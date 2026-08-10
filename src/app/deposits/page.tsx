@@ -24,6 +24,7 @@ import {
 } from "@/components/ui";
 import { deposits } from "@/lib/endpoints";
 import { date, money, text, todayInput } from "@/lib/format";
+import { useSortableTable } from "@/lib/useSortableTable";
 import { PAYMENT_TYPES } from "@/types/api";
 import type { PostDepositRequest } from "@/types/api";
 
@@ -68,6 +69,18 @@ export default function DepositsPage() {
       ),
     [bankable.data, typeFilter],
   );
+
+  // Sorted client-side: /api/deposits/bankable has no cap, it always returns every
+  // unbanked receipt, so there's no full-dataset-vs-capped-page correctness issue to work
+  // around by pushing sorting to the server (unlike customers/products/orders/invoices).
+  const { sorted, th } = useSortableTable(visible, {
+    receiptNo: (r) => r.receiptNo ?? r.id,
+    transDate: (r) => (r.transDate ? new Date(r.transDate).getTime() : null),
+    customer: (r) => r.customerTitle ?? String(r.custId ?? ""),
+    paymentType: (r) => r.paymentType,
+    description: (r) => r.description,
+    amount: (r) => r.amount,
+  });
 
   const selectedReceipts = visible.filter((receipt) => selected.has(receipt.id));
   const selectedTotal = selectedReceipts.reduce(
@@ -172,16 +185,18 @@ export default function DepositsPage() {
                 <thead>
                   <tr>
                     <Th />
-                    <Th>Receipt</Th>
-                    <Th>Date</Th>
-                    <Th>Customer</Th>
-                    <Th>Type</Th>
-                    <Th>Description</Th>
-                    <Th align="right">Amount</Th>
+                    <Th {...th("receiptNo")}>Receipt</Th>
+                    <Th {...th("transDate")}>Date</Th>
+                    <Th {...th("customer")}>Customer</Th>
+                    <Th {...th("paymentType")}>Type</Th>
+                    <Th {...th("description")}>Description</Th>
+                    <Th align="right" {...th("amount")}>
+                      Amount
+                    </Th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {visible.map((receipt) => (
+                  {sorted?.map((receipt) => (
                     <tr
                       key={receipt.id}
                       className={selected.has(receipt.id) ? "bg-sky-50" : "hover:bg-slate-50"}

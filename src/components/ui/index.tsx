@@ -1,7 +1,7 @@
 "use client";
 
 import clsx from "clsx";
-import { Loader2, X } from "lucide-react";
+import { ChevronDown, ChevronUp, ChevronsUpDown, Loader2, X } from "lucide-react";
 import { useEffect, type ReactNode } from "react";
 
 // ---------------------------------------------------------------------------------------
@@ -254,18 +254,50 @@ export function Table({ children }: { children: ReactNode }) {
   );
 }
 
+/**
+ * `sortDirection` is `null`/`undefined` when this column isn't the active sort key, and
+ * `"asc" | "desc"` when it is. Passing `onSort` turns the header into a clickable button
+ * with a sort indicator; omit it for plain, non-sortable columns.
+ */
 export function Th({
   children,
   align = "left",
   className,
+  onSort,
+  sortDirection,
 }: {
   children?: ReactNode;
   align?: "left" | "right" | "center";
   className?: string;
+  onSort?: () => void;
+  sortDirection?: "asc" | "desc" | null;
 }) {
+  if (!onSort) {
+    return (
+      <th
+        scope="col"
+        className={clsx(
+          "whitespace-nowrap px-3 py-2 text-xs font-semibold text-slate-600",
+          align === "right" && "text-right",
+          align === "center" && "text-center",
+          align === "left" && "text-left",
+          className,
+        )}
+      >
+        {children}
+      </th>
+    );
+  }
+
+  const Icon =
+    sortDirection === "asc" ? ChevronUp : sortDirection === "desc" ? ChevronDown : ChevronsUpDown;
+
   return (
     <th
       scope="col"
+      aria-sort={
+        sortDirection === "asc" ? "ascending" : sortDirection === "desc" ? "descending" : "none"
+      }
       className={clsx(
         "whitespace-nowrap px-3 py-2 text-xs font-semibold text-slate-600",
         align === "right" && "text-right",
@@ -274,7 +306,17 @@ export function Th({
         className,
       )}
     >
-      {children}
+      <button
+        type="button"
+        onClick={onSort}
+        className={clsx(
+          "inline-flex items-center gap-1 hover:text-slate-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-400",
+          align === "right" && "flex-row-reverse",
+        )}
+      >
+        {children}
+        <Icon className={clsx("size-3.5", sortDirection ? "text-slate-700" : "text-slate-400")} />
+      </button>
     </th>
   );
 }

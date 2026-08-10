@@ -40,8 +40,14 @@ import type {
 
 export const orders = {
   /** GET /api/orders */
-  list: (params: { custId?: number; runNo?: string } = {}) =>
-    api.get<OrderHeader[]>("/api/orders", params),
+  list: (
+    params: {
+      custId?: number;
+      runNo?: string;
+      sortBy?: string;
+      sortDir?: "asc" | "desc";
+    } = {},
+  ) => api.get<OrderHeader[]>("/api/orders", params),
 
   /** GET /api/orders/{orderId} */
   get: (orderId: number) => api.get<OrderHeader>(`/api/orders/${orderId}`),
@@ -79,8 +85,14 @@ export const invoices = {
   staged: () => api.get<InvoiceHeader[]>("/api/invoices/staged"),
 
   /** GET /api/invoices/history */
-  history: (params: { custId?: number; invoiceNo?: string } = {}) =>
-    api.get<ArchiveHeader[]>("/api/invoices/history", params),
+  history: (
+    params: {
+      custId?: number;
+      invoiceNo?: string;
+      sortBy?: string;
+      sortDir?: "asc" | "desc";
+    } = {},
+  ) => api.get<ArchiveHeader[]>("/api/invoices/history", params),
 
   /** GET /api/invoices/history/{invoiceNo} */
   historyDetail: (invoiceNo: string) =>
@@ -141,7 +153,8 @@ export const tracking = {
 
 export const customers = {
   /** GET /api/customers */
-  search: (search?: string) => api.get<Customer[]>("/api/customers", { search }),
+  search: (params: { search?: string; sortBy?: string; sortDir?: "asc" | "desc" } = {}) =>
+    api.get<Customer[]>("/api/customers", params),
 
   /** GET /api/customers/{custId} */
   get: (custId: number) => api.get<Customer>(`/api/customers/${custId}`),
@@ -149,8 +162,8 @@ export const customers = {
 
 export const reference = {
   /** GET /api/reference/products */
-  products: (search?: string) =>
-    api.get<SosetProduct[]>("/api/reference/products", { search }),
+    products: (params: { search?: string; sortBy?: string; sortDir?: "asc" | "desc" } = {}) =>
+    api.get<SosetProduct[]>("/api/reference/products", params),
 
   /** GET /api/reference/products/{prodId} */
   product: (prodId: string) =>

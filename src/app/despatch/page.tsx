@@ -24,6 +24,7 @@ import {
 } from "@/components/ui";
 import { tracking } from "@/lib/endpoints";
 import { date, dateTime, text, trackingStatusLabel } from "@/lib/format";
+import { useSortableTable } from "@/lib/useSortableTable";
 import type { AddTrackingRequest } from "@/types/api";
 
 /**
@@ -54,6 +55,27 @@ export default function DespatchPage() {
   const awaiting = useQuery({
     queryKey: ["tracking", "awaiting-notification"],
     queryFn: () => tracking.awaitingNotification(),
+  });
+
+  // Sorted client-side: neither /api/tracking/pending nor /api/tracking/awaiting-notification
+  // has a cap — each is already scoped to a specific tracking-status queue (pending, or
+  // ready-to-email), so it's an inherently bounded working set rather than an open-ended
+  // archive. No full-dataset-vs-capped-page correctness issue to work around here. The two
+  // tables sort independently.
+  const pendingSort = useSortableTable(pending.data, {
+    invoiceNo: (i) => i.invoiceNo,
+    custTitle: (i) => i.custTitle,
+    invoiceDate: (i) => (i.invoiceDate ? new Date(i.invoiceDate).getTime() : null),
+    deliverTo: (i) => i.delName ?? i.delAdr2,
+    status: (i) => trackingStatusLabel[i.trackingStatus] ?? i.trackingStatus,
+  });
+
+  const awaitingSort = useSortableTable(awaiting.data, {
+    invoiceNo: (i) => i.invoiceNo,
+    custTitle: (i) => i.custTitle,
+    trackingNo: (i) => i.trackingNo,
+    email: (i) => i.email,
+    emailSent: (i) => (i.emailSent ? new Date(i.emailSent).getTime() : null),
   });
 
   const addMutation = useMutation({
@@ -195,16 +217,16 @@ export default function DespatchPage() {
               <Table>
                 <thead>
                   <tr>
-                    <Th>Invoice</Th>
-                    <Th>Customer</Th>
-                    <Th>Invoice date</Th>
-                    <Th>Deliver to</Th>
-                    <Th>Status</Th>
+                    <Th {...pendingSort.th("invoiceNo")}>Invoice</Th>
+                    <Th {...pendingSort.th("custTitle")}>Customer</Th>
+                    <Th {...pendingSort.th("invoiceDate")}>Invoice date</Th>
+                    <Th {...pendingSort.th("deliverTo")}>Deliver to</Th>
+                    <Th {...pendingSort.th("status")}>Status</Th>
                     <Th />
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {pending.data?.map((invoice) => (
+                  {pendingSort.sorted?.map((invoice) => (
                     <tr key={invoice.id} className="hover:bg-slate-50">
                       <Td>
                         <button
@@ -262,16 +284,16 @@ export default function DespatchPage() {
               <Table>
                 <thead>
                   <tr>
-                    <Th>Invoice</Th>
-                    <Th>Customer</Th>
-                    <Th>Consignment</Th>
-                    <Th>Email</Th>
-                    <Th>Notified</Th>
+                    <Th {...awaitingSort.th("invoiceNo")}>Invoice</Th>
+                    <Th {...awaitingSort.th("custTitle")}>Customer</Th>
+                    <Th {...awaitingSort.th("trackingNo")}>Consignment</Th>
+                    <Th {...awaitingSort.th("email")}>Email</Th>
+                    <Th {...awaitingSort.th("emailSent")}>Notified</Th>
                     <Th />
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {awaiting.data?.map((invoice) => (
+                  {awaitingSort.sorted?.map((invoice) => (
                     <tr key={invoice.id} className="hover:bg-slate-50">
                       <Td>
                         <span className="font-medium text-slate-900">

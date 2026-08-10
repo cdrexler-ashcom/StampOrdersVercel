@@ -19,6 +19,18 @@ import {
 import { reference } from "@/lib/endpoints";
 import { money, text } from "@/lib/format";
 
+/** Columns the API's GET /api/reference/products accepts as `sortBy`. */
+type SortKey =
+  | "prodId"
+  | "prodName"
+  | "unitPrice1"
+  | "unitPrice2"
+  | "unitPrice3"
+  | "unitPrice4"
+  | "unitPrice5"
+  | "cut";
+type SortDirection = "asc" | "desc";
+
 /**
  * Product reference.
  *
@@ -35,11 +47,36 @@ export default function ProductsPage() {
     return () => clearTimeout(timer);
   }, [search]);
 
+  // Sorting is server-side (see ReferenceEndpoints.cs): the API sorts the full matching
+  // set, then this page slices to the first 200 for display below. No default sort —
+  // starts unsorted (the API's own default, ProdId asc) until a header is clicked.
+  const [sort, setSort] = useState<{ key: SortKey; direction: SortDirection } | null>(null);
+
+  const toggleSort = (key: SortKey) => {
+    setSort((current) =>
+      current && current.key === key
+        ? { key, direction: current.direction === "asc" ? "desc" : "asc" }
+        : { key, direction: "asc" },
+    );
+  };
+
   const query = useQuery({
-    queryKey: ["products", "search", debounced],
-    queryFn: () => reference.products(debounced || undefined),
+    queryKey: ["products", "search", debounced, sort],
+    queryFn: () =>
+      reference.products({
+        search: debounced || undefined,
+        sortBy: sort?.key,
+        sortDir: sort?.direction,
+      }),
   });
 
+  const th = (key: SortKey) => ({
+    onSort: () => toggleSort(key),
+    sortDirection: sort?.key === key ? sort.direction : null,
+  });
+
+  // The API returns the full sorted match set (no server-side cap), so this page still
+  // truncates for display — same as before sorting was added.
   const rows = (query.data ?? []).slice(0, 200);
 
   return (
@@ -82,14 +119,24 @@ export default function ProductsPage() {
           <Table>
             <thead>
               <tr>
-                <Th>Code</Th>
-                <Th>Name</Th>
-                <Th align="right">Price 1</Th>
-                <Th align="right">Price 2</Th>
-                <Th align="right">Price 3</Th>
-                <Th align="right">Price 4</Th>
-                <Th align="right">Price 5</Th>
-                <Th>Cut (W×H)</Th>
+                <Th {...th("prodId")}>Code</Th>
+                <Th {...th("prodName")}>Name</Th>
+                <Th align="right" {...th("unitPrice1")}>
+                  Price 1
+                </Th>
+                <Th align="right" {...th("unitPrice2")}>
+                  Price 2
+                </Th>
+                <Th align="right" {...th("unitPrice3")}>
+                  Price 3
+                </Th>
+                <Th align="right" {...th("unitPrice4")}>
+                  Price 4
+                </Th>
+                <Th align="right" {...th("unitPrice5")}>
+                  Price 5
+                </Th>
+                <Th {...th("cut")}>Cut (W×H)</Th>
                 <Th>Flags</Th>
               </tr>
             </thead>

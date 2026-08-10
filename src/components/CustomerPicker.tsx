@@ -35,7 +35,7 @@ export function CustomerPicker({
 
   const { data, isFetching } = useQuery({
     queryKey: ["customers", "search", debounced],
-    queryFn: () => customers.search(debounced || undefined),
+    queryFn: () => customers.search({ search: debounced || undefined }),
     enabled: open,
   });
 

@@ -30,6 +30,7 @@ import {
   capturesChequeDetails,
 } from "@/types/api";
 import { date, money, roundCents, text, todayInput } from "@/lib/format";
+import { useSortableTable } from "@/lib/useSortableTable";
 import type { Customer, RecordReceiptRequest } from "@/types/api";
 
 /**
@@ -72,6 +73,19 @@ export default function ReceiptsPage() {
   });
 
   const items = outstanding.data ?? [];
+
+  // Sorted client-side: /api/receipts/outstanding/{custId} has no cap and is already
+  // scoped to one customer's open items, so it's an inherently small, bounded set — no
+  // full-dataset-vs-capped-page correctness issue to work around here.
+  const { sorted, th } = useSortableTable(items, {
+    date: (i) => (i.date ? new Date(i.date).getTime() : null),
+    type: (i) => i.type,
+    docNo: (i) => i.docNo,
+    detail: (i) => i.detail,
+    originalAmount: (i) => i.originalAmount,
+    paidAmount: (i) => i.paidAmount,
+    outstanding: (i) => i.outstanding,
+  });
 
   const pickCustomer = (next: Customer | null) => {
     setCustomer(next);
@@ -255,18 +269,24 @@ export default function ReceiptsPage() {
               <Table>
                 <thead>
                   <tr>
-                    <Th>Date</Th>
-                    <Th>Type</Th>
-                    <Th>Document</Th>
-                    <Th>Detail</Th>
-                    <Th align="right">Original</Th>
-                    <Th align="right">Paid</Th>
-                    <Th align="right">Outstanding</Th>
+                    <Th {...th("date")}>Date</Th>
+                    <Th {...th("type")}>Type</Th>
+                    <Th {...th("docNo")}>Document</Th>
+                    <Th {...th("detail")}>Detail</Th>
+                    <Th align="right" {...th("originalAmount")}>
+                      Original
+                    </Th>
+                    <Th align="right" {...th("paidAmount")}>
+                      Paid
+                    </Th>
+                    <Th align="right" {...th("outstanding")}>
+                      Outstanding
+                    </Th>
                     <Th align="right">Allocate</Th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {items.map((item) => (
+                  {sorted?.map((item) => (
                     <tr key={item.id} className="hover:bg-slate-50">
                       <Td>{date(item.date)}</Td>
                       <Td>

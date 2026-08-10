@@ -33,7 +33,7 @@ export function ProductPicker({
 
   const { data, isFetching } = useQuery({
     queryKey: ["products", "search", debounced],
-    queryFn: () => reference.products(debounced || undefined),
+    queryFn: () => reference.products({ search: debounced || undefined }),
     enabled: open,
   });
 

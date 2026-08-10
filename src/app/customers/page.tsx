@@ -19,6 +19,10 @@ import {
 import { customers } from "@/lib/endpoints";
 import { text } from "@/lib/format";
 
+/** Columns the API's GET /api/customers accepts as `sortBy`. */
+type SortKey = "accountNo" | "title" | "address3" | "phoneNo" | "priceCode" | "discPct";
+type SortDirection = "asc" | "desc";
+
 /**
  * Customer list.
  *
@@ -35,9 +39,33 @@ export default function CustomersPage() {
     return () => clearTimeout(timer);
   }, [search]);
 
+  // Sorting is server-side: the API orders the full matching set before applying its
+  // 100-row cap, so this can't be a plain client-side re-sort of the page that came back
+  // (see ReferenceEndpoints.cs). No default sort — starts unsorted (the API's own default,
+  // AccountNo asc) until a header is clicked.
+  const [sort, setSort] = useState<{ key: SortKey; direction: SortDirection } | null>(null);
+
+  const toggleSort = (key: SortKey) => {
+    setSort((current) =>
+      current && current.key === key
+        ? { key, direction: current.direction === "asc" ? "desc" : "asc" }
+        : { key, direction: "asc" },
+    );
+  };
+
   const query = useQuery({
-    queryKey: ["customers", "search", debounced],
-    queryFn: () => customers.search(debounced || undefined),
+    queryKey: ["customers", "search", debounced, sort],
+    queryFn: () =>
+      customers.search({
+        search: debounced || undefined,
+        sortBy: sort?.key,
+        sortDir: sort?.direction,
+      }),
+  });
+
+  const th = (key: SortKey) => ({
+    onSort: () => toggleSort(key),
+    sortDirection: sort?.key === key ? sort.direction : null,
   });
 
   return (
@@ -72,12 +100,16 @@ export default function CustomersPage() {
           <Table>
             <thead>
               <tr>
-                <Th>Account</Th>
-                <Th>Name</Th>
-                <Th>Suburb</Th>
-                <Th>Phone</Th>
-                <Th align="right">Price code</Th>
-                <Th align="right">Discount</Th>
+                <Th {...th("accountNo")}>Account</Th>
+                <Th {...th("title")}>Name</Th>
+                <Th {...th("address3")}>Suburb</Th>
+                <Th {...th("phoneNo")}>Phone</Th>
+                <Th align="right" {...th("priceCode")}>
+                  Price code
+                </Th>
+                <Th align="right" {...th("discPct")}>
+                  Discount
+                </Th>
                 <Th>Flags</Th>
                 <Th />
               </tr>

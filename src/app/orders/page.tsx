@@ -25,6 +25,10 @@ import { orders } from "@/lib/endpoints";
 import { date, text } from "@/lib/format";
 import type { Customer } from "@/types/api";
 
+/** Columns the API's GET /api/orders accepts as `sortBy`. */
+type SortKey = "orderId" | "custTitle" | "date" | "runNo" | "binNo";
+type SortDirection = "asc" | "desc";
+
 /**
  * Order list.
  *
@@ -36,13 +40,33 @@ export default function OrdersPage() {
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [runNo, setRunNo] = useState("");
 
+  // Sorting is server-side (matching customers/products): starts unsorted until a header
+  // is clicked, then the active column/direction is sent as sortBy/sortDir so the API can
+  // sort the full matching set before applying whatever cap it returns.
+  const [sort, setSort] = useState<{ key: SortKey; direction: SortDirection } | null>(null);
+
+  const toggleSort = (key: SortKey) => {
+    setSort((current) =>
+      current && current.key === key
+        ? { key, direction: current.direction === "asc" ? "desc" : "asc" }
+        : { key, direction: "asc" },
+    );
+  };
+
   const query = useQuery({
-    queryKey: ["orders", { custId: customer?.uniqueId, runNo }],
+    queryKey: ["orders", { custId: customer?.uniqueId, runNo }, sort],
     queryFn: () =>
       orders.list({
         custId: customer?.uniqueId,
         runNo: runNo.trim() || undefined,
+        sortBy: sort?.key,
+        sortDir: sort?.direction,
       }),
+  });
+
+  const th = (key: SortKey) => ({
+    onSort: () => toggleSort(key),
+    sortDirection: sort?.key === key ? sort.direction : null,
   });
 
   return (
@@ -105,11 +129,11 @@ export default function OrdersPage() {
           <Table>
             <thead>
               <tr>
-                <Th>Order</Th>
-                <Th>Customer</Th>
-                <Th>Date</Th>
-                <Th>Run</Th>
-                <Th>Bin</Th>
+                <Th {...th("orderId")}>Order</Th>
+                <Th {...th("custTitle")}>Customer</Th>
+                <Th {...th("date")}>Date</Th>
+                <Th {...th("runNo")}>Run</Th>
+                <Th {...th("binNo")}>Bin</Th>
                 <Th>Flags</Th>
                 <Th />
               </tr>
@@ -131,7 +155,6 @@ export default function OrdersPage() {
                   <Td>
                     <div className="flex flex-wrap gap-1">
                       {order.credit && <Badge tone="violet">Credit</Badge>}
-                      {order.paid && <Badge tone="green">Paid</Badge>}
                       {order.freightApplies && <Badge tone="slate">Freight</Badge>}
                       {order.direct && <Badge tone="sky">Docket</Badge>}
                     </div>

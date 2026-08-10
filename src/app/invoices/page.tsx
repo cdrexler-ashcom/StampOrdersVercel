@@ -24,6 +24,10 @@ import { invoices } from "@/lib/endpoints";
 import { date, text, trackingStatusLabel } from "@/lib/format";
 import type { Customer } from "@/types/api";
 
+/** Columns the API's GET /api/invoices/history accepts as `sortBy`. */
+type SortKey = "invoiceNo" | "custTitle" | "invoiceDate" | "orderId" | "runNo";
+type SortDirection = "asc" | "desc";
+
 /**
  * Invoice history.
  *
@@ -35,13 +39,32 @@ export default function InvoiceHistoryPage() {
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [invoiceNo, setInvoiceNo] = useState("");
 
+  // Sorting is server-side: starts unsorted (the API's own default — newest first, per
+  // the page description) until a header is clicked.
+  const [sort, setSort] = useState<{ key: SortKey; direction: SortDirection } | null>(null);
+
+  const toggleSort = (key: SortKey) => {
+    setSort((current) =>
+      current && current.key === key
+        ? { key, direction: current.direction === "asc" ? "desc" : "asc" }
+        : { key, direction: "asc" },
+    );
+  };
+
   const query = useQuery({
-    queryKey: ["invoices", "history", { custId: customer?.uniqueId, invoiceNo }],
+    queryKey: ["invoices", "history", { custId: customer?.uniqueId, invoiceNo }, sort],
     queryFn: () =>
       invoices.history({
         custId: customer?.uniqueId,
         invoiceNo: invoiceNo.trim() || undefined,
+        sortBy: sort?.key,
+        sortDir: sort?.direction,
       }),
+  });
+
+  const th = (key: SortKey) => ({
+    onSort: () => toggleSort(key),
+    sortDirection: sort?.key === key ? sort.direction : null,
   });
 
   return (
@@ -90,11 +113,11 @@ export default function InvoiceHistoryPage() {
           <Table>
             <thead>
               <tr>
-                <Th>Invoice</Th>
-                <Th>Customer</Th>
-                <Th>Invoice date</Th>
-                <Th>Order</Th>
-                <Th>Run</Th>
+                <Th {...th("invoiceNo")}>Invoice</Th>
+                <Th {...th("custTitle")}>Customer</Th>
+                <Th {...th("invoiceDate")}>Invoice date</Th>
+                <Th {...th("orderId")}>Order</Th>
+                <Th {...th("runNo")}>Run</Th>
                 <Th>Tracking</Th>
                 <Th />
               </tr>
