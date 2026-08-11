@@ -91,6 +91,10 @@ export const invoices = {
       invoiceNo?: string;
       sortBy?: string;
       sortDir?: "asc" | "desc";
+      custTitle?: string[];
+      runNo?: string[];
+      invoiceNos?: string[];
+      orderId?: string[];
     } = {},
   ) => api.get<ArchiveHeader[]>("/api/invoices/history", params),
 
@@ -153,8 +157,17 @@ export const tracking = {
 
 export const customers = {
   /** GET /api/customers */
-  search: (params: { search?: string; sortBy?: string; sortDir?: "asc" | "desc" } = {}) =>
-    api.get<Customer[]>("/api/customers", params),
+  search: (
+    params: {
+      search?: string;
+      sortBy?: string;
+      sortDir?: "asc" | "desc";
+      title?: string[];
+      address3?: string[];
+      priceCode?: string[];
+      discPct?: string[];
+    } = {},
+  ) => api.get<Customer[]>("/api/customers", params),
 
   /** GET /api/customers/{custId} */
   get: (custId: number) => api.get<Customer>(`/api/customers/${custId}`),
@@ -162,8 +175,15 @@ export const customers = {
 
 export const reference = {
   /** GET /api/reference/products */
-    products: (params: { search?: string; sortBy?: string; sortDir?: "asc" | "desc" } = {}) =>
-    api.get<SosetProduct[]>("/api/reference/products", params),
+    products: (
+    params: {
+      search?: string;
+      sortBy?: string;
+      sortDir?: "asc" | "desc";
+      prodName?: string[];
+      cut?: string[];
+    } = {},
+  ) => api.get<SosetProduct[]>("/api/reference/products", params),
 
   /** GET /api/reference/products/{prodId} */
   product: (prodId: string) =>

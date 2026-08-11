@@ -56,13 +56,24 @@ export default function CustomersPage() {
     );
   };
 
+  // Column filter selections. Lifted up here (rather than left inside useFilterableTable)
+  // because the query below needs to read it to build the request — see the `controlled`
+  // param on useFilterableTable.
+  const [filterSelected, setFilterSelected] = useState<
+    Partial<Record<"title" | "address3" | "priceCode" | "discPct", string[]>>
+  >({});
+
   const query = useQuery({
-    queryKey: ["customers", "search", debounced, sort],
+    queryKey: ["customers", "search", debounced, sort, filterSelected],
     queryFn: () =>
       customers.search({
         search: debounced || undefined,
         sortBy: sort?.key,
         sortDir: sort?.direction,
+        title: filterSelected.title,
+        address3: filterSelected.address3,
+        priceCode: filterSelected.priceCode,
+        discPct: filterSelected.discPct,
       }),
   });
 
@@ -71,17 +82,25 @@ export default function CustomersPage() {
     sortDirection: sort?.key === key ? sort.direction : null,
   });
 
-  // Column filtering runs client-side over whatever page of rows the search returned —
-  // like sorting before it was moved server-side, this only sees the currently loaded
-  // matches (capped at 100). Account number and phone aren't offered as filters since
-  // they're effectively unique per row, so a value list wouldn't be useful there.
-  const { filtered, isFiltered, clearAll, colFilter } = useFilterableTable(query.data, {
-    accountNo: (c: Customer) => c.accountNo?.trim() ?? "",
-    title: (c: Customer) => c.title?.trim() ?? "",
-    address3: (c: Customer) => c.address3?.trim() ?? "",
-    priceCode: (c: Customer) => (c.priceCode != null ? String(c.priceCode) : ""),
-    discPct: (c: Customer) => (c.discPct != null ? `${c.discPct}%` : ""),
-  });
+  // Filtering itself now happens server-side (see ReferenceEndpoints.cs), applied before
+  // Take(100) — so unlike before, a filter narrows the full matching set correctly rather
+  // than just the loaded page. What's still client-side is each column's *option list*:
+  // it's built from whatever page comes back, so once a filter on one column is active,
+  // other columns' popups only offer values that survive it — the same progressive
+  // narrowing a spreadsheet AutoFilter shows, and a step further than before, when every
+  // column's options stayed independent of the others no matter what was selected.
+  // Account number and phone still aren't offered as filters — they're effectively unique
+  // per row, so a value list wouldn't be useful there.
+  const { filtered, isFiltered, clearAll, colFilter } = useFilterableTable(
+    query.data,
+    {
+      title: (c: Customer) => c.title?.trim() ?? "",
+      address3: (c: Customer) => c.address3?.trim() ?? "",
+      priceCode: (c: Customer) => (c.priceCode != null ? String(c.priceCode) : ""),
+      discPct: (c: Customer) => (c.discPct != null ? `${c.discPct}%` : ""),
+    },
+    { selected: filterSelected, onChange: setFilterSelected },
+  );
 
   return (
     <>
@@ -117,20 +136,17 @@ export default function CustomersPage() {
           <ErrorState error={query.error} />
         ) : (query.data?.length ?? 0) === 0 ? (
           <EmptyState title="No customers found" />
-        ) : (filtered?.length ?? 0) === 0 ? (
-          <EmptyState
-            title="No customers match the selected filters"
-            action={
-              <Button size="sm" variant="secondary" onClick={clearAll}>
-                Clear column filters
-              </Button>
-            }
-          />
         ) : (
+          // The header (and its filter dropdowns) stays mounted even when `filtered` is
+          // empty. Each column's option list comes from the full loaded page regardless
+          // of `selected`, but the dropdown itself still has to stay on screen for that
+          // to matter — swapping the whole <Table> out for an EmptyState previously took
+          // the filter triggers with it, so there was no way back once a combination of
+          // filters matched zero rows.
           <Table>
             <thead>
               <tr>
-                <Th {...th("accountNo")} filter={colFilter("title")}>Account</Th>
+                <Th {...th("accountNo")}>Account</Th>
                 <Th {...th("title")} filter={colFilter("title")}>
                   Name
                 </Th>
@@ -149,52 +165,65 @@ export default function CustomersPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {filtered?.map((customer) => (
-                <tr key={customer.uniqueId} className="hover:bg-slate-50">
-                  <Td>
-                    <span className="font-medium text-slate-900">
-                      {text(customer.accountNo)}
-                    </span>
-                  </Td>
-                  <Td>
-                    <span className="block max-w-64 truncate">
-                      {text(customer.title)}
-                    </span>
-                  </Td>
-                  <Td>{text(customer.address3)}</Td>
-                  <Td>{text(customer.phoneNo)}</Td>
-                  <Td align="right">{customer.priceCode ?? "—"}</Td>
-                  <Td align="right">
-                    {customer.discPct ? `${customer.discPct}%` : "—"}
-                  </Td>
-                  <Td>
-                    <div className="flex flex-wrap gap-1">
-                      {customer.creditStatus?.trim() && (
-                        <Badge tone="amber">{customer.creditStatus}</Badge>
-                      )}
-                      {customer.gstExempt && <Badge tone="slate">GST exempt</Badge>}
-                      {customer.emailInvoice && <Badge tone="sky">Email</Badge>}
-                    </div>
-                  </Td>
-                  <Td align="right">
-                    <Link
-                      href={`/customers/${customer.uniqueId}`}
-                      className="text-xs font-medium text-sky-700 hover:text-sky-900"
-                    >
-                      Open
-                    </Link>
-                  </Td>
+              {(filtered?.length ?? 0) === 0 ? (
+                <tr>
+                  <td colSpan={8} className="px-4 py-8">
+                    <EmptyState
+                      title="No customers match the selected filters"
+                      action={
+                        <Button size="sm" variant="secondary" onClick={clearAll}>
+                          Clear column filters
+                        </Button>
+                      }
+                    />
+                  </td>
                 </tr>
-              ))}
+              ) : (
+                filtered?.map((customer) => (
+                  <tr key={customer.uniqueId} className="hover:bg-slate-50">
+                    <Td>
+                      <span className="font-medium text-slate-900">
+                        {text(customer.accountNo)}
+                      </span>
+                    </Td>
+                    <Td>
+                      <span className="block max-w-64 truncate">
+                        {text(customer.title)}
+                      </span>
+                    </Td>
+                    <Td>{text(customer.address3)}</Td>
+                    <Td>{text(customer.phoneNo)}</Td>
+                    <Td align="right">{customer.priceCode ?? "—"}</Td>
+                    <Td align="right">
+                      {customer.discPct ? `${customer.discPct}%` : "—"}
+                    </Td>
+                    <Td>
+                      <div className="flex flex-wrap gap-1">
+                        {customer.creditStatus?.trim() && (
+                          <Badge tone="amber">{customer.creditStatus}</Badge>
+                        )}
+                        {customer.gstExempt && <Badge tone="slate">GST exempt</Badge>}
+                        {customer.emailInvoice && <Badge tone="sky">Email</Badge>}
+                      </div>
+                    </Td>
+                    <Td align="right">
+                      <Link
+                        href={`/customers/${customer.uniqueId}`}
+                        className="text-xs font-medium text-sky-700 hover:text-sky-900"
+                      >
+                        Open
+                      </Link>
+                    </Td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </Table>
         )}
 
         {(query.data?.length ?? 0) === 100 && (
           <p className="border-t border-slate-100 px-4 py-2 text-xs text-slate-500">
-            Showing the first 100 matches
-            {isFiltered ? ", before column filters are applied" : ""}. Refine the search to
-            narrow them.
+            Showing the first 100 matches. Refine the search to narrow them.
           </p>
         )}
       </Card>

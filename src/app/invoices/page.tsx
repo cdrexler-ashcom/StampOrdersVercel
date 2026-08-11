@@ -20,7 +20,7 @@ import {
   Td,
   Th,
 } from "@/components/ui";
-import { invoices, orders } from "@/lib/endpoints";
+import { invoices } from "@/lib/endpoints";
 import { date, text, trackingStatusLabel } from "@/lib/format";
 import { useFilterableTable } from "@/lib/useFilterableTable";
 import type { ArchiveHeader, Customer } from "@/types/api";
@@ -52,14 +52,38 @@ export default function InvoiceHistoryPage() {
     );
   };
 
+  // Column filter selections, covering all six filterable columns even though only
+  // custTitle/runNo/invoiceNo(→invoiceNos)/orderId get forwarded to the API below — see
+  // the note on the useFilterableTable call for why invoiceDate/tracking stay client-side.
+  // Every one of these needs to either be forwarded or documented as not being forwarded:
+  // a filter that's silently client-side-only will look correct until a sort or another
+  // filter changes which page of rows is loaded, at which point it can go from "one
+  // matching row" to "zero rows", with nothing about the filter itself having changed.
+  const [filterSelected, setFilterSelected] = useState<
+    Partial<Record<"invoiceNo" | "custTitle" | "invoiceDate" | "orderId" | "runNo" | "tracking", string[]>>
+  >({});
+
   const query = useQuery({
-    queryKey: ["invoices", "history", { custId: customer?.uniqueId, invoiceNo }, sort],
+    queryKey: [
+      "invoices",
+      "history",
+      { custId: customer?.uniqueId, invoiceNo },
+      sort,
+      filterSelected.custTitle,
+      filterSelected.runNo,
+      filterSelected.invoiceNo,
+      filterSelected.orderId,
+    ],
     queryFn: () =>
       invoices.history({
         custId: customer?.uniqueId,
         invoiceNo: invoiceNo.trim() || undefined,
         sortBy: sort?.key,
         sortDir: sort?.direction,
+        custTitle: filterSelected.custTitle,
+        runNo: filterSelected.runNo,
+        invoiceNos: filterSelected.invoiceNo,
+        orderId: filterSelected.orderId,
       }),
   });
 
@@ -68,24 +92,36 @@ export default function InvoiceHistoryPage() {
     sortDirection: sort?.key === key ? sort.direction : null,
   });
 
-  // Client-side, over whatever page the API returned (capped at 200 — see the notice
-  // below), same as customers/orders. Invoice and order numbers are unfiltered since
-  // they're unique per row. "Tracking" mirrors exactly what the cell displays (a captured
-  // number, a status badge, or "Not required") so the filter's option list matches what's
-  // on screen.
-  const { filtered, isFiltered, clearAll, colFilter } = useFilterableTable(query.data, {
-    invoiceNo: (i: ArchiveHeader) => i.invoiceNo?.trim() ?? "",
-    custTitle: (i: ArchiveHeader) => i.custTitle?.trim() ?? "",
-    invoiceDate: (i: ArchiveHeader) => date(i.invoiceDate) ?? "",
-    orderId: (i: ArchiveHeader) => i.orderId.toString() ?? "",
-    runNo: (i: ArchiveHeader) => i.runNo?.trim() ?? "",
-    tracking: (i: ArchiveHeader) =>
-      i.trackingNo?.trim()
-        ? "Tracking captured"
-        : i.trackingRequired
-          ? (trackingStatusLabel[i.trackingStatus] ?? i.trackingStatus)
-          : "Not required",
-  });
+  // custTitle/runNo/invoiceNo/orderId all filter server-side now (see InvoiceEndpoints.cs),
+  // applied before Take(200) — a filter narrows the full matching set correctly, not just
+  // the loaded page. Two stay client-side, both for the same reason: their filter popup
+  // doesn't show a raw column value, it shows something derived —
+  //   - tracking: a label built from three columns (TrackingNo/TrackingRequired/
+  //     TrackingStatus)
+  //   - invoiceDate: a display-formatted string (date()), not the underlying DateTime
+  // Matching either server-side would mean re-implementing that formatting/derivation in
+  // C#. Known caveat: because the page these two filter over is still capped at 200 and
+  // ordered by whatever sort is active, changing sort (or another filter) can change which
+  // 200 rows are loaded and make a previously-matching row disappear from an
+  // invoiceDate/tracking filter with nothing about that filter having changed — narrow by
+  // customer or run first if that happens.
+  const { filtered, isFiltered, clearAll, colFilter } = useFilterableTable(
+    query.data,
+    {
+      invoiceNo: (i: ArchiveHeader) => i.invoiceNo?.trim() ?? "",
+      custTitle: (i: ArchiveHeader) => i.custTitle?.trim() ?? "",
+      invoiceDate: (i: ArchiveHeader) => (i.invoiceDate ? date(i.invoiceDate) : ""),
+      orderId: (i: ArchiveHeader) => i.orderId.toString(),
+      runNo: (i: ArchiveHeader) => i.runNo?.trim() ?? "",
+      tracking: (i: ArchiveHeader) =>
+        i.trackingNo?.trim()
+          ? "Tracking captured"
+          : i.trackingRequired
+            ? (trackingStatusLabel[i.trackingStatus] ?? i.trackingStatus)
+            : "Not required",
+    },
+    { selected: filterSelected, onChange: setFilterSelected },
+  );
 
   return (
     <>
@@ -217,8 +253,11 @@ export default function InvoiceHistoryPage() {
         {(query.data?.length ?? 0) === 200 && (
           <p className="border-t border-slate-100 px-4 py-2 text-xs text-slate-500">
             Showing the most recent 200 invoices
-            {isFiltered ? ", before column filters are applied" : ""}. Filter to narrow the
-            list.
+            {(filterSelected.invoiceDate?.length ?? 0) > 0 ||
+            (filterSelected.tracking?.length ?? 0) > 0
+              ? ", before the invoice date and tracking filters are applied"
+              : ""}
+            . Filter or search to narrow the list.
           </p>
         )}
       </Card>

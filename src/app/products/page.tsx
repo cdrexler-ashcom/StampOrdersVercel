@@ -63,13 +63,21 @@ export default function ProductsPage() {
     );
   };
 
+  // Column filter selections, lifted up here so the query below can read them — same
+  // pattern as customers/invoices.
+  const [filterSelected, setFilterSelected] = useState<
+    Partial<Record<"prodName" | "cut", string[]>>
+  >({});
+
   const query = useQuery({
-    queryKey: ["products", "search", debounced, sort],
+    queryKey: ["products", "search", debounced, sort, filterSelected],
     queryFn: () =>
       reference.products({
         search: debounced || undefined,
         sortBy: sort?.key,
         sortDir: sort?.direction,
+        prodName: filterSelected.prodName,
+        cut: filterSelected.cut,
       }),
   });
 
@@ -78,26 +86,28 @@ export default function ProductsPage() {
     sortDirection: sort?.key === key ? sort.direction : null,
   });
 
-  // The API returns the full sorted match set (no server-side cap), so this page still
-  // truncates for display — same as before sorting was added.
-  const rows = (query.data ?? []).slice(0, 200);
+  // GetProductsAsync (the Soset gateway) returns every matching product with no cap, so
+  // filtering server-side here is a payload-size win, not a correctness fix — there's no
+  // Take() for a filtered-out row to get lost behind the way there was for
+  // customers/invoices. Code is left unfiltered since it's unique per row; the five price
+  // columns are continuous values rather than a small set of repeated ones, so a
+  // value-list filter wouldn't narrow much there either. Cut mirrors exactly what the
+  // cell displays (the "W × H" pairing, or "—").
+  const { filtered, isFiltered, clearAll, colFilter } = useFilterableTable(
+    query.data,
+    {
+      prodName: (p: SosetProduct) => p.prodName?.trim() ?? "",
+      cut: (p: SosetProduct) =>
+        p.cutWidth != null && p.cutHeight != null ? `${p.cutWidth} × ${p.cutHeight}` : "",
+    },
+    { selected: filterSelected, onChange: setFilterSelected },
+  );
 
-  // Filtering runs over the same 200-row slice that's actually on screen, so the caveat
-  // note below already covers it — same shape as customers/orders/invoices, just phrased
-  // around a client-side slice instead of a server-side cap. Code is left unfiltered
-  // since it's unique per row; the five price columns are continuous values rather than
-  // a small set of repeated ones, so a value-list filter wouldn't narrow much there
-  // either. Cut mirrors exactly what the cell displays (the "W × H" pairing, or "—").
-  const { filtered, isFiltered, clearAll, colFilter } = useFilterableTable(rows, {
-    code: (p: SosetProduct) => p.prodId?.trim() ?? "",
-    prodName: (p: SosetProduct) => p.prodName?.trim() ?? "",
-    price1: (p: SosetProduct) => (p.unitPrice1 != null ? money(p.unitPrice1) : ""),
-    price2: (p: SosetProduct) => (p.unitPrice2 != null ? money(p.unitPrice2) : ""),
-    price3: (p: SosetProduct) => (p.unitPrice3 != null ? money(p.unitPrice3) : ""),
-    price4: (p: SosetProduct) => (p.unitPrice4 != null ? money(p.unitPrice4) : ""),
-    price5: (p: SosetProduct) => (p.unitPrice5 != null ? money(p.unitPrice5) : ""),
-    cut: (p: SosetProduct) => p.cutWidth != null && p.cutHeight != null ? `${p.cutWidth} × ${p.cutHeight}` : "",
-  });
+  // Slicing now happens after filtering (both server-side above, and the client-side
+  // no-op re-filter inside the hook) rather than before — previously this sliced to 200
+  // first and filtered what was left, which meant a product outside the first 200 could
+  // never be found by a filter at all, no matter how narrow.
+  const rows = (filtered ?? []).slice(0, 200);
 
   return (
     <>
@@ -141,25 +151,39 @@ export default function ProductsPage() {
           <Spinner />
         ) : query.isError ? (
           <ErrorState error={query.error} />
-        ) : rows.length === 0 ? (
+        ) : (query.data?.length ?? 0) === 0 ? (
           <EmptyState title="No products found" />
         ) : (
           <Table>
             <thead>
               <tr>
-                <Th {...th("prodId")} filter={colFilter("code")}>Code</Th>
-                <Th {...th("prodName")} filter={colFilter("prodName")}>Name</Th>
-                <Th align="right" {...th("unitPrice1")} filter={colFilter("price1")}>Price 1</Th>
-                <Th align="right" {...th("unitPrice2")} filter={colFilter("price2")}>Price 2</Th>
-                <Th align="right" {...th("unitPrice3")} filter={colFilter("price3")}>Price 3</Th>
-                <Th align="right" {...th("unitPrice4")} filter={colFilter("price4")}>Price 4</Th>
-                <Th align="right" {...th("unitPrice5")} filter={colFilter("price5")}>Price 5</Th>
-                <Th {...th("cut")} filter={colFilter("cut")}>Cut (W×H)</Th>
+                <Th {...th("prodId")}>Code</Th>
+                <Th {...th("prodName")} filter={colFilter("prodName")}>
+                  Name
+                </Th>
+                <Th align="right" {...th("unitPrice1")}>
+                  Price 1
+                </Th>
+                <Th align="right" {...th("unitPrice2")}>
+                  Price 2
+                </Th>
+                <Th align="right" {...th("unitPrice3")}>
+                  Price 3
+                </Th>
+                <Th align="right" {...th("unitPrice4")}>
+                  Price 4
+                </Th>
+                <Th align="right" {...th("unitPrice5")}>
+                  Price 5
+                </Th>
+                <Th {...th("cut")} filter={colFilter("cut")}>
+                  Cut (W×H)
+                </Th>
                 <Th>Flags</Th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {(filtered?.length ?? 0) === 0 ? (
+              {rows.length === 0 ? (
                 <tr>
                   <td colSpan={9} className="px-4 py-8">
                     <EmptyState
@@ -173,7 +197,7 @@ export default function ProductsPage() {
                   </td>
                 </tr>
               ) : (
-                filtered?.map((product) => (
+                rows.map((product) => (
                   <tr key={product.prodId} className="hover:bg-slate-50">
                     <Td>
                       <span className="font-medium text-slate-900">
@@ -212,10 +236,9 @@ export default function ProductsPage() {
           </Table>
         )}
 
-        {(query.data?.length ?? 0) > 200 && (
+        {(filtered?.length ?? 0) > 200 && (
           <p className="border-t border-slate-100 px-4 py-2 text-xs text-slate-500">
-            Showing 200 of {query.data?.length} products
-            {isFiltered ? ", before column filters are applied" : ""}. Refine the search to
+            Showing 200 of {filtered?.length} products. Refine the search or filters to
             narrow them.
           </p>
         )}
