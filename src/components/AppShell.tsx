@@ -4,7 +4,9 @@ import clsx from "clsx";
 import {
   Banknote,
   Boxes,
+  Bug,
   ClipboardList,
+  FileBarChart2,
   FileText,
   LayoutDashboard,
   Receipt,
@@ -47,11 +49,16 @@ const navigation = [
     ],
   },
   {
+    heading: "Reports",
+    items: [{ href: "/reports", label: "Reports", icon: FileBarChart2 }],
+  },
+  {
     heading: "Reference",
     items: [
       { href: "/customers", label: "Customers", icon: Users },
       { href: "/products", label: "Products", icon: Boxes },
       { href: "/system", label: "System", icon: Settings },
+      { href: "/reports/debug", label: "Report debug", icon: Bug },
     ],
   },
 ];

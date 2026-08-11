@@ -476,3 +476,38 @@ export interface ProblemDetails {
   detail?: string;
   instance?: string;
 }
+
+// ---------------------------------------------------------------------------------------
+// Reports
+// ---------------------------------------------------------------------------------------
+
+/**
+ * A light mirror of the API's parsed report definition (StampOrders.Reporting.Model.
+ * ReportDefinition), enough for the debug inspector. The API serialises with the default
+ * camelCase policy. Only the fields the UI reads are typed; the rest are ignored.
+ */
+export interface ReportTableInfo {
+  name: string;
+  location?: string | null;
+}
+
+export interface ReportParameterInfo {
+  name: string;
+  promptText?: string | null;
+  valueType?: string | null;
+}
+
+export interface ReportFormulaInfo {
+  name: string;
+  valueType?: string | null;
+}
+
+export interface ReportDefinitionInfo {
+  sourceFile: string;
+  name: string;
+  title?: string | null;
+  tables: ReportTableInfo[];
+  formulas: ReportFormulaInfo[];
+  parameters: ReportParameterInfo[];
+  recordSelectionFormula?: string | null;
+}
