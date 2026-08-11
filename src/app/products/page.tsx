@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 
 import {
   Badge,
+  Button,
   Card,
   EmptyState,
   ErrorState,
@@ -18,6 +19,8 @@ import {
 } from "@/components/ui";
 import { reference } from "@/lib/endpoints";
 import { money, text } from "@/lib/format";
+import { useFilterableTable } from "@/lib/useFilterableTable";
+import type { SosetProduct } from "@/types/api";
 
 /** Columns the API's GET /api/reference/products accepts as `sortBy`. */
 type SortKey =
@@ -60,13 +63,21 @@ export default function ProductsPage() {
     );
   };
 
+  // Column filter selections, lifted up here so the query below can read them — same
+  // pattern as customers/invoices.
+  const [filterSelected, setFilterSelected] = useState<
+    Partial<Record<"prodName" | "cut", string[]>>
+  >({});
+
   const query = useQuery({
-    queryKey: ["products", "search", debounced, sort],
+    queryKey: ["products", "search", debounced, sort, filterSelected],
     queryFn: () =>
       reference.products({
         search: debounced || undefined,
         sortBy: sort?.key,
         sortDir: sort?.direction,
+        prodName: filterSelected.prodName,
+        cut: filterSelected.cut,
       }),
   });
 
@@ -75,9 +86,28 @@ export default function ProductsPage() {
     sortDirection: sort?.key === key ? sort.direction : null,
   });
 
-  // The API returns the full sorted match set (no server-side cap), so this page still
-  // truncates for display — same as before sorting was added.
-  const rows = (query.data ?? []).slice(0, 200);
+  // GetProductsAsync (the Soset gateway) returns every matching product with no cap, so
+  // filtering server-side here is a payload-size win, not a correctness fix — there's no
+  // Take() for a filtered-out row to get lost behind the way there was for
+  // customers/invoices. Code is left unfiltered since it's unique per row; the five price
+  // columns are continuous values rather than a small set of repeated ones, so a
+  // value-list filter wouldn't narrow much there either. Cut mirrors exactly what the
+  // cell displays (the "W × H" pairing, or "—").
+  const { filtered, isFiltered, clearAll, colFilter } = useFilterableTable(
+    query.data,
+    {
+      prodName: (p: SosetProduct) => p.prodName?.trim() ?? "",
+      cut: (p: SosetProduct) =>
+        p.cutWidth != null && p.cutHeight != null ? `${p.cutWidth} × ${p.cutHeight}` : "",
+    },
+    { selected: filterSelected, onChange: setFilterSelected },
+  );
+
+  // Slicing now happens after filtering (both server-side above, and the client-side
+  // no-op re-filter inside the hook) rather than before — previously this sliced to 200
+  // first and filtered what was left, which meant a product outside the first 200 could
+  // never be found by a filter at all, no matter how narrow.
+  const rows = (filtered ?? []).slice(0, 200);
 
   return (
     <>
@@ -109,18 +139,28 @@ export default function ProductsPage() {
       )}
 
       <Card>
+        {isFiltered && (
+          <div className="flex justify-end border-b border-slate-100 px-4 py-2">
+            <Button size="sm" variant="ghost" onClick={clearAll}>
+              Clear column filters
+            </Button>
+          </div>
+        )}
+
         {query.isLoading ? (
           <Spinner />
         ) : query.isError ? (
           <ErrorState error={query.error} />
-        ) : rows.length === 0 ? (
+        ) : (query.data?.length ?? 0) === 0 ? (
           <EmptyState title="No products found" />
         ) : (
           <Table>
             <thead>
               <tr>
                 <Th {...th("prodId")}>Code</Th>
-                <Th {...th("prodName")}>Name</Th>
+                <Th {...th("prodName")} filter={colFilter("prodName")}>
+                  Name
+                </Th>
                 <Th align="right" {...th("unitPrice1")}>
                   Price 1
                 </Th>
@@ -136,53 +176,70 @@ export default function ProductsPage() {
                 <Th align="right" {...th("unitPrice5")}>
                   Price 5
                 </Th>
-                <Th {...th("cut")}>Cut (W×H)</Th>
+                <Th {...th("cut")} filter={colFilter("cut")}>
+                  Cut (W×H)
+                </Th>
                 <Th>Flags</Th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {rows.map((product) => (
-                <tr key={product.prodId} className="hover:bg-slate-50">
-                  <Td>
-                    <span className="font-medium text-slate-900">
-                      {product.prodId}
-                    </span>
-                  </Td>
-                  <Td>
-                    <span className="block max-w-64 truncate">
-                      {text(product.prodName)}
-                    </span>
-                  </Td>
-                  <Td align="right">{money(product.unitPrice1)}</Td>
-                  <Td align="right">{money(product.unitPrice2)}</Td>
-                  <Td align="right">{money(product.unitPrice3)}</Td>
-                  <Td align="right">{money(product.unitPrice4)}</Td>
-                  <Td align="right">{money(product.unitPrice5)}</Td>
-                  <Td>
-                    {product.cutWidth != null && product.cutHeight != null
-                      ? `${product.cutWidth} × ${product.cutHeight}`
-                      : "—"}
-                  </Td>
-                  <Td>
-                    <div className="flex flex-wrap gap-1">
-                      {product.suppressesStampJob && (
-                        <Badge tone="amber">NOSTAMP</Badge>
-                      )}
-                      {product.typeset?.trim() && (
-                        <Badge tone="sky">Typeset</Badge>
-                      )}
-                    </div>
-                  </Td>
+              {rows.length === 0 ? (
+                <tr>
+                  <td colSpan={9} className="px-4 py-8">
+                    <EmptyState
+                      title="No products match the selected filters"
+                      action={
+                        <Button size="sm" variant="secondary" onClick={clearAll}>
+                          Clear column filters
+                        </Button>
+                      }
+                    />
+                  </td>
                 </tr>
-              ))}
+              ) : (
+                rows.map((product) => (
+                  <tr key={product.prodId} className="hover:bg-slate-50">
+                    <Td>
+                      <span className="font-medium text-slate-900">
+                        {product.prodId}
+                      </span>
+                    </Td>
+                    <Td>
+                      <span className="block max-w-64 truncate">
+                        {text(product.prodName)}
+                      </span>
+                    </Td>
+                    <Td align="right">{money(product.unitPrice1)}</Td>
+                    <Td align="right">{money(product.unitPrice2)}</Td>
+                    <Td align="right">{money(product.unitPrice3)}</Td>
+                    <Td align="right">{money(product.unitPrice4)}</Td>
+                    <Td align="right">{money(product.unitPrice5)}</Td>
+                    <Td>
+                      {product.cutWidth != null && product.cutHeight != null
+                        ? `${product.cutWidth} × ${product.cutHeight}`
+                        : "—"}
+                    </Td>
+                    <Td>
+                      <div className="flex flex-wrap gap-1">
+                        {product.suppressesStampJob && (
+                          <Badge tone="amber">NOSTAMP</Badge>
+                        )}
+                        {product.typeset?.trim() && (
+                          <Badge tone="sky">Typeset</Badge>
+                        )}
+                      </div>
+                    </Td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </Table>
         )}
 
-        {(query.data?.length ?? 0) > 200 && (
+        {(filtered?.length ?? 0) > 200 && (
           <p className="border-t border-slate-100 px-4 py-2 text-xs text-slate-500">
-            Showing 200 of {query.data?.length} products. Refine the search to narrow
-            them.
+            Showing 200 of {filtered?.length} products. Refine the search or filters to
+            narrow them.
           </p>
         )}
       </Card>

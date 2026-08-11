@@ -28,6 +28,8 @@ export function ProductPicker({
   const [open, setOpen] = useState(false);
   const [highlight, setHighlight] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [focusPending, setFocusPending] = useState(false);
 
   const debounced = useDebounced(query, 250);
 
@@ -49,15 +51,48 @@ export function ProductPicker({
 
   useEffect(() => setHighlight(0), [debounced]);
 
+  // Once a selected product is cleared (via F2), the search input mounts fresh on the
+  // next render — focus it then, rather than racing the DOM update.
+  useEffect(() => {
+    if (focusPending && !value) {
+      inputRef.current?.focus();
+      setFocusPending(false);
+    }
+  }, [focusPending, value]);
+
   const select = (product: SosetProduct) => {
     onChange(product);
     setQuery("");
     setOpen(false);
   };
 
+  /**
+   * F2 replicates the VB6 shortcut that opened GetProd.frm from the product field.
+   * Bound at the window level (like Modal's Escape handler) rather than to a specific
+   * element, so it works regardless of what currently has focus.
+   */
+  useEffect(() => {
+    const handler = (event: KeyboardEvent) => {
+      if (event.key !== "F2") return;
+      event.preventDefault();
+      if (value) {
+        onChange(null);
+        setFocusPending(true);
+      } else {
+        inputRef.current?.focus();
+      }
+      setOpen(true);
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [value, onChange]);
+
   if (value) {
     return (
-      <div className="rounded-md bg-white px-2.5 py-1.5 ring-1 ring-inset ring-slate-300">
+      <div
+        title="Press F2 to search for a different product"
+        className="rounded-md bg-white px-2.5 py-1.5 ring-1 ring-inset ring-slate-300"
+      >
         <div className="flex items-center justify-between gap-2 text-sm">
           <span className="min-w-0 truncate">
             <span className="font-medium text-slate-900">{value.prodId}</span>
@@ -85,6 +120,7 @@ export function ProductPicker({
       <div className="relative">
         <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
         <input
+          ref={inputRef}
           type="text"
           value={query}
           autoFocus={autoFocus}

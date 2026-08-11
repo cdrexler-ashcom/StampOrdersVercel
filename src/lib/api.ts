@@ -52,7 +52,7 @@ interface RequestOptions {
   method?: "GET" | "POST" | "PUT" | "DELETE";
   body?: unknown;
   signal?: AbortSignal;
-  query?: Record<string, string | number | boolean | null | undefined>;
+  query?: Record<string, string | number | boolean | string[] | null | undefined>;
 }
 
 function buildUrl(path: string, query?: RequestOptions["query"]): string {
@@ -61,6 +61,17 @@ function buildUrl(path: string, query?: RequestOptions["query"]): string {
   const params = new URLSearchParams();
   for (const [key, value] of Object.entries(query)) {
     if (value === null || value === undefined || value === "") continue;
+
+    if (Array.isArray(value)) {
+      // Repeated key per value (?title=Foo&title=Bar), which is what the API's minimal
+      // endpoints bind string[]? parameters from — used for column filter selections.
+      for (const item of value) {
+        if (item === "") continue;
+        params.append(key, item);
+      }
+      continue;
+    }
+
     params.set(key, String(value));
   }
 
