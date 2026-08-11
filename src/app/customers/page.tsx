@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 
 import {
   Badge,
+  Button,
   Card,
   EmptyState,
   ErrorState,
@@ -17,7 +18,9 @@ import {
   Th,
 } from "@/components/ui";
 import { customers } from "@/lib/endpoints";
+import { useFilterableTable } from "@/lib/useFilterableTable";
 import { text } from "@/lib/format";
+import type { Customer } from "@/types/api";
 
 /** Columns the API's GET /api/customers accepts as `sortBy`. */
 type SortKey = "accountNo" | "title" | "address3" | "phoneNo" | "priceCode" | "discPct";
@@ -68,6 +71,18 @@ export default function CustomersPage() {
     sortDirection: sort?.key === key ? sort.direction : null,
   });
 
+  // Column filtering runs client-side over whatever page of rows the search returned —
+  // like sorting before it was moved server-side, this only sees the currently loaded
+  // matches (capped at 100). Account number and phone aren't offered as filters since
+  // they're effectively unique per row, so a value list wouldn't be useful there.
+  const { filtered, isFiltered, clearAll, colFilter } = useFilterableTable(query.data, {
+    accountNo: (c: Customer) => c.accountNo?.trim() ?? "",
+    title: (c: Customer) => c.title?.trim() ?? "",
+    address3: (c: Customer) => c.address3?.trim() ?? "",
+    priceCode: (c: Customer) => (c.priceCode != null ? String(c.priceCode) : ""),
+    discPct: (c: Customer) => (c.discPct != null ? `${c.discPct}%` : ""),
+  });
+
   return (
     <>
       <PageHeader
@@ -75,8 +90,8 @@ export default function CustomersPage() {
         description="Search by account number or name."
       />
 
-      <div className="mb-4 max-w-md">
-        <div className="relative">
+      <div className="mb-4 flex flex-wrap items-center gap-3">
+        <div className="relative max-w-md flex-1">
           <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
           <input
             type="text"
@@ -87,6 +102,12 @@ export default function CustomersPage() {
             className="block w-full rounded-md border-0 bg-white py-2 pl-8 pr-2.5 text-sm text-slate-900 ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-sky-600"
           />
         </div>
+
+        {isFiltered && (
+          <Button size="sm" variant="ghost" onClick={clearAll}>
+            Clear column filters
+          </Button>
+        )}
       </div>
 
       <Card>
@@ -96,18 +117,31 @@ export default function CustomersPage() {
           <ErrorState error={query.error} />
         ) : (query.data?.length ?? 0) === 0 ? (
           <EmptyState title="No customers found" />
+        ) : (filtered?.length ?? 0) === 0 ? (
+          <EmptyState
+            title="No customers match the selected filters"
+            action={
+              <Button size="sm" variant="secondary" onClick={clearAll}>
+                Clear column filters
+              </Button>
+            }
+          />
         ) : (
           <Table>
             <thead>
               <tr>
-                <Th {...th("accountNo")}>Account</Th>
-                <Th {...th("title")}>Name</Th>
-                <Th {...th("address3")}>Suburb</Th>
+                <Th {...th("accountNo")} filter={colFilter("title")}>Account</Th>
+                <Th {...th("title")} filter={colFilter("title")}>
+                  Name
+                </Th>
+                <Th {...th("address3")} filter={colFilter("address3")}>
+                  Suburb
+                </Th>
                 <Th {...th("phoneNo")}>Phone</Th>
-                <Th align="right" {...th("priceCode")}>
+                <Th align="right" {...th("priceCode")} filter={colFilter("priceCode")}>
                   Price code
                 </Th>
-                <Th align="right" {...th("discPct")}>
+                <Th align="right" {...th("discPct")} filter={colFilter("discPct")}>
                   Discount
                 </Th>
                 <Th>Flags</Th>
@@ -115,7 +149,7 @@ export default function CustomersPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {query.data?.map((customer) => (
+              {filtered?.map((customer) => (
                 <tr key={customer.uniqueId} className="hover:bg-slate-50">
                   <Td>
                     <span className="font-medium text-slate-900">
@@ -158,7 +192,9 @@ export default function CustomersPage() {
 
         {(query.data?.length ?? 0) === 100 && (
           <p className="border-t border-slate-100 px-4 py-2 text-xs text-slate-500">
-            Showing the first 100 matches. Refine the search to narrow them.
+            Showing the first 100 matches
+            {isFiltered ? ", before column filters are applied" : ""}. Refine the search to
+            narrow them.
           </p>
         )}
       </Card>

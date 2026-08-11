@@ -3,6 +3,7 @@
 import clsx from "clsx";
 import { ChevronDown, ChevronUp, ChevronsUpDown, Loader2, X } from "lucide-react";
 import { useEffect, type ReactNode } from "react";
+import { ColumnFilterMenu } from "@/components/ColumnFilterMenu";
 
 // ---------------------------------------------------------------------------------------
 // Button
@@ -259,19 +260,38 @@ export function Table({ children }: { children: ReactNode }) {
  * `"asc" | "desc"` when it is. Passing `onSort` turns the header into a clickable button
  * with a sort indicator; omit it for plain, non-sortable columns.
  */
+/** Options accepted by `Th`'s `filter` prop — spread `colFilter("key")` from `useFilterableTable`. */
+type ThFilter = {
+  options: string[];
+  selected: string[];
+  onChange: (values: string[]) => void;
+};
+
 export function Th({
   children,
   align = "left",
   className,
   onSort,
   sortDirection,
+  filter,
 }: {
   children?: ReactNode;
   align?: "left" | "right" | "center";
   className?: string;
   onSort?: () => void;
   sortDirection?: "asc" | "desc" | null;
+  /** Adds a funnel icon that opens a checkbox popup of the column's distinct values. */
+  filter?: ThFilter;
 }) {
+  const filterMenu = filter && (
+    <ColumnFilterMenu
+      label={typeof children === "string" ? children : "column"}
+      options={filter.options}
+      selected={filter.selected}
+      onChange={filter.onChange}
+    />
+  );
+
   if (!onSort) {
     return (
       <th
@@ -284,7 +304,15 @@ export function Th({
           className,
         )}
       >
-        {children}
+        <span
+          className={clsx(
+            "inline-flex items-center gap-1",
+            align === "right" && "flex-row-reverse",
+          )}
+        >
+          {children}
+          {filterMenu}
+        </span>
       </th>
     );
   }
@@ -306,17 +334,24 @@ export function Th({
         className,
       )}
     >
-      <button
-        type="button"
-        onClick={onSort}
-        className={clsx(
-          "inline-flex items-center gap-1 hover:text-slate-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-400",
-          align === "right" && "flex-row-reverse",
-        )}
+      <span
+        className={clsx("inline-flex items-center gap-1", align === "right" && "flex-row-reverse")}
       >
-        {children}
-        <Icon className={clsx("size-3.5", sortDirection ? "text-slate-700" : "text-slate-400")} />
-      </button>
+        <button
+          type="button"
+          onClick={onSort}
+          className={clsx(
+            "inline-flex items-center gap-1 hover:text-slate-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-400",
+            align === "right" && "flex-row-reverse",
+          )}
+        >
+          {children}
+          <Icon
+            className={clsx("size-3.5", sortDirection ? "text-slate-700" : "text-slate-400")}
+          />
+        </button>
+        {filterMenu}
+      </span>
     </th>
   );
 }
