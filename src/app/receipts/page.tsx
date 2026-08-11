@@ -30,8 +30,9 @@ import {
   capturesChequeDetails,
 } from "@/types/api";
 import { date, money, roundCents, text, todayInput } from "@/lib/format";
+import { useFilterableTable } from "@/lib/useFilterableTable";
 import { useSortableTable } from "@/lib/useSortableTable";
-import type { Customer, RecordReceiptRequest } from "@/types/api";
+import type { Customer, OpenItem, RecordReceiptRequest } from "@/types/api";
 
 /**
  * Receipt entry and allocation.
@@ -85,6 +86,19 @@ export default function ReceiptsPage() {
     originalAmount: (i) => i.originalAmount,
     paidAmount: (i) => i.paidAmount,
     outstanding: (i) => i.outstanding,
+  });
+
+  // Only Type is offered as a filter here — Document and Detail are effectively free-form
+  // per row on a single customer's (usually short) open-item list, so a value list
+  // wouldn't narrow much.
+  const { filtered, isFiltered, clearAll, colFilter } = useFilterableTable(sorted, {
+    date: (i: OpenItem) => i.date ? date(i.date) : "",
+    type: (i: OpenItem) => i.type?.trim() ?? "",
+    docNo: (i: OpenItem) => i.docNo?.trim() ?? "",
+    detail: (i: OpenItem) => i.detail?.trim() ?? "",
+    originalAmount: (i: OpenItem) => String(i.originalAmount),
+    paidAmount: (i: OpenItem) => String(i.paidAmount),
+    outstanding: (i: OpenItem) => String(i.outstanding),
   });
 
   const pickCustomer = (next: Customer | null) => {
@@ -251,6 +265,11 @@ export default function ReceiptsPage() {
                     <Button size="sm" onClick={() => setAllocations({})}>
                       Clear
                     </Button>
+                    {isFiltered && (
+                      <Button size="sm" variant="ghost" onClick={clearAll}>
+                        Clear column filters
+                      </Button>
+                    )}
                   </>
                 ) : undefined
               }
@@ -270,58 +289,67 @@ export default function ReceiptsPage() {
                 <thead>
                   <tr>
                     <Th {...th("date")}>Date</Th>
-                    <Th {...th("type")}>Type</Th>
-                    <Th {...th("docNo")}>Document</Th>
-                    <Th {...th("detail")}>Detail</Th>
-                    <Th align="right" {...th("originalAmount")}>
-                      Original
-                    </Th>
-                    <Th align="right" {...th("paidAmount")}>
-                      Paid
-                    </Th>
-                    <Th align="right" {...th("outstanding")}>
-                      Outstanding
-                    </Th>
+                    <Th {...th("type")} filter={colFilter("type")}>Type</Th>
+                    <Th {...th("docNo")} filter={colFilter("docNo")}>Document</Th>
+                    <Th {...th("detail")} filter={colFilter("detail")}>Detail</Th>
+                    <Th align="right" {...th("originalAmount")} filter={colFilter("originalAmount")}>Original</Th>
+                    <Th align="right" {...th("paidAmount")} filter={colFilter("paidAmount")}>Paid</Th>
+                    <Th align="right" {...th("outstanding")} filter={colFilter("outstanding")}>Outstanding</Th>
                     <Th align="right">Allocate</Th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {sorted?.map((item) => (
-                    <tr key={item.id} className="hover:bg-slate-50">
-                      <Td>{date(item.date)}</Td>
-                      <Td>
-                        <Badge tone={item.type === "Payment" ? "green" : "slate"}>
-                          {text(item.type)}
-                        </Badge>
-                      </Td>
-                      <Td>{text(item.docNo)}</Td>
-                      <Td>
-                        <span className="block max-w-40 truncate">
-                          {text(item.detail)}
-                        </span>
-                      </Td>
-                      <Td align="right">{money(item.originalAmount)}</Td>
-                      <Td align="right">{money(item.paidAmount)}</Td>
-                      <Td align="right" className="font-medium">
-                        {money(item.outstanding)}
-                      </Td>
-                      <Td align="right">
-                        <Input
-                          type="number"
-                          step="0.01"
-                          value={allocations[item.id] ?? ""}
-                          placeholder="0.00"
-                          onChange={(event) =>
-                            setAllocations((current) => ({
-                              ...current,
-                              [item.id]: event.target.value,
-                            }))
+                  {(filtered?.length ?? 0) === 0 ? (
+                    <tr>
+                      <td colSpan={8} className="px-4 py-8">
+                        <EmptyState
+                          title="No items match the selected filters"
+                          action={
+                            <Button size="sm" variant="secondary" onClick={clearAll}>
+                              Clear column filters
+                            </Button>
                           }
-                          className="w-24 text-right"
                         />
-                      </Td>
+                      </td>
                     </tr>
-                  ))}
+                  ) : (
+                    filtered?.map((item) => (
+                      <tr key={item.id} className="hover:bg-slate-50">
+                        <Td>{date(item.date)}</Td>
+                        <Td>
+                          <Badge tone={item.type === "Payment" ? "green" : "slate"}>
+                            {text(item.type)}
+                          </Badge>
+                        </Td>
+                        <Td>{text(item.docNo)}</Td>
+                        <Td>
+                          <span className="block max-w-40 truncate">
+                            {text(item.detail)}
+                          </span>
+                        </Td>
+                        <Td align="right">{money(item.originalAmount)}</Td>
+                        <Td align="right">{money(item.paidAmount)}</Td>
+                        <Td align="right" className="font-medium">
+                          {money(item.outstanding)}
+                        </Td>
+                        <Td align="right">
+                          <Input
+                            type="number"
+                            step="0.01"
+                            value={allocations[item.id] ?? ""}
+                            placeholder="0.00"
+                            onChange={(event) =>
+                              setAllocations((current) => ({
+                                ...current,
+                                [item.id]: event.target.value,
+                              }))
+                            }
+                            className="w-24 text-right"
+                          />
+                        </Td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </Table>
             )}
