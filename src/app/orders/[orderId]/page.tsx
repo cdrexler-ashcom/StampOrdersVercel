@@ -1,10 +1,10 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { AddLineDialog } from "@/components/AddLineDialog";
 import { CreditCheckPanel } from "@/components/CreditCheckPanel";
@@ -34,6 +34,7 @@ import {
   qty as formatQty,
   text,
 } from "@/lib/format";
+import { getOrderListContext } from "@/lib/orderListContext";
 
 /**
  * Order workspace — the web replacement for Form2 (invoice.Frm), the largest form in the
@@ -57,6 +58,26 @@ export default function OrderDetailPage() {
 
   const [addLineOpen, setAddLineOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+
+  // The order sequence from wherever the Orders list last stood — read once on mount
+  // rather than per-orderId, so Previous/Next keep stepping through the same set you
+  // opened this record from rather than silently re-adopting whatever the list shows now.
+  const [listContext, setListContext] = useState<number[] | null>(null);
+  useEffect(() => {
+    setListContext(getOrderListContext());
+  }, []);
+
+  const contextIndex = listContext ? listContext.indexOf(orderId) : -1;
+  const prevOrderId =
+    listContext && contextIndex > 0 ? listContext[contextIndex - 1] : null;
+  const nextOrderId =
+    listContext && contextIndex >= 0 && contextIndex < listContext.length - 1
+      ? listContext[contextIndex + 1]
+      : null;
+  const positionLabel =
+    listContext && contextIndex >= 0
+      ? `${contextIndex + 1} of ${listContext.length}`
+      : null;
 
   const orderQuery = useQuery({
     queryKey: ["order", orderId],
@@ -110,6 +131,46 @@ export default function OrderDetailPage() {
         description={text(order.custTitle, "Customer not set")}
         actions={
           <>
+            {contextIndex >= 0 && (
+              <div className="mr-1 flex items-center gap-1 border-r border-slate-200 pr-3">
+                {prevOrderId ? (
+                  <Link href={`/orders/${prevOrderId}`}>
+                    <Button variant="ghost" size="sm" title="Previous order in this list">
+                      <ChevronLeft className="size-3.5" />
+                      Previous
+                    </Button>
+                  </Link>
+                ) : (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    disabled
+                    title="No previous order in this list"
+                  >
+                    <ChevronLeft className="size-3.5" />
+                    Previous
+                  </Button>
+                )}
+
+                {positionLabel && (
+                  <span className="px-1 text-xs text-slate-500">{positionLabel}</span>
+                )}
+
+                {nextOrderId ? (
+                  <Link href={`/orders/${nextOrderId}`}>
+                    <Button variant="ghost" size="sm" title="Next order in this list">
+                      Next
+                      <ChevronRight className="size-3.5" />
+                    </Button>
+                  </Link>
+                ) : (
+                  <Button variant="ghost" size="sm" disabled title="No next order in this list">
+                    Next
+                    <ChevronRight className="size-3.5" />
+                  </Button>
+                )}
+              </div>
+            )}
             <Button variant="danger" onClick={() => setConfirmDelete(true)}>
               <Trash2 className="size-3.5" />
               Delete

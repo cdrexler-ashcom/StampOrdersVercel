@@ -3,7 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Plus } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { CustomerPicker } from "@/components/CustomerPicker";
 import {
@@ -23,6 +23,7 @@ import {
 } from "@/components/ui";
 import { orders } from "@/lib/endpoints";
 import { date, text } from "@/lib/format";
+import { setOrderListContext } from "@/lib/orderListContext";
 import type { Customer } from "@/types/api";
 
 /** Columns the API's GET /api/orders accepts as `sortBy`. */
@@ -63,6 +64,14 @@ export default function OrdersPage() {
         sortDir: sort?.direction,
       }),
   });
+
+  // Snapshot the visible order sequence whenever it changes, so the detail page can offer
+  // Previous/Next through this same filtered, sorted set.
+  useEffect(() => {
+    if (query.data) {
+      setOrderListContext(query.data.map((order) => order.orderId));
+    }
+  }, [query.data]);
 
   const th = (key: SortKey) => ({
     onSort: () => toggleSort(key),
