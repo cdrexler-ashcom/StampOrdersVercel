@@ -24,9 +24,10 @@ import {
 } from "@/components/ui";
 import { deposits } from "@/lib/endpoints";
 import { date, money, text, todayInput } from "@/lib/format";
+import { useFilterableTable } from "@/lib/useFilterableTable";
 import { useSortableTable } from "@/lib/useSortableTable";
 import { PAYMENT_TYPES } from "@/types/api";
-import type { PostDepositRequest } from "@/types/api";
+import type { BankableReceipt, PostDepositRequest } from "@/types/api";
 
 /**
  * Bank deposits.
@@ -80,6 +81,18 @@ export default function DepositsPage() {
     paymentType: (r) => r.paymentType,
     description: (r) => r.description,
     amount: (r) => r.amount,
+  });
+
+  // Only Customer gets a column filter here — Type already has its own dedicated
+  // checkbox row above the table (carried over from the legacy screen's five payment-type
+  // checkboxes), so a second, overlapping funnel filter on the same column would be
+  // redundant. Description is free text per receipt, so a value list wouldn't narrow much.
+  const { filtered, isFiltered, clearAll, colFilter } = useFilterableTable(sorted, {
+    receiptNo: (r: BankableReceipt) => String(r.receiptNo ?? r.id),
+    transDate: (r: BankableReceipt) => r.transDate ? date(r.transDate) : "",
+    customer: (r: BankableReceipt) => r.customerTitle?.trim() ?? String(r.custId ?? ""),
+    paymentType: (r: BankableReceipt) => r.paymentType?.trim() ?? "",
+    description: (r: BankableReceipt) => r.description?.trim() ?? "",
   });
 
   const selectedReceipts = visible.filter((receipt) => selected.has(receipt.id));
@@ -139,13 +152,13 @@ export default function DepositsPage() {
           <Card>
             <CardHeader
               title="Receipts to bank"
-              description={`${visible.length} of ${bankable.data?.length ?? 0} shown`}
+              description={`${filtered?.length ?? 0} of ${bankable.data?.length ?? 0} shown`}
               actions={
                 <>
                   <Button
                     size="sm"
                     onClick={() =>
-                      setSelected(new Set(visible.map((receipt) => receipt.id)))
+                      setSelected(new Set((filtered ?? []).map((receipt) => receipt.id)))
                     }
                   >
                     Select all
@@ -153,6 +166,11 @@ export default function DepositsPage() {
                   <Button size="sm" onClick={() => setSelected(new Set())}>
                     Clear all
                   </Button>
+                  {isFiltered && (
+                    <Button size="sm" variant="ghost" onClick={clearAll}>
+                      Clear column filters
+                    </Button>
+                  )}
                 </>
               }
             />
@@ -185,46 +203,68 @@ export default function DepositsPage() {
                 <thead>
                   <tr>
                     <Th />
-                    <Th {...th("receiptNo")}>Receipt</Th>
-                    <Th {...th("transDate")}>Date</Th>
-                    <Th {...th("customer")}>Customer</Th>
-                    <Th {...th("paymentType")}>Type</Th>
-                    <Th {...th("description")}>Description</Th>
-                    <Th align="right" {...th("amount")}>
-                      Amount
+                    <Th {...th("receiptNo")} filter={colFilter("receiptNo")}>
+                      Receipt
+                    </Th>
+                    <Th {...th("transDate")} filter={colFilter("transDate")}>
+                      Date
+                    </Th>
+                    <Th {...th("customer")} filter={colFilter("customer")}>
+                      Customer
+                    </Th>
+                    <Th {...th("paymentType")} filter={colFilter("paymentType")}> 
+                      Type
+                    </Th>
+                    <Th {...th("description")} filter={colFilter("description")}>
+                      Description
                     </Th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {sorted?.map((receipt) => (
-                    <tr
-                      key={receipt.id}
-                      className={selected.has(receipt.id) ? "bg-sky-50" : "hover:bg-slate-50"}
-                    >
-                      <Td>
-                        <input
-                          type="checkbox"
-                          checked={selected.has(receipt.id)}
-                          onChange={() => toggle(receipt.id)}
-                          className="size-4 rounded border-slate-300 text-sky-700 focus:ring-sky-600"
+                  {(filtered?.length ?? 0) === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="px-4 py-8">
+                        <EmptyState
+                          title="No receipts match the selected filters"
+                          action={
+                            <Button size="sm" variant="secondary" onClick={clearAll}>
+                              Clear column filters
+                            </Button>
+                          }
                         />
-                      </Td>
-                      <Td>{receipt.receiptNo ?? receipt.id}</Td>
-                      <Td>{date(receipt.transDate)}</Td>
-                      <Td>{text(receipt.customerTitle ?? String(receipt.custId ?? ""))}</Td>
-                      <Td>
-                        <Badge tone="slate">{text(receipt.paymentType)}</Badge>
-                      </Td>
-                      <Td>
-                        <span className="block max-w-48 truncate">
-                          {text(receipt.description)}
-                        </span>
-                      </Td>
-                      <Td align="right" className="font-medium">
-                        {money(receipt.amount)}
-                      </Td>
+                      </td>
                     </tr>
-                  ))}
+                  ) : (
+                    filtered?.map((receipt) => (
+                      <tr
+                        key={receipt.id}
+                        className={selected.has(receipt.id) ? "bg-sky-50" : "hover:bg-slate-50"}
+                      >
+                        <Td>
+                          <input
+                            type="checkbox"
+                            checked={selected.has(receipt.id)}
+                            onChange={() => toggle(receipt.id)}
+                            className="size-4 rounded border-slate-300 text-sky-700 focus:ring-sky-600"
+                          />
+                        </Td>
+                        <Td>{receipt.receiptNo ?? receipt.id}</Td>
+                        <Td>{date(receipt.transDate)}</Td>
+                        <Td>{text(receipt.customerTitle ?? String(receipt.custId ?? ""))}</Td>
+                        <Td>
+                          <Badge tone="slate">{text(receipt.paymentType)}</Badge>
+                        </Td>
+                        <Td>
+                          <span className="block max-w-48 truncate">
+                            {text(receipt.description)}
+                          </span>
+                        </Td>
+                        <Td align="right" className="font-medium">
+                          {money(receipt.amount)}
+                        </Td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </Table>
             )}
