@@ -100,11 +100,34 @@ export interface OrderHeader {
   email: string | null;
   phoneNo: string | null;
   note: string | null;
+  paid: boolean;
   /**
    * Populated by GET /api/orders/{orderId}, which Includes them.
-   * GET /api/orders does not, so treat this as absent in list responses.
+   * GET /api/orders returns OrderListItem instead, so this is only present on the detail
+   * response.
    */
   lines?: OrderLine[];
+}
+
+/**
+ * A row from GET /api/orders (task A4). Carries a line count and line totals, computed by the
+ * same calculator the detail page uses, so the figures match. Totals are line totals only;
+ * header freight is not included, matching the detail Totals card.
+ */
+export interface OrderListItem {
+  orderId: number;
+  custId: number | null;
+  custTitle: string | null;
+  date: string | null;
+  binNo: number | null;
+  runNo: string | null;
+  credit: boolean;
+  freightApplies: boolean;
+  direct: boolean;
+  lineCount: number;
+  netAmount: number;
+  gstAmount: number;
+  grossAmount: number;
 }
 
 export interface Customer {
@@ -416,6 +439,48 @@ export interface CreateOrderRequest {
 
 export interface AddOrderLineRequest {
   jobNo: string;
+  product: string;
+  qty: number;
+  price?: number | null;
+  discPct?: number | null;
+  priceIncGst?: boolean | null;
+  custOrderNo?: string | null;
+  details?: string | null;
+  colour?: string | null;
+  colourDesc?: string | null;
+  wildSearch?: string | null;
+  stampLabel?: boolean;
+  stampLabelCode?: string | null;
+}
+
+/** PUT /api/orders/{orderId} (task A1). Customer, bin and credit flag are not editable. */
+export interface UpdateOrderRequest {
+  orderDate?: string | null;
+  runNo?: string | null;
+  delCode?: string | null;
+  email?: string | null;
+  phoneNo?: string | null;
+  note?: string | null;
+  delName?: string | null;
+  delAdr0?: string | null;
+  delAdr1?: string | null;
+  delAdr2?: string | null;
+  delAdr3?: string | null;
+  invAdr1?: string | null;
+  invAdr2?: string | null;
+  invAdr3?: string | null;
+  invPostCode?: string | null;
+  direct: boolean;
+  freightApplies: boolean;
+  freight?: number | null;
+  priceCode?: number | null;
+  invoiceComp?: string | null;
+  invoiceApplied?: string | null;
+  paid: boolean;
+}
+
+/** PUT /api/orders/{orderId}/lines/{jobNo} (task A2). Job number is the route key, immutable. */
+export interface UpdateOrderLineRequest {
   product: string;
   qty: number;
   price?: number | null;

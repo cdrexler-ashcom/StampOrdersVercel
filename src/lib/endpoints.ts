@@ -16,8 +16,11 @@ import type {
   OpenItem,
   OrderHeader,
   OrderLine,
+  OrderListItem,
   OrderTotalsResult,
   PostDepositRequest,
+  UpdateOrderLineRequest,
+  UpdateOrderRequest,
   PriceResult,
   ProcessReceiptsResult,
   Receipt,
@@ -47,7 +50,7 @@ export const orders = {
       sortBy?: string;
       sortDir?: "asc" | "desc";
     } = {},
-  ) => api.get<OrderHeader[]>("/api/orders", params),
+  ) => api.get<OrderListItem[]>("/api/orders", params),
 
   /** GET /api/orders/{orderId} */
   get: (orderId: number) => api.get<OrderHeader>(`/api/orders/${orderId}`),
@@ -55,9 +58,24 @@ export const orders = {
   /** POST /api/orders */
   create: (body: CreateOrderRequest) => api.post<OrderHeader>("/api/orders", body),
 
+  /** PUT /api/orders/{orderId} */
+  update: (orderId: number, body: UpdateOrderRequest) =>
+    api.put<OrderHeader>(`/api/orders/${orderId}`, body),
+
   /** POST /api/orders/{orderId}/lines */
   addLine: (orderId: number, body: AddOrderLineRequest) =>
     api.post<OrderLine>(`/api/orders/${orderId}/lines`, body),
+
+  /** PUT /api/orders/{orderId}/lines/{jobNo} */
+  updateLine: (orderId: number, jobNo: string, body: UpdateOrderLineRequest) =>
+    api.put<OrderLine>(
+      `/api/orders/${orderId}/lines/${encodeURIComponent(jobNo)}`,
+      body,
+    ),
+
+  /** DELETE /api/orders/{orderId}/lines/{jobNo} */
+  removeLine: (orderId: number, jobNo: string) =>
+    api.delete<void>(`/api/orders/${orderId}/lines/${encodeURIComponent(jobNo)}`),
 
   /** GET /api/orders/{orderId}/totals */
   totals: (orderId: number) =>

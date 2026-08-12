@@ -1,13 +1,15 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronLeft, ChevronRight, Plus, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Pencil, Plus, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { AddLineDialog } from "@/components/AddLineDialog";
 import { CreditCheckPanel } from "@/components/CreditCheckPanel";
+import { EditLineDialog } from "@/components/EditLineDialog";
+import { EditOrderDialog } from "@/components/EditOrderDialog";
 import {
   Badge,
   Button,
@@ -35,6 +37,7 @@ import {
   text,
 } from "@/lib/format";
 import { getOrderListContext } from "@/lib/orderListContext";
+import type { OrderLine } from "@/types/api";
 
 /**
  * Order workspace — the web replacement for Form2 (invoice.Frm), the largest form in the
@@ -58,6 +61,9 @@ export default function OrderDetailPage() {
 
   const [addLineOpen, setAddLineOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [editOrderOpen, setEditOrderOpen] = useState(false);
+  const [editLine, setEditLine] = useState<OrderLine | null>(null);
+  const [deleteLine, setDeleteLine] = useState<OrderLine | null>(null);
 
   // The order sequence from wherever the Orders list last stood — read once on mount
   // rather than per-orderId, so Previous/Next keep stepping through the same set you
@@ -104,6 +110,16 @@ export default function OrderDetailPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["orders"] });
       router.push("/orders");
+    },
+  });
+
+  const deleteLineMutation = useMutation({
+    mutationFn: (jobNo: string) => orders.removeLine(orderId, jobNo),
+    onSuccess: (_data, jobNo) => {
+      queryClient.invalidateQueries({ queryKey: ["order", orderId] });
+      queryClient.invalidateQueries({ queryKey: ["order-totals", orderId] });
+      queryClient.invalidateQueries({ queryKey: ["soset", "stamp", jobNo] });
+      setDeleteLine(null);
     },
   });
 
@@ -171,6 +187,10 @@ export default function OrderDetailPage() {
                 )}
               </div>
             )}
+            <Button onClick={() => setEditOrderOpen(true)}>
+              <Pencil className="size-3.5" />
+              Edit
+            </Button>
             <Button variant="danger" onClick={() => setConfirmDelete(true)}>
               <Trash2 className="size-3.5" />
               Delete
@@ -252,6 +272,7 @@ export default function OrderDetailPage() {
                     <Th align="right">GST</Th>
                     <Th align="right">Total</Th>
                     <Th>Soset</Th>
+                    <Th />
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -288,6 +309,26 @@ export default function OrderDetailPage() {
                       </Td>
                       <Td>
                         <StampCell jobNo={line.jobNo} />
+                      </Td>
+                      <Td align="right">
+                        <div className="flex justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            title="Edit line"
+                            onClick={() => setEditLine(line)}
+                          >
+                            <Pencil className="size-3.5" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            title="Delete line"
+                            onClick={() => setDeleteLine(line)}
+                          >
+                            <Trash2 className="size-3.5" />
+                          </Button>
+                        </div>
                       </Td>
                     </tr>
                   ))}
@@ -386,6 +427,49 @@ export default function OrderDetailPage() {
         customer={customer}
         defaultDiscountPct={customer?.discPct ?? 0}
       />
+
+      <EditOrderDialog
+        open={editOrderOpen}
+        onClose={() => setEditOrderOpen(false)}
+        order={order}
+      />
+
+      <EditLineDialog
+        open={editLine !== null}
+        onClose={() => setEditLine(null)}
+        orderId={orderId}
+        line={editLine}
+        customer={customer}
+      />
+
+      <Modal
+        open={deleteLine !== null}
+        onClose={() => setDeleteLine(null)}
+        title={deleteLine ? `Delete line ${deleteLine.jobNo}?` : "Delete line"}
+        description="The line is removed and its Soset stamp job voided."
+        footer={
+          <>
+            <Button onClick={() => setDeleteLine(null)}>Cancel</Button>
+            <Button
+              variant="danger"
+              loading={deleteLineMutation.isPending}
+              onClick={() => deleteLine && deleteLineMutation.mutate(deleteLine.jobNo)}
+            >
+              Delete line
+            </Button>
+          </>
+        }
+      >
+        {deleteLineMutation.isError ? (
+          <Notice tone="red" title="Line was not deleted">
+            {(deleteLineMutation.error as Error).message}
+          </Notice>
+        ) : (
+          <p className="text-sm text-slate-600">
+            Line {deleteLine?.jobNo} ({deleteLine?.product}) will be removed.
+          </p>
+        )}
+      </Modal>
 
       <Modal
         open={confirmDelete}

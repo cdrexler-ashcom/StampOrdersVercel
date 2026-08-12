@@ -109,5 +109,8 @@ export const api = {
   post: <T>(path: string, body?: unknown, query?: RequestOptions["query"]) =>
     request<T>(path, { method: "POST", body, query }),
 
+  put: <T>(path: string, body?: unknown, query?: RequestOptions["query"]) =>
+    request<T>(path, { method: "PUT", body, query }),
+
   delete: <T>(path: string) => request<T>(path, { method: "DELETE" }),
 };

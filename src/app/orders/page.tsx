@@ -22,7 +22,7 @@ import {
   Th,
 } from "@/components/ui";
 import { orders } from "@/lib/endpoints";
-import { date, text } from "@/lib/format";
+import { date, money, text } from "@/lib/format";
 import { setOrderListContext } from "@/lib/orderListContext";
 import type { Customer } from "@/types/api";
 
@@ -143,6 +143,8 @@ export default function OrdersPage() {
                 <Th {...th("date")}>Date</Th>
                 <Th {...th("runNo")}>Run</Th>
                 <Th {...th("binNo")}>Bin</Th>
+                <Th align="right">Lines</Th>
+                <Th align="right">Value</Th>
                 <Th>Flags</Th>
                 <Th />
               </tr>
@@ -161,6 +163,12 @@ export default function OrdersPage() {
                   <Td>{date(order.date)}</Td>
                   <Td>{text(order.runNo)}</Td>
                   <Td>{order.binNo ?? "—"}</Td>
+                  <Td align="right" className="tabular-nums">
+                    {order.lineCount}
+                  </Td>
+                  <Td align="right" className="tabular-nums">
+                    {order.lineCount > 0 ? money(order.grossAmount) : "—"}
+                  </Td>
                   <Td>
                     <div className="flex flex-wrap gap-1">
                       {order.credit && <Badge tone="violet">Credit</Badge>}
