@@ -2,6 +2,7 @@
 
 import clsx from "clsx";
 import {
+  Archive,
   Banknote,
   Boxes,
   Bug,
@@ -57,6 +58,7 @@ const navigation = [
     items: [
       { href: "/customers", label: "Customers", icon: Users },
       { href: "/products", label: "Products", icon: Boxes },
+      { href: "/settings/bins", label: "Bins", icon: Archive },
       { href: "/system", label: "System", icon: Settings },
       { href: "/reports/debug", label: "Report debug", icon: Bug },
     ],

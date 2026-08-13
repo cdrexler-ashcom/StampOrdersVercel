@@ -31,6 +31,8 @@ export type PriceSource =
   | "AllCustomersRule"
   | "ProductPriceCode";
 
+export type BinStatus = "Free" | "Occupied";
+
 /** PaymentType is a static class of const strings, not an enum. */
 export const PAYMENT_TYPES = [
   "Cheque",
@@ -299,6 +301,11 @@ export interface SosetStamp {
   custInfo: string | null;
   [key: string]: unknown;
 }
+export interface Bin {
+  binNo: number;
+  description: string | null;
+  status: BinStatus;
+}
 
 // ---------------------------------------------------------------------------------------
 // Results
@@ -531,6 +538,19 @@ export interface PostDepositRequest {
 export interface AddTrackingRequest {
   invoiceNo: string;
   trackingNo: string;
+}
+
+export interface CreateBinRequest {
+  binNo: number;
+  description?: string | null;
+  /** Omitted means Free — a new tray is available to the allocator immediately. */
+  status?: BinStatus | null;
+}
+
+export interface UpdateBinRequest {
+  description?: string | null;
+  /** Omitted leaves the stored status alone; see the API's UpdateBinAsync. */
+  status?: BinStatus | null;
 }
 
 /** RFC 7807, as produced by the API's exception handler and Results.Problem. */

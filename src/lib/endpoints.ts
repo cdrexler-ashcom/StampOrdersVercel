@@ -30,6 +30,10 @@ import type {
   SosetStamp,
   SosetStatus,
   SosetTableInfo,
+  BinStatus,
+  Bin,
+  CreateBinRequest,
+  UpdateBinRequest,
 } from "@/types/api";
 
 /**
@@ -189,6 +193,24 @@ export const customers = {
 
   /** GET /api/customers/{custId} */
   get: (custId: number) => api.get<Customer>(`/api/customers/${custId}`),
+};
+
+export const bins = {
+  /** GET /api/bins */
+  list: (params: { status?: BinStatus } = {}) => api.get<Bin[]>("/api/bins", params),
+
+  /** GET /api/bins/{binNo} */
+  get: (binNo: number) => api.get<Bin>(`/api/bins/${binNo}`),
+
+  /** POST /api/bins */
+  create: (body: CreateBinRequest) => api.post<Bin>("/api/bins", body),
+
+  /** PUT /api/bins/{binNo} */
+  update: (binNo: number, body: UpdateBinRequest) =>
+    api.put<Bin>(`/api/bins/${binNo}`, body),
+
+  /** DELETE /api/bins/{binNo} */
+  remove: (binNo: number) => api.delete<void>(`/api/bins/${binNo}`),
 };
 
 export const reference = {
