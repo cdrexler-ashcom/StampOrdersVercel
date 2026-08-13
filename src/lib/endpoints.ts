@@ -34,6 +34,13 @@ import type {
   Bin,
   CreateBinRequest,
   UpdateBinRequest,
+  OverdueMessages,
+  StateInvoice,
+  UpdateInvoiceStateRequest,
+  CreateInvoiceStateRequest,
+  UpdateStampLabelRequest,
+  StampLabel,
+  CreateStampLabelRequest,
 } from "@/types/api";
 
 /**
@@ -211,6 +218,47 @@ export const bins = {
 
   /** DELETE /api/bins/{binNo} */
   remove: (binNo: number) => api.delete<void>(`/api/bins/${binNo}`),
+};
+
+export const stampLabels = {
+  /** GET /api/stamp-labels */
+  list: (params: { search?: string } = {}) => api.get<StampLabel[]>("/api/stamp-labels", params),
+  /** GET /api/stamp-labels/{labelCode} */
+  get: (labelCode: string) =>
+    api.get<StampLabel>(`/api/stamp-labels/${encodeURIComponent(labelCode)}`),
+  /** POST /api/stamp-labels */
+  create: (body: CreateStampLabelRequest) => api.post<StampLabel>("/api/stamp-labels", body),
+  /** PUT /api/stamp-labels/{labelCode} */
+  update: (labelCode: string, body: UpdateStampLabelRequest) =>
+    api.put<StampLabel>(`/api/stamp-labels/${encodeURIComponent(labelCode)}`, body),
+  /** DELETE /api/stamp-labels/{labelCode} */
+  remove: (labelCode: string) =>
+    api.delete<void>(`/api/stamp-labels/${encodeURIComponent(labelCode)}`),
+};
+
+export const invoiceStates = {
+  /** GET /api/invoice-states */
+  list: () => api.get<StateInvoice[]>("/api/invoice-states"),
+  /** GET /api/invoice-states/{state} */
+  get: (state: string) =>
+    api.get<StateInvoice>(`/api/invoice-states/${encodeURIComponent(state)}`),
+  /** POST /api/invoice-states */
+  create: (body: CreateInvoiceStateRequest) =>
+    api.post<StateInvoice>("/api/invoice-states", body),
+  /** PUT /api/invoice-states/{state} */
+  update: (state: string, body: UpdateInvoiceStateRequest) =>
+    api.put<StateInvoice>(`/api/invoice-states/${encodeURIComponent(state)}`, body),
+  /** DELETE /api/invoice-states/{state} */
+  remove: (state: string) =>
+    api.delete<void>(`/api/invoice-states/${encodeURIComponent(state)}`),
+};
+
+export const settings = {
+  /** GET /api/settings/overdue-messages */
+  overdueMessages: () => api.get<OverdueMessages>("/api/settings/overdue-messages"),
+  /** PUT /api/settings/overdue-messages */
+  updateOverdueMessages: (body: OverdueMessages) =>
+    api.put<OverdueMessages>("/api/settings/overdue-messages", body),
 };
 
 export const reference = {

@@ -553,6 +553,55 @@ export interface UpdateBinRequest {
   status?: BinStatus | null;
 }
 
+export interface StampLabel {
+  labelCode: string;
+  labelText: string | null;
+}
+
+export interface StateInvoice {
+  state: string;
+  name: string | null;
+  address1: string | null;
+  address2: string | null;
+  address3: string | null;
+  suburb: string | null;
+  stateCode: string | null;
+  postCode: string | null;
+  /** Column is `Letterhead`, property is `LetterHead` — the JSON field is `letterHead`. */
+  letterHead: string | null;
+  printBankDetails: boolean;
+  bankName: string | null;
+  bankBsb: string | null;
+  bankAcct: string | null;
+}
+
+export interface CreateStampLabelRequest { labelCode: string; labelText?: string | null; }
+export interface UpdateStampLabelRequest { labelText?: string | null; }
+
+export interface CreateInvoiceStateRequest {
+  state: string;
+  name?: string | null;
+  address1?: string | null;
+  address2?: string | null;
+  address3?: string | null;
+  suburb?: string | null;
+  stateCode?: string | null;
+  postCode?: string | null;
+  letterHead?: string | null;
+  printBankDetails: boolean;
+  bankName?: string | null;
+  bankBsb?: string | null;
+  bankAcct?: string | null;
+}
+
+export type UpdateInvoiceStateRequest = Omit<CreateInvoiceStateRequest, "state">;
+
+/** Both the read result and the write body for /api/settings/overdue-messages. */
+export interface OverdueMessages {
+  message1: string | null;
+  message2: string | null;
+}
+
 /** RFC 7807, as produced by the API's exception handler and Results.Problem. */
 export interface ProblemDetails {
   type?: string;
