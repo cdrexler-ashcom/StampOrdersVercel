@@ -41,6 +41,7 @@ import type {
   UpdateStampLabelRequest,
   StampLabel,
   CreateStampLabelRequest,
+  CustomerRequest,
 } from "@/types/api";
 
 /**
@@ -200,6 +201,10 @@ export const customers = {
 
   /** GET /api/customers/{custId} */
   get: (custId: number) => api.get<Customer>(`/api/customers/${custId}`),
+  /** POST /api/customers */
+  create: (body: CustomerRequest) => api.post<Customer>("/api/customers", body),
+  /** PUT /api/customers/{custId} */
+  update: (custId: number, body: CustomerRequest) => api.put<Customer>(`/api/customers/${custId}`, body),
 };
 
 export const bins = {

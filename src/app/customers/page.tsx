@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { Search } from "lucide-react";
+import { Plus, Search } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
@@ -29,9 +29,8 @@ type SortDirection = "asc" | "desc";
 /**
  * Customer list.
  *
- * The legacy CustEdit.frm was a 1,050-line maintenance form. The API exposes customers
- * read-only (GET /api/customers, GET /api/customers/{custId}), so this is a search and
- * view surface. Maintenance is recorded as an API gap in DESIGN-NOTES.md.
+ * The legacy CustEdit.frm was a 1,050-line maintenance form. This is the search and view
+ * surface; creation and editing (task C2) live on /customers/new and /customers/[custId].
  */
 export default function CustomersPage() {
   const [search, setSearch] = useState("");
@@ -107,6 +106,14 @@ export default function CustomersPage() {
       <PageHeader
         title="Customers"
         description="Search by account number or name."
+        actions={
+          <Link href="/customers/new">
+            <Button variant="primary">
+              <Plus className="size-3.5" />
+              New customer
+            </Button>
+          </Link>
+        }
       />
 
       <div className="mb-4 flex flex-wrap items-center gap-3">

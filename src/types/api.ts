@@ -611,6 +611,49 @@ export interface ProblemDetails {
   instance?: string;
 }
 
+// Put and Post request for /api/customers. (task C2) The API's CreateCustomerAsync and UpdateCustomerAsync use the same DTO, so the same interface is used for both.
+export interface CustomerRequest {
+  accountNo: string;
+  title: string | null;
+  address1: string | null;
+  address2: string | null;
+  address3: string | null;
+  postCode: string | null;
+  delivery1: string | null;
+  delivery2: string | null;
+  delivery3: string | null;
+  delPostCode: string | null;
+  delState: string | null;
+  phoneNo: string | null;
+  priceCode: number | null;
+  discPct: number | null;
+  gstExempt: boolean;
+  priceIncGst: boolean;
+  freight: boolean;
+  freightAmt: number | null;
+  deliveryThreshold: number | null;
+  defDelCode: string | null;
+  runNo: string | null;
+  creditStatus: string | null;
+  creditMsg: string | null;
+  emailInvoice: boolean;
+  accountsEmail: string | null;
+  deliveryDocket: boolean;
+  invoiceComp: string | null;
+  orderNote: string | null;
+  dealerReturnAddress: boolean;
+  webEmail: boolean;
+  webFreightApplies: boolean;
+  webDeliveryDocket: boolean;
+  webRunNo: string | null;
+  drawerName: string | null;
+  bankName: string | null;
+  bankBranch: string | null;
+  cardNumber: string | null;
+  expiryDate: string | null;
+  paidDefault: boolean;
+}
+
 // ---------------------------------------------------------------------------------------
 // Reports
 // ---------------------------------------------------------------------------------------
