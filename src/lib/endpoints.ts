@@ -44,6 +44,8 @@ import type {
   CustomerRequest,
   PricingRuleRequest,
   PricingRuleResult,
+  ImportOrdersRequest,
+  ImportResult,
 } from "@/types/api";
 
 /**
@@ -324,6 +326,19 @@ export const health = {
   },
 };
 
+// --- Imports -----------------------------------------------------------------------------
+export const imports = {
+  /** POST /api/imports/orders (D1). No file — customer is optional, falls back server-side. */
+  orders: (body: ImportOrdersRequest = {}) =>
+    api.post<ImportResult>("/api/imports/orders", body),
+
+  /** POST /api/imports/web-orders (D2). Multipart CSV upload. */
+  webOrders: (file: File) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    return api.postForm<ImportResult>("/api/imports/web-orders", formData);
+  },
+};
 // --- Pricing ----------------------------------------------------------------------------
 export const pricing = {
   /** GET /api/pricing */

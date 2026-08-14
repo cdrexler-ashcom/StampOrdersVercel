@@ -16,6 +16,7 @@ import {
   Settings,
   Tag,
   Truck,
+  Upload,
   Users,
 } from "lucide-react";
 import Link from "next/link";
@@ -43,6 +44,7 @@ const navigation = [
       { href: "/invoicing", label: "Invoice run", icon: FileText },
       { href: "/invoices", label: "Invoice history", icon: FileText },
       { href: "/despatch", label: "Despatch", icon: Truck },
+      { href: "/imports", label: "Import orders", icon: Upload }
     ],
   },
   {

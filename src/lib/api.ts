@@ -113,4 +113,23 @@ export const api = {
     request<T>(path, { method: "PUT", body, query }),
 
   delete: <T>(path: string) => request<T>(path, { method: "DELETE" }),
+
+  /**
+   * Multipart form upload (file inputs). Deliberately not routed through request(): that
+   * helper always JSON-encodes the body and sets Content-Type: application/json, which
+   * would send the file as a stringified object instead of a real upload. The browser sets
+   * the multipart boundary itself, so no Content-Type header is passed here.
+   */
+  postForm: async <T>(path: string, formData: FormData): Promise<T> => {
+    const response = await fetch(path, {
+      method: "POST",
+      body: formData,
+      cache: "no-store",
+    });
+
+    if (!response.ok) throw await toApiError(response);
+
+    const text = await response.text();
+    return (text ? JSON.parse(text) : undefined) as T;
+  },
 };

@@ -716,3 +716,26 @@ export interface PricingRuleRequest {
   price: number | null;
   lines: PricingRuleLineRequest[] | null;
 }
+export interface ImportOrdersRequest {
+  customerAccountNo?: string | null;
+}
+
+export type ImportRowStatus = "Imported" | "Skipped" | "Failed";
+
+export interface ImportRowResult {
+  row: number;
+  status: ImportRowStatus;
+  message: string | null;
+  orderId: number | null;
+  jobNo: string | null;
+}
+
+export interface ImportResult {
+  orderId: number | null;
+  totalRows: number;
+  imported: number;
+  skipped: number;
+  failed: number;
+  rows: ImportRowResult[];
+  summary: string | null;
+}
