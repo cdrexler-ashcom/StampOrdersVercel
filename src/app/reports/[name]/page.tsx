@@ -1,22 +1,17 @@
 "use client";
 
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, X } from "lucide-react";
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import { Suspense, useMemo, useState } from "react";
 
 import { ReportFrame } from "@/components/ReportFrame";
 import {
-  Button,
-  Card,
-  CardBody,
-  CardHeader,
-  Field,
-  Input,
-  Notice,
-  PageHeader,
-  Spinner,
-} from "@/components/ui";
+  EMPTY_REPORT_PARAMS,
+  ReportParamsPopup,
+  type ReportParamsValue,
+} from "@/components/ReportParamsPopup";
+import { Button, Notice, PageHeader, Spinner } from "@/components/ui";
 import {
   findReport,
   reportUrl,
@@ -38,35 +33,38 @@ function ReportViewer() {
     search.get("view") === "layout" ? "layout" : bound ? "html" : "layout";
 
   const [view, setView] = useState<ReportView>(initialView);
-  const [from, setFrom] = useState("");
-  const [to, setTo] = useState("");
-  const [custId, setCustId] = useState("");
-  const [invoiceNo, setInvoiceNo] = useState("");
 
-  // The parameters actually applied to the currently displayed report. Updated on Generate so the
-  // iframe doesn't reload on every keystroke.
-  const [applied, setApplied] = useState<{ view: ReportView; params: ReportQueryParams }>({
+  // Draft: what the popup is currently showing, edited freely without touching the report.
+  const [draft, setDraft] = useState<ReportParamsValue>(EMPTY_REPORT_PARAMS);
+
+  // Applied: what the report was actually generated with. Kept as the rich
+  // ReportParamsValue (not just the query-string values) so the filter chips below can
+  // still show the customer's name, not just the id that went into the URL.
+  const [applied, setApplied] = useState<{ view: ReportView; params: ReportParamsValue }>({
     view: initialView,
-    params: {},
+    params: EMPTY_REPORT_PARAMS,
   });
 
-  const url = useMemo(
-    () => reportUrl(name, applied.view, applied.params),
-    [name, applied],
+  const queryParams: ReportQueryParams = useMemo(
+    () => ({
+      from: applied.params.from || undefined,
+      to: applied.params.to || undefined,
+      custId: applied.params.customer?.uniqueId ?? undefined,
+      invoiceNo: applied.params.invoiceNo || undefined,
+    }),
+    [applied.params],
   );
 
-  function generate(nextView: ReportView) {
+  const url = useMemo(() => reportUrl(name, applied.view, queryParams), [name, applied.view, queryParams]);
+
+  /** Applies a full parameter set immediately — used by both Generate and chip removal. */
+  function apply(nextParams: ReportParamsValue, nextView: ReportView = view) {
+    setDraft(nextParams);
     setView(nextView);
-    setApplied({
-      view: nextView,
-      params: {
-        from: from || undefined,
-        to: to || undefined,
-        custId: custId || undefined,
-        invoiceNo: invoiceNo || undefined,
-      },
-    });
+    setApplied({ view: nextView, params: nextParams });
   }
+
+  const chips = buildChips(applied.params, (next) => apply(next));
 
   return (
     <div>
@@ -93,63 +91,86 @@ function ReportViewer() {
         </div>
       )}
 
-      <div className="grid gap-4 lg:grid-cols-[18rem_1fr]">
-        <Card className="h-fit">
-          <CardHeader title="Options" />
-          <CardBody className="space-y-3">
-            {filters.dates && (
-              <div className="grid grid-cols-2 gap-2">
-                <Field label="From">
-                  <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
-                </Field>
-                <Field label="To">
-                  <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
-                </Field>
-              </div>
-            )}
-            {filters.custId && (
-              <Field label="Customer ID" hint="Optional — leave blank for all customers.">
-                <Input
-                  inputMode="numeric"
-                  value={custId}
-                  onChange={(e) => setCustId(e.target.value.replace(/[^0-9]/g, ""))}
-                  placeholder="e.g. 1042"
-                />
-              </Field>
-            )}
-            {filters.invoiceNo && (
-              <Field label="Invoice no." hint="Optional — exact match.">
-                <Input
-                  value={invoiceNo}
-                  onChange={(e) => setInvoiceNo(e.target.value)}
-                  placeholder="e.g. 100482"
-                />
-              </Field>
-            )}
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <ReportParamsPopup
+          filters={filters}
+          value={draft}
+          onChange={setDraft}
+          bound={bound}
+          onGenerate={(nextView) => apply(draft, nextView)}
+        />
 
-            <div className="flex flex-col gap-2 pt-1">
-              {bound ? (
-                <>
-                  <Button variant="primary" onClick={() => generate("html")}>
-                    Generate with live data
-                  </Button>
-                  <Button variant="secondary" onClick={() => generate("layout")}>
-                    Layout preview
-                  </Button>
-                </>
-              ) : (
-                <Button variant="primary" onClick={() => generate("layout")}>
-                  Generate layout preview
-                </Button>
-              )}
-            </div>
-          </CardBody>
-        </Card>
-
-        <ReportFrame url={url} title={meta?.title ?? name} view={view} />
+        {chips.map((chip) => (
+          <FilterChip key={chip.key} label={chip.label} onRemove={chip.onRemove} />
+        ))}
       </div>
+
+      <ReportFrame url={url} title={meta?.title ?? name} view={view} />
     </div>
   );
+}
+
+function FilterChip({ label, onRemove }: { label: string; onRemove: () => void }) {
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 py-1 pl-2.5 pr-1.5 text-xs font-medium text-slate-700">
+      {label}
+      <button
+        type="button"
+        onClick={onRemove}
+        aria-label={`Remove ${label} filter`}
+        className="rounded-full p-0.5 text-slate-400 hover:bg-slate-200 hover:text-slate-600"
+      >
+        <X className="size-3" />
+      </button>
+    </span>
+  );
+}
+
+/**
+ * Turns the applied parameters into removable chips. Each chip's remove handler re-applies
+ * immediately from the applied set (not the popup's draft), so clearing a chip can't
+ * accidentally discard an unrelated edit sitting unsaved in the popup.
+ */
+function buildChips(
+  applied: ReportParamsValue,
+  onApply: (next: ReportParamsValue) => void,
+): { key: string; label: string; onRemove: () => void }[] {
+  const chips: { key: string; label: string; onRemove: () => void }[] = [];
+
+  if (applied.from || applied.to) {
+    const label =
+      applied.from && applied.to
+        ? `${applied.from} → ${applied.to}`
+        : applied.from
+          ? `From ${applied.from}`
+          : `To ${applied.to}`;
+    chips.push({
+      key: "dates",
+      label,
+      onRemove: () => onApply({ ...applied, from: "", to: "" }),
+    });
+  }
+
+  if (applied.customer) {
+    const customerLabel = [applied.customer.accountNo, applied.customer.title]
+      .filter(Boolean)
+      .join(" — ");
+    chips.push({
+      key: "customer",
+      label: customerLabel || `Customer ${applied.customer.uniqueId}`,
+      onRemove: () => onApply({ ...applied, customer: null }),
+    });
+  }
+
+  if (applied.invoiceNo.trim()) {
+    chips.push({
+      key: "invoiceNo",
+      label: `Invoice ${applied.invoiceNo.trim()}`,
+      onRemove: () => onApply({ ...applied, invoiceNo: "" }),
+    });
+  }
+
+  return chips;
 }
 
 /**
