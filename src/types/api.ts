@@ -688,3 +688,31 @@ export interface ReportDefinitionInfo {
   parameters: ReportParameterInfo[];
   recordSelectionFormula?: string | null;
 }
+
+// Pricing rules
+export interface PricingRuleLineResult {
+  id: number;
+  customerAccountNo: string;
+  custId: number;
+  price: number;
+}
+
+export interface PricingRuleResult {
+  id: number;
+  prodId: string | null;
+  allCustomers: boolean;
+  price: number | null;
+  lines: PricingRuleLineResult[];
+}
+
+export interface PricingRuleLineRequest {
+  customerAccountNo: string;
+  price: number;
+}
+
+export interface PricingRuleRequest {
+  prodId: string;
+  allCustomers: boolean;
+  price: number | null;
+  lines: PricingRuleLineRequest[] | null;
+}

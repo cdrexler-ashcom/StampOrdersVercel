@@ -42,6 +42,8 @@ import type {
   StampLabel,
   CreateStampLabelRequest,
   CustomerRequest,
+  PricingRuleRequest,
+  PricingRuleResult,
 } from "@/types/api";
 
 /**
@@ -320,4 +322,24 @@ export const health = {
       return false;
     }
   },
+};
+
+// --- Pricing ----------------------------------------------------------------------------
+export const pricing = {
+  /** GET /api/pricing */
+  list: (params: { prodId?: string } = {}) =>
+    api.get<PricingRuleResult[]>("/api/pricing", params),
+
+  /** GET /api/pricing/{id} */
+  get: (id: number) => api.get<PricingRuleResult>(`/api/pricing/${id}`),
+
+  /** POST /api/pricing */
+  create: (body: PricingRuleRequest) => api.post<PricingRuleResult>("/api/pricing", body),
+
+  /** PUT /api/pricing/{id} */
+  update: (id: number, body: PricingRuleRequest) =>
+    api.put<PricingRuleResult>(`/api/pricing/${id}`, body),
+
+  /** DELETE /api/pricing/{id} */
+  remove: (id: number) => api.delete<void>(`/api/pricing/${id}`),
 };

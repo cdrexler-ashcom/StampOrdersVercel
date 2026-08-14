@@ -65,6 +65,7 @@ const navigation = [
       { href: "/settings/stamp-labels", label: "Stamp labels", icon: Tag },
       { href: "/settings/invoice-states", label: "Invoice states", icon: Building2 },
       { href: "/settings/overdue-messages", label: "Overdue messages", icon: MessageSquareWarning },
+      { href: "/settings/pricing", label: "Pricing", icon: Tag },
       { href: "/system", label: "System", icon: Settings },
       { href: "/reports/debug", label: "Report debug", icon: Bug },
     ],
