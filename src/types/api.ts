@@ -739,3 +739,25 @@ export interface ImportResult {
   rows: ImportRowResult[];
   summary: string | null;
 }
+// --- Auth (H2) --------------------------------------------------------------------------
+
+/** POST /api/auth/login request. */
+export interface LoginRequest {
+  username: string;
+  password: string;
+}
+
+/** POST /api/auth/login success response — the exact shape from docs/AUTH-CONTRACT.md. */
+export interface LoginResult {
+  token: string;
+  tokenType: string;
+  expiresAtUtc: string;
+  username: string;
+  roles: string[];
+}
+
+/** GET /api/auth/me — the current identity. */
+export interface CurrentUser {
+  username: string;
+  roles: string[];
+}
