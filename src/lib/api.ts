@@ -132,4 +132,22 @@ export const api = {
     const text = await response.text();
     return (text ? JSON.parse(text) : undefined) as T;
   },
+
+  /**
+   * POST that returns a raw text body rather than JSON — for the proof preview endpoint,
+   * which responds with a self-contained HTML document. Not routed through request(): that
+   * helper always JSON.parses the response body, which would throw on HTML.
+   */
+  postText: async (path: string, body: unknown): Promise<string> => {
+    const response = await fetch(path, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      cache: "no-store",
+    });
+
+    if (!response.ok) throw await toApiError(response);
+
+    return response.text();
+  },
 };

@@ -739,3 +739,86 @@ export interface ImportResult {
   rows: ImportRowResult[];
   summary: string | null;
 }
+
+// ---------------------------------------------------------------------------------------
+// Proofs — the web equivalent of ProofSQL's frmSelect. Preview only; see ProofDialog.
+// ---------------------------------------------------------------------------------------
+
+export interface ProofColourOption {
+  colourId: string;
+  name: string;
+}
+
+/** GET /api/proofs/{jobNo} — the proof screen's defaults, from txJobNo_Validate. */
+export interface ProofJobResponse {
+  jobNo: string;
+  accountNo: string;
+  custTitle: string;
+
+  prodId: string;
+  prodName: string;
+
+  colourId: string | null;
+  colour: string;
+
+  qty: number;
+
+  priceCode: number;
+  price: number;
+  discPct: number;
+
+  email: string;
+  faxNo: string;
+  emailFrom: string;
+
+  subject: string;
+
+  invoiceComp: string;
+  invoiceComps: string[];
+
+  deliveryAmt: number;
+
+  priceIncGst: boolean;
+  noProofHeader: boolean;
+  proofHeader: string;
+
+  messageText: string;
+
+  stampImageAvailable: boolean;
+  letterHeadAvailable: boolean;
+
+  colours: ProofColourOption[];
+}
+
+/** POST /api/proofs/preview body — the proof screen's current state, from cmdView_Click. */
+export interface ProofPreviewRequest {
+  jobNo: string;
+  accountNo: string;
+
+  custTitle?: string | null;
+  prodId?: string | null;
+  prodName?: string | null;
+  colour?: string | null;
+
+  qty: number;
+
+  priceCode: number;
+  price: number;
+  discPct: number;
+
+  email?: string | null;
+  faxNo?: string | null;
+
+  invoiceComp?: string | null;
+  extraText?: string | null;
+
+  noProofHeader: boolean;
+  priceIncGst: boolean;
+
+  /** The legacy "Delivery Included" button — swaps the amount for the wording. */
+  deliveryIncluded: boolean;
+  deliveryAmt?: number | null;
+
+  /** Must match the customer's stored ProofHeader, or be omitted/empty. */
+  proofHeader?: string | null;
+}

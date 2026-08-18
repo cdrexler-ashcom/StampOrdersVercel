@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronLeft, ChevronRight, Pencil, Plus, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, FileText, Pencil, Plus, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -10,6 +10,7 @@ import { AddLineDialog } from "@/components/AddLineDialog";
 import { CreditCheckPanel } from "@/components/CreditCheckPanel";
 import { EditLineDialog } from "@/components/EditLineDialog";
 import { EditOrderDialog } from "@/components/EditOrderDialog";
+import { ProofDialog } from "@/components/ProofDialog";
 import {
   Badge,
   Button,
@@ -64,6 +65,7 @@ export default function OrderDetailPage() {
   const [editOrderOpen, setEditOrderOpen] = useState(false);
   const [editLine, setEditLine] = useState<OrderLine | null>(null);
   const [deleteLine, setDeleteLine] = useState<OrderLine | null>(null);
+  const [proofJobNo, setProofJobNo] = useState<string | null>(null);
 
   // The order sequence from wherever the Orders list last stood — read once on mount
   // rather than per-orderId, so Previous/Next keep stepping through the same set you
@@ -315,6 +317,14 @@ export default function OrderDetailPage() {
                           <Button
                             variant="ghost"
                             size="sm"
+                            title="Proof"
+                            onClick={() => setProofJobNo(line.jobNo)}
+                          >
+                            <FileText className="size-3.5" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
                             title="Edit line"
                             onClick={() => setEditLine(line)}
                           >
@@ -441,6 +451,8 @@ export default function OrderDetailPage() {
         line={editLine}
         customer={customer}
       />
+
+      <ProofDialog jobNo={proofJobNo} onClose={() => setProofJobNo(null)} />
 
       <Modal
         open={deleteLine !== null}
