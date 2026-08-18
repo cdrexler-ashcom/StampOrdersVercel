@@ -47,7 +47,7 @@ export interface ReportMeta {
 
 /**
  * Every extracted report. Order here drives the debug list. `bound` reflects what the API can
- * render with live data as of the reporting work to date (9 of 20).
+ * render with live data as of the reporting work to date (11 of 20).
  */
 export const REPORTS: ReportMeta[] = [
   // --- Invoice register (ArchHeader / ArchLine) ---
@@ -133,6 +133,24 @@ export const REPORTS: ReportMeta[] = [
     filters: { dates: true, custId: true },
   },
 
+  // --- Receipts history (Receipts_History / Customer) ---
+  {
+    name: "bankdep",
+    title: "Bank Deposit",
+    description: "Banking slip summarising receipts by payment type (cash / card / cheque), with a deposit total.",
+    category: "Operational",
+    bound: true,
+    filters: { dates: true, custId: true },
+  },
+  {
+    name: "rechist",
+    title: "Receipt History",
+    description: "Receipts grouped by customer, with per-customer and grand totals.",
+    category: "Operational",
+    bound: true,
+    filters: { dates: true, custId: true },
+  },
+
   // --- Not yet bound ---
   {
     name: "ageopen",
@@ -173,22 +191,6 @@ export const REPORTS: ReportMeta[] = [
     category: "Documents",
     bound: false,
     blockedBy: "Full document: per-invoice layout and bank-detail parameters.",
-  },
-  {
-    name: "bankdep",
-    title: "Bank Deposit",
-    description: "Banking slip summarising receipts by payment type.",
-    category: "Operational",
-    bound: false,
-    blockedBy: "Needs a receipts-history provider (Receipts_History).",
-  },
-  {
-    name: "rechist",
-    title: "Receipt History",
-    description: "Receipts with their invoice allocations.",
-    category: "Operational",
-    bound: false,
-    blockedBy: "Needs a receipts-history provider (Receipts_History / RecInvoice_History).",
   },
   {
     name: "ChangeLog",

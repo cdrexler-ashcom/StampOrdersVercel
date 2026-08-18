@@ -41,6 +41,6 @@ new tab" is also available for viewing or printing manually.
 category and blocker (for unbound ones). "Generate" produces a test version — live data where
 bound, layout preview otherwise — so even unimplemented reports can be exercised end to end.
 
-As of this change: **9 of 20** reports are bound to live data
+As of this change: **11 of 20** reports are bound to live data
 (`invreg`, `invregdate`, `invreginvc`, `CustSales`, `ProdSales`, `history`, `ositems`, `dephist`,
-`ageopen_excel`). The rest render as layout previews with a noted blocker.
+`ageopen_excel`, `bankdep`, `rechist`). The rest render as layout previews with a noted blocker.
