@@ -13,6 +13,7 @@ import type {
   InvoiceHeader,
   InvoiceRunRequest,
   InvoiceRunResult,
+  JobCard,
   OpenItem,
   OrderHeader,
   OrderLine,
@@ -103,6 +104,10 @@ export const orders = {
   /** GET /api/orders/credit-check/{custId} */
   creditCheck: (custId: number) =>
     api.get<CreditCheckResult>(`/api/orders/credit-check/${custId}`),
+
+  /** GET /api/orders/{orderId}/job-card */
+  jobCard: (orderId: number) =>
+    api.get<JobCard[]>(`/api/orders/${orderId}/job-card`),
 };
 
 // --- Invoicing --------------------------------------------------------------------------
