@@ -1,38 +1,74 @@
 "use client";
 
 import { Download, ExternalLink, RefreshCw } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
-import { Badge, Button } from "@/components/ui";
-import { printReportUrl } from "@/lib/print";
+import { Badge, Button, Notice } from "@/components/ui";
+import { ApiError } from "@/lib/api";
+import { openReportHtml, printReportHtml } from "@/lib/print";
+import { fetchReportHtml, type ReportQueryParams, type ReportView } from "@/lib/reports";
 
 /**
- * Renders a report document (HTML from the API) in an iframe, with a toolbar to refresh, open in a
- * new tab, and save as PDF. The iframe is same-origin (the API is proxied under this app), so the
- * "Save as PDF" button can drive the browser's print pipeline directly.
+ * Renders a report document in an iframe.
+ *
+ * Since auth (H1/H2) the report HTML CANNOT be loaded by pointing the iframe at the API URL — a
+ * browser navigation doesn't carry the bearer token and the API returns 401. Instead we fetch the
+ * HTML through the authenticated api client and render it with the iframe's `srcDoc`. "Open in new
+ * tab" and "Save as PDF" likewise operate on the already-fetched HTML (via a blob), so they carry
+ * the auth too.
  */
 export function ReportFrame({
-  url,
-  title,
+  name,
   view,
+  params,
+  title,
   height = 780,
 }: {
-  url: string;
+  name: string;
+  view: ReportView;
+  params: ReportQueryParams;
   title: string;
-  /** "html" = live data, "layout" = placeholder preview. Shown as a badge. */
-  view: "html" | "layout";
   height?: number;
 }) {
-  const frameRef = useRef<HTMLIFrameElement>(null);
+  const [html, setHtml] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  // Bumping this forces the iframe to reload even when the url is unchanged.
+  const [error, setError] = useState<string | null>(null);
+  // Bumping this forces a re-fetch even when the inputs are unchanged (the Refresh button).
   const [nonce, setNonce] = useState(0);
 
-  useEffect(() => {
-    setLoading(true);
-  }, [url, nonce]);
+  // Serialise params so the effect re-runs when any filter changes.
+  const paramsKey = JSON.stringify(params);
 
-  const src = nonce === 0 ? url : `${url}${url.includes("?") ? "&" : "?"}_r=${nonce}`;
+  useEffect(() => {
+    const controller = new AbortController();
+    setLoading(true);
+    setError(null);
+
+    fetchReportHtml(name, view, params, controller.signal)
+      .then((doc) => setHtml(doc))
+      .catch((err) => {
+        if (controller.signal.aborted) return;
+        // A 401 is handled globally (api.ts redirects to /login); show a message for anything else.
+        if (!(err instanceof ApiError && err.status === 401)) {
+          setError(err instanceof Error ? err.message : "The report could not be generated.");
+        }
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false);
+      });
+
+    return () => controller.abort();
+    // paramsKey stands in for `params`; name/view/nonce are primitives.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [name, view, paramsKey, nonce]);
+
+  const onPrint = useCallback(() => {
+    if (html) printReportHtml(html);
+  }, [html]);
+
+  const onOpen = useCallback(() => {
+    if (html) openReportHtml(html);
+  }, [html]);
 
   return (
     <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
@@ -50,13 +86,17 @@ export function ReportFrame({
             <RefreshCw className="size-3.5" />
             Refresh
           </Button>
-          <a href={src} target="_blank" rel="noopener noreferrer">
-            <Button size="sm" variant="secondary" type="button">
-              <ExternalLink className="size-3.5" />
-              Open in new tab
-            </Button>
-          </a>
-          <Button size="sm" variant="primary" onClick={() => printReportUrl(src)}>
+          <Button
+            size="sm"
+            variant="secondary"
+            type="button"
+            onClick={onOpen}
+            disabled={!html}
+          >
+            <ExternalLink className="size-3.5" />
+            Open in new tab
+          </Button>
+          <Button size="sm" variant="primary" onClick={onPrint} disabled={!html}>
             <Download className="size-3.5" />
             Save as PDF
           </Button>
@@ -69,13 +109,22 @@ export function ReportFrame({
             Loading report…
           </div>
         )}
-        <iframe
-          ref={frameRef}
-          src={src}
-          title={title}
-          className="h-full w-full"
-          onLoad={() => setLoading(false)}
-        />
+
+        {error ? (
+          <div className="p-4">
+            <Notice tone="red" title="Could not generate the report">
+              {error}
+            </Notice>
+          </div>
+        ) : (
+          <iframe
+            // srcDoc renders the fetched HTML directly — no navigation to the API, so the token
+            // isn't needed at load time (it was already sent by the authenticated fetch).
+            srcDoc={html ?? ""}
+            title={title}
+            className="h-full w-full"
+          />
+        )}
       </div>
     </div>
   );

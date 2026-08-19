@@ -145,6 +145,34 @@ export const api = {
   delete: <T>(path: string) => request<T>(path, { method: "DELETE" }),
 
   /**
+   * GET returning the raw response body as text (not JSON-parsed). Used for report HTML, which
+   * must be fetched through this authenticated client — a browser navigation (iframe src, window
+   * open, anchor) would not carry the bearer token and gets a 401. Same auth + 401 handling as
+   * request(); the caller renders the HTML locally (iframe srcDoc / blob).
+   */
+  getText: async (
+    path: string,
+    query?: RequestOptions["query"],
+    signal?: AbortSignal,
+  ): Promise<string> => {
+    const response = await fetch(buildUrl(path, query), {
+      method: "GET",
+      signal,
+      headers: authHeader(),
+      cache: "no-store",
+    });
+
+    if (response.status === 401) {
+      handleUnauthorized();
+      throw await toApiError(response);
+    }
+
+    if (!response.ok) throw await toApiError(response);
+
+    return response.text();
+  },
+
+  /**
    * Multipart form upload (file inputs). Deliberately not routed through request(): that
    * helper always JSON-encodes the body and sets Content-Type: application/json, which
    * would send the file as a stringified object instead of a real upload. The browser sets

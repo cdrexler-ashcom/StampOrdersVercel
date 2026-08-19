@@ -1,22 +1,24 @@
 /**
- * Client-side print / "Save as PDF" for reports.
+ * Client-side print / "Save as PDF" / open-in-new-tab for reports.
  *
- * The API renders each report as a self-contained, print-ready HTML document (the same layout the
- * legacy Crystal viewer produced, positioned in points). Rather than convert that to PDF on the
- * server, we drive the browser's own print pipeline: load the report into a hidden, same-origin
- * iframe and call print() on it. The browser's print dialog then offers "Save as PDF", which
- * downloads the file to the user's computer with the report layout preserved exactly.
+ * The API renders each report as a self-contained, print-ready HTML document. Since auth (H1/H2)
+ * the report HTML is fetched through the authenticated api client (ReportFrame does this) and
+ * passed here as a STRING — we no longer point a frame/window at the API URL, because a browser
+ * navigation wouldn't carry the bearer token and would 401.
  *
- * Same-origin is what makes contentWindow.print() permissible — next.config.ts proxies /api/* to
- * the API under this app's origin, so the report document is same-origin.
+ * Print drives the browser's own print pipeline via a hidden iframe (its "Save as PDF" preserves
+ * the layout). Both helpers use a blob URL of the fetched HTML, so nothing re-hits the API.
  */
 
 const FRAME_ID = "report-print-frame";
 
-export function printReportUrl(url: string): void {
+/** Prints (Save as PDF) a report from its already-fetched HTML. */
+export function printReportHtml(html: string): void {
   if (typeof document === "undefined") return;
 
   document.getElementById(FRAME_ID)?.remove();
+
+  const blobUrl = URL.createObjectURL(new Blob([html], { type: "text/html" }));
 
   const frame = document.createElement("iframe");
   frame.id = FRAME_ID;
@@ -35,17 +37,40 @@ export function printReportUrl(url: string): void {
     const win = frame.contentWindow;
     if (!win) return;
 
-    // Clean the frame up once the dialog closes, so repeated prints don't stack frames.
-    const cleanup = () => window.setTimeout(() => frame.remove(), 500);
+    const cleanup = () =>
+      window.setTimeout(() => {
+        frame.remove();
+        URL.revokeObjectURL(blobUrl);
+      }, 500);
     win.addEventListener?.("afterprint", cleanup);
 
     win.focus();
     win.print();
 
     // Fallback cleanup for browsers that don't fire afterprint.
-    window.setTimeout(() => document.getElementById(FRAME_ID)?.remove(), 60_000);
+    window.setTimeout(() => {
+      document.getElementById(FRAME_ID)?.remove();
+      URL.revokeObjectURL(blobUrl);
+    }, 60_000);
   };
 
-  frame.src = url;
+  frame.src = blobUrl;
   document.body.appendChild(frame);
+}
+
+/** Opens a report's already-fetched HTML in a new tab (for viewing / the browser's own print). */
+export function openReportHtml(html: string): void {
+  if (typeof window === "undefined") return;
+
+  const blobUrl = URL.createObjectURL(new Blob([html], { type: "text/html" }));
+  const win = window.open(blobUrl, "_blank", "noopener,noreferrer");
+
+  // If a popup blocker stopped it, fall back to a same-tab navigation.
+  if (!win) {
+    window.location.assign(blobUrl);
+    return;
+  }
+
+  // Revoke once the new tab has had time to load; revoking too early would blank it.
+  window.setTimeout(() => URL.revokeObjectURL(blobUrl), 60_000);
 }
