@@ -14,7 +14,6 @@ import {
 import { Button, Notice, PageHeader, Spinner } from "@/components/ui";
 import {
   findReport,
-  reportUrl,
   type ReportQueryParams,
   type ReportView,
 } from "@/lib/reports";
@@ -54,8 +53,6 @@ function ReportViewer() {
     }),
     [applied.params],
   );
-
-  const url = useMemo(() => reportUrl(name, applied.view, queryParams), [name, applied.view, queryParams]);
 
   /** Applies a full parameter set immediately — used by both Generate and chip removal. */
   function apply(nextParams: ReportParamsValue, nextView: ReportView = view) {
@@ -105,7 +102,12 @@ function ReportViewer() {
         ))}
       </div>
 
-      <ReportFrame url={url} title={meta?.title ?? name} view={view} />
+      <ReportFrame
+        name={name}
+        view={applied.view}
+        params={queryParams}
+        title={meta?.title ?? name}
+      />
     </div>
   );
 }

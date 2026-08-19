@@ -258,8 +258,12 @@ export interface ReportQueryParams {
 }
 
 /**
- * Builds the URL for a report view. The path is same-origin — next.config.ts proxies /api/* to
- * the C# API — so it can be used as an iframe src, a link, or the source for a print/PDF frame.
+ * Builds the URL for a report view (same-origin; next.config.ts proxies /api/* to the API).
+ *
+ * NOTE: since auth (H1/H2) this URL must NOT be used as an iframe src / link / window target — a
+ * browser navigation doesn't carry the bearer token, so the API returns 401. Fetch the HTML with
+ * fetchReportHtml() instead and render it locally. This builder is retained only for building the
+ * path that fetchReportHtml() requests (and for the query-string encoding).
  */
 export function reportUrl(
   name: string,
@@ -273,6 +277,25 @@ export function reportUrl(
   }
   const qs = search.toString();
   return `/api/reports/${encodeURIComponent(name)}/${view}${qs ? `?${qs}` : ""}`;
+}
+
+/**
+ * Fetches a report's rendered HTML through the AUTHENTICATED api client, so the bearer token is
+ * sent (unlike a raw iframe/window navigation, which 401s). The returned string is a
+ * self-contained HTML document the caller renders via an iframe `srcDoc` or a blob URL.
+ */
+export function fetchReportHtml(
+  name: string,
+  view: ReportView,
+  params: ReportQueryParams = {},
+  signal?: AbortSignal,
+): Promise<string> {
+  const query: Record<string, string> = {};
+  for (const [key, value] of Object.entries(params)) {
+    if (value === null || value === undefined || value === "") continue;
+    query[key] = String(value);
+  }
+  return api.getText(`/api/reports/${encodeURIComponent(name)}/${view}`, query, signal);
 }
 
 /** GET /api/reports — the report names the API can render. */
