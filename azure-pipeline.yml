@@ -1,0 +1,49 @@
+# Azure Pipeline: mirror AshcomDev -> GitHub (main)
+#
+# Trigger: any push to the AshcomDev branch.
+# Action:  push the contents of AshcomDev to the `main` branch of
+#          https://github.com/Ashcom-Business-Systems/SteadBrothersStampOrders
+#
+# Setup required before this pipeline will work:
+#   1. Create a GitHub Personal Access Token (classic or fine-grained) with
+#      `repo` (contents: read/write) access to Ashcom-Business-Systems/SteadBrothersStampOrders.
+#   2. In Azure DevOps > Pipelines > Edit > Variables (or Library > Variable group),
+#      add a secret variable named `GitHubPAT` containing that token.
+#      Do NOT put the token in this file.
+#   3. Optionally set `GitHubUser` if the token needs a username paired with it
+#      (most GitHub PATs work with any placeholder username, e.g. "x-access-token").
+
+trigger:
+  branches:
+    include:
+      - AshcomDev
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  targetRepo: 'github.com/Ashcom-Business-Systems/SteadBrothersStampOrders.git'
+  targetBranch: 'main'
+  GitHubUser: 'x-access-token'
+
+steps:
+  - checkout: self
+    persistCredentials: true
+    fetchDepth: 0
+
+  - script: |
+      set -e
+
+      if [ -z "$GITHUB_PAT" ]; then
+        echo "##vso[task.logissue type=error]GitHubPAT secret variable is not set. Add it under Pipeline > Variables."
+        exit 1
+      fi
+
+      git config --global user.email "azure-pipelines@ashcom.com.au"
+      git config --global user.name "Azure Pipelines"
+
+      # Push the current checkout (AshcomDev) to `main` on the target GitHub repo.
+      git push "https://$(GitHubUser):${GITHUB_PAT}@$(targetRepo)" "HEAD:$(targetBranch)" --force
+    displayName: 'Push AshcomDev contents to GitHub main'
+    env:
+      GITHUB_PAT: $(GitHubPAT)
