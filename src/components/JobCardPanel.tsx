@@ -7,7 +7,7 @@ import { Badge, Button, EmptyState, ErrorState, Modal, Spinner } from "@/compone
 import { orders } from "@/lib/endpoints";
 import { date, qty as formatQty, text } from "@/lib/format";
 import { buildJobCardPrintHtml } from "@/lib/jobCardPrint";
-import { printReportUrl } from "@/lib/print";
+import { printReportHtml } from "@/lib/print";
 
 /**
  * Shows how many job cards exist for an order — a small badge meant to sit inside/beside the
@@ -56,11 +56,7 @@ export function JobCardPanel({
 
   const handlePrint = () => {
     const html = buildJobCardPrintHtml(orderId, cards);
-    const url = URL.createObjectURL(new Blob([html], { type: "text/html" }));
-    printReportUrl(url);
-    // The hidden print frame holds the blob open long enough to load and print; matches
-    // print.ts's own 60s fallback cleanup for the frame itself.
-    window.setTimeout(() => URL.revokeObjectURL(url), 65_000);
+    printReportHtml(html);
   };
 
   return (

@@ -47,7 +47,7 @@ export interface ReportMeta {
 
 /**
  * Every extracted report. Order here drives the debug list. `bound` reflects what the API can
- * render with live data as of the reporting work to date (11 of 20).
+ * render with live data as of the reporting work to date (14 of 20).
  */
 export const REPORTS: ReportMeta[] = [
   // --- Invoice register (ArchHeader / ArchLine) ---
@@ -192,29 +192,31 @@ export const REPORTS: ReportMeta[] = [
     bound: false,
     blockedBy: "Full document: per-invoice layout and bank-detail parameters.",
   },
+  // --- Status change log / daily sales / job card (StatChangeLog / Daily_Sales_Report / JobCard) ---
   {
     name: "ChangeLog",
     title: "Status Change Log",
-    description: "Audit of stamp status changes.",
+    description: "Audit of stamp status changes — job no, date, order no, product and old/new status.",
     category: "Operational",
-    bound: false,
-    blockedBy: "Backs onto StatChangeLog, which has no EF entity.",
+    bound: true,
+    filters: { dates: true, invoiceNo: true },
   },
   {
     name: "DailySales",
     title: "Daily Sales",
-    description: "Daily sales summary.",
+    description: "Daily sales summary grouped by order, with sell/cost/margin, freight and grand totals.",
     category: "Operational",
-    bound: false,
-    blockedBy: "Backs onto the Daily_Sales_Report view, which has no EF entity.",
+    bound: true,
+    filters: { dates: true },
   },
   {
     name: "jobcard",
     title: "Job Card",
-    description: "Production job card.",
+    description:
+      "Printable production job card — product, size, quantity, colour, bin and special instructions.",
     category: "Operational",
-    bound: false,
-    blockedBy: "Backs onto the JobCard table, which has no EF entity.",
+    bound: true,
+    filters: { dates: true },
   },
   {
     name: "Proof",
