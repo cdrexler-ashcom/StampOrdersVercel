@@ -25,7 +25,6 @@ import {
   getReportDefinition,
   listReportNames,
   REPORTS,
-  reportUrl,
   type ReportView,
 } from "@/lib/reports";
 
@@ -211,9 +210,10 @@ export default function ReportDebugPage() {
       >
         {dialog?.kind === "preview" && (
           <ReportFrame
-            url={reportUrl(dialog.name, dialog.view)}
-            title={dialog.title}
+            name={dialog.name}
             view={dialog.view}
+            params={{}}
+            title={dialog.title}
             height={620}
           />
         )}

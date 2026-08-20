@@ -1,0 +1,70 @@
+# Azure Pipeline: mirror AshcomDev -> GitHub (main)
+#
+# Trigger: any push to the AshcomDev branch.
+# Action:  push the contents of AshcomDev to the `main` branch of:
+#            1. https://github.com/Ashcom-Business-Systems/SteadBrothersStampOrders
+#            2. https://github.com/cdrexler-ashcom/StampOrdersVercel
+#
+# Setup required before this pipeline will work:
+#   1. Create a GitHub Personal Access Token (classic or fine-grained) with
+#      `repo` (contents: read/write) access to each target repo.
+#   2. In Azure DevOps > Pipelines > Edit > Variables (or Library > Variable group),
+#      add secret variables:
+#        - `GitHubPAT`     - token for Ashcom-Business-Systems/SteadBrothersStampOrders
+#        - `GitHubCoenPAT` - token for cdrexler-ashcom/StampOrdersVercel
+#      Do NOT put either token in this file.
+#   3. Optionally set `GitHubUser` if the token needs a username paired with it
+#      (most GitHub PATs work with any placeholder username, e.g. "x-access-token").
+
+trigger:
+  branches:
+    include:
+      - AshcomDev
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  targetRepo: 'github.com/Ashcom-Business-Systems/SteadBrothersStampOrders.git'
+  targetRepo2: 'github.com/cdrexler-ashcom/StampOrdersVercel.git'
+  targetBranch: 'main'
+  GitHubUser: 'x-access-token'
+
+steps:
+  - checkout: self
+    persistCredentials: true
+    fetchDepth: 0
+
+  - script: |
+      set -e
+
+      if [ -z "$GITHUB_PAT" ]; then
+        echo "##vso[task.logissue type=error]GitHubPAT secret variable is not set. Add it under Pipeline > Variables."
+        exit 1
+      fi
+
+      git config --global user.email "azure-pipelines@ashcom.com.au"
+      git config --global user.name "Azure Pipelines"
+
+      # Push the current checkout (AshcomDev) to `main` on the target GitHub repo.
+      git push "https://$(GitHubUser):${GITHUB_PAT}@$(targetRepo)" "HEAD:$(targetBranch)" --force
+    displayName: 'Push AshcomDev contents to SteadBrothersStampOrders main'
+    env:
+      GITHUB_PAT: $(GitHubPAT)
+
+  - script: |
+      set -e
+
+      if [ -z "$GITHUB_COEN_PAT" ]; then
+        echo "##vso[task.logissue type=error]GitHubCoenPAT secret variable is not set. Add it under Pipeline > Variables."
+        exit 1
+      fi
+
+      git config --global user.email "azure-pipelines@ashcom.com.au"
+      git config --global user.name "Azure Pipelines"
+
+      # Push the current checkout (AshcomDev) to `main` on the second target GitHub repo.
+      git push "https://$(GitHubUser):${GITHUB_COEN_PAT}@$(targetRepo2)" "HEAD:$(targetBranch)" --force
+    displayName: 'Push AshcomDev contents to StampOrdersVercel main'
+    env:
+      GITHUB_COEN_PAT: $(GitHubCoenPAT)

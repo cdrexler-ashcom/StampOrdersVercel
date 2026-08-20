@@ -75,6 +75,33 @@ export interface OrderLine {
   totalPrice: number | null;
 }
 
+/**
+ * A job card for one line of an order (task E3). Mirrors JobCardResult from
+ * StampOrders.Application/Contracts/JobCardResult.cs.
+ *
+ * Built live from the line's Soset stamp job (NOT the SQL JobCard table, which the legacy
+ * forms only ever use as a print-time scratch buffer — see JobCardService's doc comment).
+ * GET /api/orders/{orderId}/job-card returns one of these per line that currently has a Soset
+ * stamp job; a line without one (writes disabled, or the product suppresses stamp jobs) is
+ * simply absent, not an error.
+ */
+export interface JobCard {
+  orderId: number;
+  jobNo: string;
+  custInfo: string | null;
+  date: string | null;
+  prodId: string | null;
+  prodName: string | null;
+  width: number | null;
+  height: number | null;
+  quantity: number | null;
+  /** Colour name when Soset has a match for the job's colour id, else the raw code. */
+  colour: string | null;
+  searchKey2: string | null;
+  rush: boolean;
+  holdMemo: string | null;
+}
+
 export interface OrderHeader {
   orderId: number;
   custId: number | null;
@@ -821,4 +848,27 @@ export interface ProofPreviewRequest {
 
   /** Must match the customer's stored ProofHeader, or be omitted/empty. */
   proofHeader?: string | null;
+}
+
+// --- Auth (H2) --------------------------------------------------------------------------
+
+/** POST /api/auth/login request. */
+export interface LoginRequest {
+  username: string;
+  password: string;
+}
+
+/** POST /api/auth/login success response — the exact shape from docs/AUTH-CONTRACT.md. */
+export interface LoginResult {
+  token: string;
+  tokenType: string;
+  expiresAtUtc: string;
+  username: string;
+  roles: string[];
+}
+
+/** GET /api/auth/me — the current identity. */
+export interface CurrentUser {
+  username: string;
+  roles: string[];
 }

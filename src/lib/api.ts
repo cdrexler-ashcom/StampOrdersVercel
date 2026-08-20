@@ -1,4 +1,26 @@
+import { clearToken, getToken } from "./authToken";
+
 import type { ProblemDetails } from "@/types/api";
+
+/**
+ * A 401 means the token is missing or expired. Clear it and bounce to the login page, preserving
+ * where the user was so they return there after signing in. Guarded so it only runs in the browser
+ * and never loops when already on /login.
+ */
+function handleUnauthorized(): void {
+  clearToken();
+  if (typeof window === "undefined") return;
+  if (window.location.pathname.startsWith("/login")) return;
+
+  const returnTo = window.location.pathname + window.location.search;
+  window.location.assign(`/login?returnTo=${encodeURIComponent(returnTo)}`);
+}
+
+/** The Authorization header for the current token, or an empty object when signed out. */
+function authHeader(): Record<string, string> {
+  const token = getToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
 
 /**
  * Thin fetch wrapper.
@@ -88,10 +110,18 @@ export async function request<T>(
   const response = await fetch(buildUrl(path, query), {
     method,
     signal,
-    headers: body === undefined ? undefined : { "Content-Type": "application/json" },
+    headers: {
+      ...(body === undefined ? {} : { "Content-Type": "application/json" }),
+      ...authHeader(),
+    },
     body: body === undefined ? undefined : JSON.stringify(body),
     cache: "no-store",
   });
+
+  if (response.status === 401) {
+    handleUnauthorized();
+    throw await toApiError(response);
+  }
 
   if (!response.ok) throw await toApiError(response);
 
@@ -115,6 +145,34 @@ export const api = {
   delete: <T>(path: string) => request<T>(path, { method: "DELETE" }),
 
   /**
+   * GET returning the raw response body as text (not JSON-parsed). Used for report HTML, which
+   * must be fetched through this authenticated client — a browser navigation (iframe src, window
+   * open, anchor) would not carry the bearer token and gets a 401. Same auth + 401 handling as
+   * request(); the caller renders the HTML locally (iframe srcDoc / blob).
+   */
+  getText: async (
+    path: string,
+    query?: RequestOptions["query"],
+    signal?: AbortSignal,
+  ): Promise<string> => {
+    const response = await fetch(buildUrl(path, query), {
+      method: "GET",
+      signal,
+      headers: authHeader(),
+      cache: "no-store",
+    });
+
+    if (response.status === 401) {
+      handleUnauthorized();
+      throw await toApiError(response);
+    }
+
+    if (!response.ok) throw await toApiError(response);
+
+    return response.text();
+  },
+
+  /**
    * Multipart form upload (file inputs). Deliberately not routed through request(): that
    * helper always JSON-encodes the body and sets Content-Type: application/json, which
    * would send the file as a stringified object instead of a real upload. The browser sets
@@ -124,8 +182,14 @@ export const api = {
     const response = await fetch(path, {
       method: "POST",
       body: formData,
+      headers: authHeader(),
       cache: "no-store",
     });
+
+    if (response.status === 401) {
+      handleUnauthorized();
+      throw await toApiError(response);
+    }
 
     if (!response.ok) throw await toApiError(response);
 

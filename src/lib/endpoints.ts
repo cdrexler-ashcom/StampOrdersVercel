@@ -13,6 +13,7 @@ import type {
   InvoiceHeader,
   InvoiceRunRequest,
   InvoiceRunResult,
+  JobCard,
   OpenItem,
   OrderHeader,
   OrderLine,
@@ -44,6 +45,9 @@ import type {
   StampLabel,
   CreateStampLabelRequest,
   CustomerRequest,
+  CurrentUser,
+  LoginRequest,
+  LoginResult,
   PricingRuleRequest,
   PricingRuleResult,
   ImportOrdersRequest,
@@ -105,6 +109,10 @@ export const orders = {
   /** GET /api/orders/credit-check/{custId} */
   creditCheck: (custId: number) =>
     api.get<CreditCheckResult>(`/api/orders/credit-check/${custId}`),
+
+  /** GET /api/orders/{orderId}/job-card */
+  jobCard: (orderId: number) =>
+    api.get<JobCard[]>(`/api/orders/${orderId}/job-card`),
 };
 
 // --- Invoicing --------------------------------------------------------------------------
@@ -373,4 +381,12 @@ export const pricing = {
 
   /** DELETE /api/pricing/{id} */
   remove: (id: number) => api.delete<void>(`/api/pricing/${id}`),
+};
+// --- Auth (H2) --------------------------------------------------------------------------
+export const auth = {
+  /** POST /api/auth/login — public. Returns a bearer token on success, 401 otherwise. */
+  login: (body: LoginRequest) => api.post<LoginResult>("/api/auth/login", body),
+
+  /** GET /api/auth/me — validates the current token and returns the identity. */
+  me: () => api.get<CurrentUser>("/api/auth/me"),
 };

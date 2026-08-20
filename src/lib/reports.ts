@@ -47,7 +47,7 @@ export interface ReportMeta {
 
 /**
  * Every extracted report. Order here drives the debug list. `bound` reflects what the API can
- * render with live data as of the reporting work to date (9 of 20).
+ * render with live data as of the reporting work to date (14 of 20).
  */
 export const REPORTS: ReportMeta[] = [
   // --- Invoice register (ArchHeader / ArchLine) ---
@@ -133,6 +133,24 @@ export const REPORTS: ReportMeta[] = [
     filters: { dates: true, custId: true },
   },
 
+  // --- Receipts history (Receipts_History / Customer) ---
+  {
+    name: "bankdep",
+    title: "Bank Deposit",
+    description: "Banking slip summarising receipts by payment type (cash / card / cheque), with a deposit total.",
+    category: "Operational",
+    bound: true,
+    filters: { dates: true, custId: true },
+  },
+  {
+    name: "rechist",
+    title: "Receipt History",
+    description: "Receipts grouped by customer, with per-customer and grand totals.",
+    category: "Operational",
+    bound: true,
+    filters: { dates: true, custId: true },
+  },
+
   // --- Not yet bound ---
   {
     name: "ageopen",
@@ -174,45 +192,31 @@ export const REPORTS: ReportMeta[] = [
     bound: false,
     blockedBy: "Full document: per-invoice layout and bank-detail parameters.",
   },
-  {
-    name: "bankdep",
-    title: "Bank Deposit",
-    description: "Banking slip summarising receipts by payment type.",
-    category: "Operational",
-    bound: false,
-    blockedBy: "Needs a receipts-history provider (Receipts_History).",
-  },
-  {
-    name: "rechist",
-    title: "Receipt History",
-    description: "Receipts with their invoice allocations.",
-    category: "Operational",
-    bound: false,
-    blockedBy: "Needs a receipts-history provider (Receipts_History / RecInvoice_History).",
-  },
+  // --- Status change log / daily sales / job card (StatChangeLog / Daily_Sales_Report / JobCard) ---
   {
     name: "ChangeLog",
     title: "Status Change Log",
-    description: "Audit of stamp status changes.",
+    description: "Audit of stamp status changes — job no, date, order no, product and old/new status.",
     category: "Operational",
-    bound: false,
-    blockedBy: "Backs onto StatChangeLog, which has no EF entity.",
+    bound: true,
+    filters: { dates: true, invoiceNo: true },
   },
   {
     name: "DailySales",
     title: "Daily Sales",
-    description: "Daily sales summary.",
+    description: "Daily sales summary grouped by order, with sell/cost/margin, freight and grand totals.",
     category: "Operational",
-    bound: false,
-    blockedBy: "Backs onto the Daily_Sales_Report view, which has no EF entity.",
+    bound: true,
+    filters: { dates: true },
   },
   {
     name: "jobcard",
     title: "Job Card",
-    description: "Production job card.",
+    description:
+      "Printable production job card — product, size, quantity, colour, bin and special instructions.",
     category: "Operational",
-    bound: false,
-    blockedBy: "Backs onto the JobCard table, which has no EF entity.",
+    bound: true,
+    filters: { dates: true },
   },
   {
     name: "Proof",
@@ -256,8 +260,12 @@ export interface ReportQueryParams {
 }
 
 /**
- * Builds the URL for a report view. The path is same-origin — next.config.ts proxies /api/* to
- * the C# API — so it can be used as an iframe src, a link, or the source for a print/PDF frame.
+ * Builds the URL for a report view (same-origin; next.config.ts proxies /api/* to the API).
+ *
+ * NOTE: since auth (H1/H2) this URL must NOT be used as an iframe src / link / window target — a
+ * browser navigation doesn't carry the bearer token, so the API returns 401. Fetch the HTML with
+ * fetchReportHtml() instead and render it locally. This builder is retained only for building the
+ * path that fetchReportHtml() requests (and for the query-string encoding).
  */
 export function reportUrl(
   name: string,
@@ -271,6 +279,25 @@ export function reportUrl(
   }
   const qs = search.toString();
   return `/api/reports/${encodeURIComponent(name)}/${view}${qs ? `?${qs}` : ""}`;
+}
+
+/**
+ * Fetches a report's rendered HTML through the AUTHENTICATED api client, so the bearer token is
+ * sent (unlike a raw iframe/window navigation, which 401s). The returned string is a
+ * self-contained HTML document the caller renders via an iframe `srcDoc` or a blob URL.
+ */
+export function fetchReportHtml(
+  name: string,
+  view: ReportView,
+  params: ReportQueryParams = {},
+  signal?: AbortSignal,
+): Promise<string> {
+  const query: Record<string, string> = {};
+  for (const [key, value] of Object.entries(params)) {
+    if (value === null || value === undefined || value === "") continue;
+    query[key] = String(value);
+  }
+  return api.getText(`/api/reports/${encodeURIComponent(name)}/${view}`, query, signal);
 }
 
 /** GET /api/reports — the report names the API can render. */

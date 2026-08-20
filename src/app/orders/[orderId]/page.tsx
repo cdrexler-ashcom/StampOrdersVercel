@@ -10,6 +10,7 @@ import { AddLineDialog } from "@/components/AddLineDialog";
 import { CreditCheckPanel } from "@/components/CreditCheckPanel";
 import { EditLineDialog } from "@/components/EditLineDialog";
 import { EditOrderDialog } from "@/components/EditOrderDialog";
+import { JobCardIndicator, JobCardPanel } from "@/components/JobCardPanel";
 import { ProofDialog } from "@/components/ProofDialog";
 import {
   Badge,
@@ -61,6 +62,7 @@ export default function OrderDetailPage() {
   const queryClient = useQueryClient();
 
   const [addLineOpen, setAddLineOpen] = useState(false);
+  const [jobCardOpen, setJobCardOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [editOrderOpen, setEditOrderOpen] = useState(false);
   const [editLine, setEditLine] = useState<OrderLine | null>(null);
@@ -200,6 +202,11 @@ export default function OrderDetailPage() {
             <Link href="/invoicing">
               <Button>Invoice run</Button>
             </Link>
+            <Button onClick={() => setJobCardOpen(true)}>
+              <FileText className="size-3.5" />
+              Job card
+              <JobCardIndicator orderId={orderId} />
+            </Button>
             <Button variant="primary" onClick={() => setAddLineOpen(true)}>
               <Plus className="size-3.5" />
               Add line
@@ -429,6 +436,12 @@ export default function OrderDetailPage() {
           </Card>
         </div>
       </div>
+
+      <JobCardPanel
+        orderId={orderId}
+        open={jobCardOpen}
+        onClose={() => setJobCardOpen(false)}
+      />
 
       <AddLineDialog
         open={addLineOpen}
