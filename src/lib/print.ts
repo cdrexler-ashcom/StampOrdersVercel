@@ -58,6 +58,47 @@ export function printReportHtml(html: string): void {
   document.body.appendChild(frame);
 }
 
+/**
+ * As printReportUrl, but for a document already held as an HTML string rather than a URL —
+ * the proof preview, which is POSTed and rendered client-side rather than fetched by GET.
+ * srcdoc content shares the parent's origin, so contentWindow.print() is permitted exactly
+ * as it is for the same-origin iframe src case above.
+ */
+export function printHtml(html: string): void {
+  if (typeof document === "undefined") return;
+
+  document.getElementById(FRAME_ID)?.remove();
+
+  const frame = document.createElement("iframe");
+  frame.id = FRAME_ID;
+  frame.setAttribute("aria-hidden", "true");
+  Object.assign(frame.style, {
+    position: "fixed",
+    right: "0",
+    bottom: "0",
+    width: "0",
+    height: "0",
+    border: "0",
+    visibility: "hidden",
+  });
+
+  frame.onload = () => {
+    const win = frame.contentWindow;
+    if (!win) return;
+
+    const cleanup = () => window.setTimeout(() => frame.remove(), 500);
+    win.addEventListener?.("afterprint", cleanup);
+
+    win.focus();
+    win.print();
+
+    window.setTimeout(() => document.getElementById(FRAME_ID)?.remove(), 60_000);
+  };
+
+  frame.srcdoc = html;
+  document.body.appendChild(frame);
+}
+
 /** Opens a report's already-fetched HTML in a new tab (for viewing / the browser's own print). */
 export function openReportHtml(html: string): void {
   if (typeof window === "undefined") return;

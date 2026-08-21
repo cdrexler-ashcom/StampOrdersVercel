@@ -24,6 +24,8 @@ import type {
   UpdateOrderRequest,
   PriceResult,
   ProcessReceiptsResult,
+  ProofJobResponse,
+  ProofPreviewRequest,
   Receipt,
   RecordReceiptRequest,
   SosetColour,
@@ -318,6 +320,20 @@ export const soset = {
   /** GET /api/soset/next-order-number */
   nextOrderNumber: () =>
     api.get<{ parameter: string; value: string }>("/api/soset/next-order-number"),
+};
+
+// --- Proofs -----------------------------------------------------------------------------
+
+export const proofs = {
+  /** GET /api/proofs/{jobNo} — the proof screen's defaults, from txJobNo_Validate. */
+  job: (jobNo: string) =>
+    api.get<ProofJobResponse>(`/api/proofs/${encodeURIComponent(jobNo)}`),
+
+  /** GET /api/proofs/{jobNo}/image — the scanned stamp design, or 404 if none was scanned. */
+  imageUrl: (jobNo: string) => `/api/proofs/${encodeURIComponent(jobNo)}/image`,
+
+  /** POST /api/proofs/preview — renders the proof as a self-contained HTML document. */
+  preview: (body: ProofPreviewRequest) => api.postText("/api/proofs/preview", body),
 };
 
 // --- Health -----------------------------------------------------------------------------

@@ -11,6 +11,7 @@ import { CreditCheckPanel } from "@/components/CreditCheckPanel";
 import { EditLineDialog } from "@/components/EditLineDialog";
 import { EditOrderDialog } from "@/components/EditOrderDialog";
 import { JobCardIndicator, JobCardPanel } from "@/components/JobCardPanel";
+import { ProofDialog } from "@/components/ProofDialog";
 import {
   Badge,
   Button,
@@ -28,7 +29,7 @@ import {
   Td,
   Th,
 } from "@/components/ui";
-import { customers, orders, soset } from "@/lib/endpoints";
+import { customers, orders, proofs, soset } from "@/lib/endpoints";
 import {
   addressLines,
   date,
@@ -66,6 +67,7 @@ export default function OrderDetailPage() {
   const [editOrderOpen, setEditOrderOpen] = useState(false);
   const [editLine, setEditLine] = useState<OrderLine | null>(null);
   const [deleteLine, setDeleteLine] = useState<OrderLine | null>(null);
+  const [proofJobNo, setProofJobNo] = useState<string | null>(null);
 
   // The order sequence from wherever the Orders list last stood — read once on mount
   // rather than per-orderId, so Previous/Next keep stepping through the same set you
@@ -319,6 +321,10 @@ export default function OrderDetailPage() {
                       </Td>
                       <Td align="right">
                         <div className="flex justify-end gap-1">
+                          <ProofButton
+                            jobNo={line.jobNo}
+                            onClick={() => setProofJobNo(line.jobNo)}
+                          />
                           <Button
                             variant="ghost"
                             size="sm"
@@ -455,6 +461,8 @@ export default function OrderDetailPage() {
         customer={customer}
       />
 
+      <ProofDialog jobNo={proofJobNo} onClose={() => setProofJobNo(null)} />
+
       <Modal
         open={deleteLine !== null}
         onClose={() => setDeleteLine(null)}
@@ -545,5 +553,32 @@ function StampCell({ jobNo }: { jobNo: string }) {
     <Badge tone="green" className="whitespace-nowrap">
       {text(data?.orderNo, "Present")}
     </Badge>
+  );
+}
+
+/**
+ * The Proof button, shown only when there's a proof to view.
+ *
+ * Being in Soset isn't enough — GetJobAsync also requires the job to name a customer and
+ * product that actually resolve (see ProofService.GetJobAsync), so a job can be present in
+ * Soset and still fail to load as a proof, e.g. "names customer 'X', which does not exist".
+ * Runs the same lookup the dialog does, under the same query key, so a line whose job won't
+ * load hides its button instead of opening the dialog to an error, and opening the dialog
+ * afterwards reads from cache rather than re-fetching.
+ */
+function ProofButton({ jobNo, onClick }: { jobNo: string; onClick: () => void }) {
+  const { data, error } = useQuery({
+    queryKey: ["proof", "job", jobNo],
+    queryFn: () => proofs.job(jobNo),
+    retry: false,
+    staleTime: 60_000,
+  });
+
+  if (error || !data) return null;
+
+  return (
+    <Button variant="ghost" size="sm" title="Proof" onClick={onClick}>
+      <FileText className="size-3.5" />
+    </Button>
   );
 }
