@@ -71,6 +71,10 @@ export const orders = {
       runNo?: string;
       sortBy?: string;
       sortDir?: "asc" | "desc";
+      custTitle?: string[];
+      runNos?: string[];
+      binNo?: string[];
+      orderId?: string[];
     } = {},
   ) => api.get<OrderListItem[]>("/api/orders", params),
 

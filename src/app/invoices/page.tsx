@@ -1,7 +1,6 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
 
 import { CustomerPicker } from "@/components/CustomerPicker";
 import {
@@ -22,6 +21,7 @@ import {
 import { invoices } from "@/lib/endpoints";
 import { date, text, trackingStatusLabel } from "@/lib/format";
 import { useFilterableTable } from "@/lib/useFilterableTable";
+import { useGridState } from "@/lib/useGridState";
 import type { ArchiveHeader, Customer } from "@/types/api";
 
 /** Columns the API's GET /api/invoices/history accepts as `sortBy`. */
@@ -39,12 +39,19 @@ import { useRowLink } from "@/lib/useRowLink";
 
 export default function InvoiceHistoryPage() {
   const rowLink = useRowLink();
-  const [customer, setCustomer] = useState<Customer | null>(null);
-  const [invoiceNo, setInvoiceNo] = useState("");
+  // Customer/invoice-number filters, sort, and column filters are all remembered in
+  // sessionStorage (see useGridState) so they survive following a row link to
+  // /invoices/{invoiceNo} and hitting Back — otherwise the list page remounts from scratch
+  // and reverts to its defaults.
+  const [customer, setCustomer] = useGridState<Customer | null>("invoices:customer", null);
+  const [invoiceNo, setInvoiceNo] = useGridState("invoices:invoiceNo", "");
 
   // Sorting is server-side: starts unsorted (the API's own default — newest first, per
   // the page description) until a header is clicked.
-  const [sort, setSort] = useState<{ key: SortKey; direction: SortDirection } | null>(null);
+  const [sort, setSort] = useGridState<{ key: SortKey; direction: SortDirection } | null>(
+    "invoices:sort",
+    null,
+  );
 
   const toggleSort = (key: SortKey) => {
     setSort((current) =>
@@ -61,9 +68,9 @@ export default function InvoiceHistoryPage() {
   // a filter that's silently client-side-only will look correct until a sort or another
   // filter changes which page of rows is loaded, at which point it can go from "one
   // matching row" to "zero rows", with nothing about the filter itself having changed.
-  const [filterSelected, setFilterSelected] = useState<
+  const [filterSelected, setFilterSelected] = useGridState<
     Partial<Record<"invoiceNo" | "custTitle" | "invoiceDate" | "orderId" | "runNo" | "tracking", string[]>>
-  >({});
+  >("invoices:filters", {});
 
   const query = useQuery({
     queryKey: [
@@ -158,11 +165,18 @@ export default function InvoiceHistoryPage() {
       </Card>
 
       <Card>
-        {isFiltered && (
-          <div className="mb-4">
-            <Button size="sm" variant="ghost" onClick={clearAll}>
-              Clear column filters
-            </Button>
+        {(sort || isFiltered) && (
+          <div className="mb-4 flex flex-wrap gap-2">
+            {sort && (
+              <Button size="sm" variant="ghost" onClick={() => setSort(null)}>
+                Clear sorting
+              </Button>
+            )}
+            {isFiltered && (
+              <Button size="sm" variant="ghost" onClick={clearAll}>
+                Clear column filters
+              </Button>
+            )}
           </div>
         )}
 

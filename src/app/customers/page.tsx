@@ -19,6 +19,7 @@ import {
 } from "@/components/ui";
 import { customers } from "@/lib/endpoints";
 import { useFilterableTable } from "@/lib/useFilterableTable";
+import { useGridState } from "@/lib/useGridState";
 import { text } from "@/lib/format";
 import type { Customer } from "@/types/api";
 
@@ -36,8 +37,11 @@ import { useRowLink } from "@/lib/useRowLink";
 
 export default function CustomersPage() {
   const rowLink = useRowLink();
-  const [search, setSearch] = useState("");
-  const [debounced, setDebounced] = useState("");
+  // Search text, sort, and column filters are all remembered in sessionStorage (see
+  // useGridState) so they survive following a row link to /customers/{id} and hitting
+  // Back — otherwise the list page remounts from scratch and reverts to its defaults.
+  const [search, setSearch] = useGridState("customers:search", "");
+  const [debounced, setDebounced] = useState(search);
 
   useEffect(() => {
     const timer = setTimeout(() => setDebounced(search), 250);
@@ -48,7 +52,10 @@ export default function CustomersPage() {
   // 100-row cap, so this can't be a plain client-side re-sort of the page that came back
   // (see ReferenceEndpoints.cs). No default sort — starts unsorted (the API's own default,
   // AccountNo asc) until a header is clicked.
-  const [sort, setSort] = useState<{ key: SortKey; direction: SortDirection } | null>(null);
+  const [sort, setSort] = useGridState<{ key: SortKey; direction: SortDirection } | null>(
+    "customers:sort",
+    null,
+  );
 
   const toggleSort = (key: SortKey) => {
     setSort((current) =>
@@ -61,9 +68,9 @@ export default function CustomersPage() {
   // Column filter selections. Lifted up here (rather than left inside useFilterableTable)
   // because the query below needs to read it to build the request — see the `controlled`
   // param on useFilterableTable.
-  const [filterSelected, setFilterSelected] = useState<
+  const [filterSelected, setFilterSelected] = useGridState<
     Partial<Record<"title" | "address3" | "priceCode" | "discPct", string[]>>
-  >({});
+  >("customers:filters", {});
 
   const query = useQuery({
     queryKey: ["customers", "search", debounced, sort, filterSelected],
@@ -131,6 +138,12 @@ export default function CustomersPage() {
             className="block w-full rounded-md border-0 bg-white py-2 pl-8 pr-2.5 text-sm text-slate-900 ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-sky-600"
           />
         </div>
+
+        {sort && (
+          <Button size="sm" variant="ghost" onClick={() => setSort(null)}>
+            Clear sorting
+          </Button>
+        )}
 
         {isFiltered && (
           <Button size="sm" variant="ghost" onClick={clearAll}>

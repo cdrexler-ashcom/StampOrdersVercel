@@ -66,7 +66,12 @@ export function useFilterableTable<T, A extends FilterAccessors<T>>(
       const accessor = accessors[key];
       const values = new Set<string>();
       (data ?? []).forEach((row) => {
-        const value = accessor(row);
+        // Accessors are typed to always return a string, but that's only enforced at
+        // compile time — a row with an unexpected value (a raw number/boolean slipping
+        // through an accessor's own null-coalescing, say) would otherwise land a non-string
+        // in this Set and crash the localeCompare sort below.
+        const raw = accessor(row);
+        const value = typeof raw === "string" ? raw : raw == null ? "" : String(raw);
         if (value) values.add(value);
       });
       result[key] = [...values].sort((a, b) =>

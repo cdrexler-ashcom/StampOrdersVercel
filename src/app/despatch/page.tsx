@@ -64,21 +64,33 @@ export default function DespatchPage() {
   // ready-to-email), so it's an inherently bounded working set rather than an open-ended
   // archive. No full-dataset-vs-capped-page correctness issue to work around here. The two
   // tables sort independently.
-  const pendingSort = useSortableTable(pending.data, {
-    invoiceNo: (i) => i.invoiceNo,
-    custTitle: (i) => i.custTitle,
-    invoiceDate: (i) => (i.invoiceDate ? new Date(i.invoiceDate).getTime() : null),
-    deliverTo: (i) => i.delName ?? i.delAdr2,
-    status: (i) => trackingStatusLabel[i.trackingStatus] ?? i.trackingStatus,
-  });
+  const pendingSort = useSortableTable(
+    pending.data,
+    {
+      invoiceNo: (i) => i.invoiceNo,
+      custTitle: (i) => i.custTitle,
+      invoiceDate: (i) => (i.invoiceDate ? new Date(i.invoiceDate).getTime() : null),
+      deliverTo: (i) => i.delName ?? i.delAdr2,
+      status: (i) => trackingStatusLabel[i.trackingStatus] ?? i.trackingStatus,
+    },
+    undefined,
+    "asc",
+    "despatch:pending-sort",
+  );
 
-  const awaitingSort = useSortableTable(awaiting.data, {
-    invoiceNo: (i) => i.invoiceNo,
-    custTitle: (i) => i.custTitle,
-    trackingNo: (i) => i.trackingNo,
-    email: (i) => i.email,
-    emailSent: (i) => (i.emailSent ? new Date(i.emailSent).getTime() : null),
-  });
+  const awaitingSort = useSortableTable(
+    awaiting.data,
+    {
+      invoiceNo: (i) => i.invoiceNo,
+      custTitle: (i) => i.custTitle,
+      trackingNo: (i) => i.trackingNo,
+      email: (i) => i.email,
+      emailSent: (i) => (i.emailSent ? new Date(i.emailSent).getTime() : null),
+    },
+    undefined,
+    "asc",
+    "despatch:awaiting-sort",
+  );
 
   const addMutation = useMutation({
     mutationFn: (body: AddTrackingRequest) => tracking.add(body),
@@ -207,6 +219,13 @@ export default function DespatchPage() {
             <CardHeader
               title="Awaiting a consignment number"
               description={`${pending.data?.length ?? 0} invoice(s)`}
+              actions={
+                pendingSort.isSorted && (
+                  <Button size="sm" variant="ghost" onClick={pendingSort.clear}>
+                    Clear sorting
+                  </Button>
+                )
+              }
             />
 
             {pending.isLoading ? (
@@ -265,6 +284,13 @@ export default function DespatchPage() {
             <CardHeader
               title="Ready to notify"
               description="Invoices with a consignment number, awaiting a despatch notification."
+              actions={
+                awaitingSort.isSorted && (
+                  <Button size="sm" variant="ghost" onClick={awaitingSort.clear}>
+                    Clear sorting
+                  </Button>
+                )
+              }
             />
 
             {awaiting.isLoading ? (

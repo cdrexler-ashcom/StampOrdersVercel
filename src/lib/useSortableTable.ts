@@ -1,5 +1,7 @@
 import { useState } from "react";
 
+import { useGridState } from "./useGridState";
+
 export type SortDirection = "asc" | "desc";
 export type SortValue = string | number | boolean | null | undefined;
 
@@ -54,6 +56,10 @@ function compareValues(a: SortValue, b: SortValue): number {
  * instead — e.g. `useSortableTable(data, accessors, "invoiceDate", "desc")` for newest
  * first.
  *
+ * Pass `storageKey` to remember the active sort in `sessionStorage` (see `useGridState`) —
+ * for a grid whose rows link to a detail screen, that means the sort survives clicking
+ * through and hitting Back, instead of reverting to `initialKey`/unsorted on remount.
+ *
  * The column key type is inferred as `keyof typeof accessors` (via the `A extends
  * SortAccessors<T>` generic) rather than a directly-declared `K extends string` type
  * parameter. `Record<K, ...>` isn't a homomorphic mapped type, so TypeScript can't infer
@@ -65,12 +71,15 @@ export function useSortableTable<T, A extends SortAccessors<T>>(
   accessors: A,
   initialKey?: keyof A & string,
   initialDirection: SortDirection = "asc",
+  storageKey?: string,
 ) {
   type K = keyof A & string;
+  type Sort = { key: K; direction: SortDirection } | null;
 
-  const [sort, setSort] = useState<{ key: K; direction: SortDirection } | null>(
-    initialKey ? { key: initialKey, direction: initialDirection } : null,
-  );
+  const initialSort: Sort = initialKey ? { key: initialKey, direction: initialDirection } : null;
+  const gridState = useGridState<Sort>(storageKey ?? "", initialSort);
+  const localState = useState<Sort>(initialSort);
+  const [sort, setSort] = storageKey ? gridState : localState;
 
   const toggle = (key: K) => {
     setSort((current) =>
@@ -95,5 +104,12 @@ export function useSortableTable<T, A extends SortAccessors<T>>(
     sortDirection: sort?.key === key ? sort.direction : null,
   });
 
-  return { sorted, sort, toggle, th };
+  /**
+   * Resets to unsorted. With a `storageKey`, sort otherwise persists indefinitely (see
+   * useGridState) — refreshing the page no longer clears it the way it used to, so grids
+   * need an explicit "Clear sort" control wired to this instead.
+   */
+  const clear = () => setSort(null);
+
+  return { sorted, sort, toggle, th, clear, isSorted: sort !== null };
 }
