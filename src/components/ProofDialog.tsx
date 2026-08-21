@@ -4,6 +4,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { Download, ExternalLink, Eye, RefreshCw } from "lucide-react";
 import { useEffect, useState } from "react";
 
+import { api } from "@/lib/api";
 import { proofs } from "@/lib/endpoints";
 import { printHtml } from "@/lib/print";
 import type { ProofPreviewRequest } from "@/types/api";
@@ -49,6 +50,27 @@ export function ProofDialog({
     retry: false,
   });
   const job = jobQuery.data;
+
+  // The stamp design image, like the job lookup and the preview, has to go through the
+  // authenticated client rather than a bare <img src> — since auth (H1/H2) a plain browser
+  // image request carries no bearer token and the API returns 401 (see api.getBlob).
+  const imageQuery = useQuery({
+    queryKey: ["proof", "image", job?.jobNo],
+    queryFn: ({ signal }) => api.getBlob(proofs.imageUrl(job!.jobNo), signal),
+    enabled: Boolean(job?.stampImageAvailable),
+    retry: false,
+  });
+
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  useEffect(() => {
+    if (!imageQuery.data) {
+      setImageUrl(null);
+      return;
+    }
+    const url = URL.createObjectURL(imageQuery.data);
+    setImageUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [imageQuery.data]);
 
   const [custTitle, setCustTitle] = useState("");
   const [prodName, setProdName] = useState("");
@@ -327,13 +349,17 @@ export function ProofDialog({
 
             <div>
               <p className="mb-1 text-xs font-medium text-slate-700">Stamp design</p>
-              {job.stampImageAvailable ? (
+              {job.stampImageAvailable && imageUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
-                  src={proofs.imageUrl(job.jobNo)}
+                  src={imageUrl}
                   alt={`Stamp design for job ${job.jobNo}`}
                   className="w-full rounded-md border border-slate-200 bg-white object-contain"
                 />
+              ) : job.stampImageAvailable && imageQuery.isLoading ? (
+                <div className="flex h-24 items-center justify-center rounded-md border border-dashed border-slate-300 text-center text-xs text-slate-400">
+                  Loading…
+                </div>
               ) : (
                 <div className="flex h-24 items-center justify-center rounded-md border border-dashed border-slate-300 text-center text-xs text-slate-400">
                   No image

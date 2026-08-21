@@ -9,6 +9,7 @@ import {
   Building2,
   ClipboardList,
   FileBarChart2,
+  FileSearch,
   FileText,
   LayoutDashboard,
   MessageSquareWarning,
@@ -47,7 +48,8 @@ const navigation = [
       { href: "/invoicing", label: "Invoice run", icon: FileText },
       { href: "/invoices", label: "Invoice history", icon: FileText },
       { href: "/despatch", label: "Despatch", icon: Truck },
-      { href: "/imports", label: "Import orders", icon: Upload }
+      { href: "/imports", label: "Import orders", icon: Upload },
+      { href: "/proofs", label: "Proofs", icon: FileSearch },
     ],
   },
   {

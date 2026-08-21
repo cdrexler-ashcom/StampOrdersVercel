@@ -173,6 +173,30 @@ export const api = {
   },
 
   /**
+   * GET returning the raw response body as a Blob — for the proof's stamp design image, which
+   * likewise cannot be loaded by pointing an <img> at the API URL directly: a plain browser
+   * image request carries no bearer token and gets a 401. Same auth + 401 handling as request();
+   * the caller renders it via an object URL.
+   */
+  getBlob: async (path: string, signal?: AbortSignal): Promise<Blob> => {
+    const response = await fetch(path, {
+      method: "GET",
+      signal,
+      headers: authHeader(),
+      cache: "no-store",
+    });
+
+    if (response.status === 401) {
+      handleUnauthorized();
+      throw await toApiError(response);
+    }
+
+    if (!response.ok) throw await toApiError(response);
+
+    return response.blob();
+  },
+
+  /**
    * Multipart form upload (file inputs). Deliberately not routed through request(): that
    * helper always JSON-encodes the body and sets Content-Type: application/json, which
    * would send the file as a stringified object instead of a real upload. The browser sets
@@ -205,10 +229,15 @@ export const api = {
   postText: async (path: string, body: unknown): Promise<string> => {
     const response = await fetch(path, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...authHeader() },
       body: JSON.stringify(body),
       cache: "no-store",
     });
+
+    if (response.status === 401) {
+      handleUnauthorized();
+      throw await toApiError(response);
+    }
 
     if (!response.ok) throw await toApiError(response);
 
