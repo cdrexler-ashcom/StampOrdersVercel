@@ -1,20 +1,24 @@
 # Azure Pipeline: mirror AshcomDev -> GitHub (main)
 #
 # Trigger: any push to the AshcomDev branch.
-# Action:  push the contents of AshcomDev to the `main` branch of:
+# Action:  force-push the contents of AshcomDev to the `main` branch of:
 #            1. https://github.com/Ashcom-Business-Systems/SteadBrothersStampOrders
 #            2. https://github.com/cdrexler-ashcom/StampOrdersVercel
 #
 # Setup required before this pipeline will work:
-#   1. Create a GitHub Personal Access Token (classic or fine-grained) with
-#      `repo` (contents: read/write) access to each target repo.
+#   1. Create a GitHub Personal Access Token (classic OR fine-grained) that has,
+#      for each target repo:
+#        - Contents:  Read and write
+#        - Metadata:  Read-only   (required by GitHub for any git operation)
+#      For a fine-grained token, make sure the token's RESOURCE OWNER matches the
+#      repo owner (org vs. personal account) and that the specific repo is selected.
 #   2. In Azure DevOps > Pipelines > Edit > Variables (or Library > Variable group),
-#      add secret variables:
-#        - `GitHubPAT`     - token for Ashcom-Business-Systems/SteadBrothersStampOrders
-#        - `GitHubCoenPAT` - token for cdrexler-ashcom/StampOrdersVercel
-#      Do NOT put either token in this file.
-#   3. Optionally set `GitHubUser` if the token needs a username paired with it
-#      (most GitHub PATs work with any placeholder username, e.g. "x-access-token").
+#      add these as SECRET variables (Do NOT put the tokens in this file):
+#        - GitHubPAT      -> token for Ashcom-Business-Systems/SteadBrothersStampOrders
+#        - GitHubCoenPAT  -> token for cdrexler-ashcom/StampOrdersVercel
+#   3. GitHubUser is only a placeholder. For a PAT over HTTPS, GitHub ignores the
+#      username and authenticates on the token, so any value (e.g. "x-access-token")
+#      works for both classic and fine-grained tokens.
 
 trigger:
   branches:
@@ -25,8 +29,6 @@ pool:
   vmImage: 'ubuntu-latest'
 
 variables:
-  targetRepo: 'github.com/Ashcom-Business-Systems/SteadBrothersStampOrders.git'
-  targetRepo2: 'github.com/cdrexler-ashcom/StampOrdersVercel.git'
   targetBranch: 'main'
   GitHubUser: 'x-access-token'
 
@@ -35,43 +37,74 @@ steps:
     persistCredentials: true
     fetchDepth: 0
 
+  # ---------------------------------------------------------------------------
+  # Target 1: Ashcom-Business-Systems/SteadBrothersStampOrders  (organization)
+  # ---------------------------------------------------------------------------
   - script: |
-      set -e
+      set -euo pipefail
 
-      if [ -z "$GITHUB_PAT" ]; then
-        echo "##vso[task.logissue type=error]GitHubPAT secret variable is not set. Add it under Pipeline > Variables."
+      TARGET_REPO='github.com/Ashcom-Business-Systems/SteadBrothersStampOrders.git'
+
+      if [ -z "${GITHUB_TOKEN:-}" ]; then
+        echo "##vso[task.logissue type=error]GitHubPAT secret variable is not set. Add it under Pipeline > Variables (as a secret)."
         exit 1
       fi
 
       git config --global user.email "azure-pipelines@ashcom.com.au"
-      git config --global user.name "Azure Pipelines"
+      git config --global user.name  "Azure Pipelines"
 
-      # Push the current checkout (AshcomDev) to `main` on the target GitHub repo.
-      git push "https://$(GitHubUser):${GITHUB_PAT}@$(targetRepo)" "HEAD:$(targetBranch)" --force
-    displayName: 'Push AshcomDev contents to SteadBrothersStampOrders main'
+      # --- Preflight (non-fatal): who is this token, and does it report write access? ---
+      echo "----- Preflight: SteadBrothersStampOrders -----"
+      LOGIN=$(curl -s -H "Authorization: Bearer ${GITHUB_TOKEN}" https://api.github.com/user \
+                | grep '"login"' | head -n1 | sed -E 's/.*"login": *"([^"]+)".*/\1/' || true)
+      echo "Token authenticates as: ${LOGIN:-<unknown / fine-grained token>}"
+      PERMS=$(curl -s -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+                https://api.github.com/repos/Ashcom-Business-Systems/SteadBrothersStampOrders \
+                | grep -A5 '"permissions"' || true)
+      echo "Reported repo permissions: ${PERMS:-<none returned>}"
+      echo "-----------------------------------------------"
+
+      # --- Push AshcomDev checkout to `main` on the target repo ---
+      git push "https://${GITHUB_USER}:${GITHUB_TOKEN}@${TARGET_REPO}" "HEAD:${TARGET_BRANCH}" --force
+      echo "Pushed to Ashcom-Business-Systems/SteadBrothersStampOrders:${TARGET_BRANCH}"
+    displayName: 'Push AshcomDev -> SteadBrothersStampOrders (main)'
     env:
-      GITHUB_PAT: $(GitHubPAT)
+      GITHUB_TOKEN:  $(GitHubPAT)
+      GITHUB_USER:   $(GitHubUser)
+      TARGET_BRANCH: $(targetBranch)
 
+  # ---------------------------------------------------------------------------
+  # Target 2: cdrexler-ashcom/StampOrdersVercel  (personal, public repo)
+  # ---------------------------------------------------------------------------
   - script: |
-      set -e
+      set -euo pipefail
 
-       # Who does this token authenticate as?
-      curl -s -H "Authorization: Bearer ${GITHUB_COEN_PAT}" https://api.github.com/user | grep '"login"'
+      TARGET_REPO='github.com/cdrexler-ashcom/StampOrdersVercel.git'
 
-      # Verbose push to see the exact 403 line
-      GIT_CURL_VERBOSE=1 git push "https://$(GitHubUser):${GITHUB_COEN_PAT}@$(targetRepo2)" "HEAD:$(targetBranch)" --force
-
-
-      if [ -z "$GITHUB_COEN_PAT" ]; then
-        echo "##vso[task.logissue type=error]GitHubCoenPAT secret variable is not set. Add it under Pipeline > Variables."
+      if [ -z "${GITHUB_TOKEN:-}" ]; then
+        echo "##vso[task.logissue type=error]GitHubCoenPAT secret variable is not set. Add it under Pipeline > Variables (as a secret)."
         exit 1
       fi
 
       git config --global user.email "azure-pipelines@ashcom.com.au"
-      git config --global user.name "Azure Pipelines"
-     
-      # Push the current checkout (AshcomDev) to `main` on the second target GitHub repo.
-      git push "https://$(GitHubUser):${GITHUB_COEN_PAT}@$(targetRepo2)" "HEAD:$(targetBranch)" --force
-    displayName: 'Push AshcomDev contents to StampOrdersVercel main'
+      git config --global user.name  "Azure Pipelines"
+
+      # --- Preflight (non-fatal): who is this token, and does it report write access? ---
+      echo "----- Preflight: StampOrdersVercel -----"
+      LOGIN=$(curl -s -H "Authorization: Bearer ${GITHUB_TOKEN}" https://api.github.com/user \
+                | grep '"login"' | head -n1 | sed -E 's/.*"login": *"([^"]+)".*/\1/' || true)
+      echo "Token authenticates as: ${LOGIN:-<unknown / fine-grained token>}"
+      PERMS=$(curl -s -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+                https://api.github.com/repos/cdrexler-ashcom/StampOrdersVercel \
+                | grep -A5 '"permissions"' || true)
+      echo "Reported repo permissions: ${PERMS:-<none returned>}"
+      echo "----------------------------------------"
+
+      # --- Push AshcomDev checkout to `main` on the target repo ---
+      git push "https://${GITHUB_USER}:${GITHUB_TOKEN}@${TARGET_REPO}" "HEAD:${TARGET_BRANCH}" --force
+      echo "Pushed to cdrexler-ashcom/StampOrdersVercel:${TARGET_BRANCH}"
+    displayName: 'Push AshcomDev -> StampOrdersVercel (main)'
     env:
-      GITHUB_COEN_PAT: $(GitHubCoenPAT)
+      GITHUB_TOKEN:  $(GitHubCoenPAT)
+      GITHUB_USER:   $(GitHubUser)
+      TARGET_BRANCH: $(targetBranch)
