@@ -63,6 +63,12 @@ steps:
       git config --global user.email "azure-pipelines@ashcom.com.au"
       git config --global user.name "Azure Pipelines"
 
+      # Who does this token authenticate as?
+      curl -s -H "Authorization: Bearer ${GITHUB_COEN_PAT}" https://api.github.com/user | grep '"login"'
+
+      # Verbose push to see the exact 403 line
+      GIT_CURL_VERBOSE=1 git push "https://$(GitHubUser):${GITHUB_COEN_PAT}@$(targetRepo2)" "HEAD:$(targetBranch)" --force
+
       # Push the current checkout (AshcomDev) to `main` on the second target GitHub repo.
       git push "https://$(GitHubUser):${GITHUB_COEN_PAT}@$(targetRepo2)" "HEAD:$(targetBranch)" --force
     displayName: 'Push AshcomDev contents to StampOrdersVercel main'
