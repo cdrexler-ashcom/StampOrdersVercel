@@ -81,26 +81,57 @@ steps:
 
       TARGET_REPO='github.com/cdrexler-ashcom/StampOrdersVercel.git'
 
-      if [ -z "${GITHUB_TOKEN:-}" ]; then
-        echo "##vso[task.logissue type=error]GitHubCoenPAT secret variable is not set. Add it under Pipeline > Variables (as a secret)."
+      # --- 1. Trim any stray whitespace / newline that may have been pasted in ---
+      GITHUB_TOKEN="$(printf '%s' "${GITHUB_TOKEN:-}" | tr -d '[:space:]')"
+
+      # --- 2. Guard: empty? ---
+      if [ -z "${GITHUB_TOKEN}" ]; then
+        echo "##vso[task.logissue type=error]GitHubCoenPAT is empty. Define it as a SECRET variable on THIS pipeline (or a linked variable group)."
         exit 1
       fi
 
-      git config --global user.email "azure-pipelines@ashcom.com.au"
-      git config --global user.name  "Azure Pipelines"
+      # --- 3. Guard: did the Azure macro fail to expand? (variable missing / misnamed / wrong scope) ---
+      case "${GITHUB_TOKEN}" in
+        *'$('*|*'GitHubCoenPAT'*)
+          echo "##vso[task.logissue type=error]GitHubCoenPAT did not expand - the pipeline is passing the literal macro, not a token. The secret variable is missing, misnamed, or defined in an unlinked variable group."
+          exit 1 ;;
+      esac
 
-      # --- Preflight (non-fatal): who is this token, and does it report write access? ---
+      # --- 4. Sanity check the shape without revealing the value ---
+      #     Valid GitHub tokens start with: github_pat_ (fine-grained), ghp_ (classic), gho_/ghs_ etc.
+      TOKEN_LEN=${#GITHUB_TOKEN}
+      case "${GITHUB_TOKEN}" in
+        github_pat_*) TOKEN_KIND="fine-grained (github_pat_)" ;;
+        ghp_*)        TOKEN_KIND="classic (ghp_)" ;;
+        gh[ous]_*)    TOKEN_KIND="other GitHub token" ;;
+        *)            TOKEN_KIND="UNRECOGNIZED PREFIX - probably not a GitHub token" ;;
+      esac
       echo "----- Preflight: StampOrdersVercel -----"
-      LOGIN=$(curl -s -H "Authorization: Bearer ${GITHUB_TOKEN}" https://api.github.com/user \
-                | grep '"login"' | head -n1 | sed -E 's/.*"login": *"([^"]+)".*/\1/' || true)
-      echo "Token authenticates as: ${LOGIN:-<unknown / fine-grained token>}"
+      echo "Token length: ${TOKEN_LEN}   Kind: ${TOKEN_KIND}"
+
+      # --- 5. Verify the credential against the API BEFORE pushing (fail fast, clear message) ---
+      HTTP_CODE=$(curl -s -o /dev/null -w '%{http_code}' \
+                    -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+                    -H "X-GitHub-Api-Version: 2022-11-28" \
+                    https://api.github.com/user)
+      echo "GitHub /user auth check returned HTTP ${HTTP_CODE}"
+      if [ "${HTTP_CODE}" = "401" ]; then
+        echo "##vso[task.logissue type=error]GitHub returned 401 Unauthorized - the token value is invalid, revoked, expired, or stale (regenerated after being stored). Regenerate the PAT and update the GitHubCoenPAT secret."
+        exit 1
+      fi
+
+      # Optional: show the repo permissions the token actually has (helps catch a future 403).
       PERMS=$(curl -s -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+                -H "X-GitHub-Api-Version: 2022-11-28" \
                 https://api.github.com/repos/cdrexler-ashcom/StampOrdersVercel \
                 | grep -A5 '"permissions"' || true)
       echo "Reported repo permissions: ${PERMS:-<none returned>}"
       echo "----------------------------------------"
 
-      # --- Push AshcomDev checkout to `main` on the target repo ---
+      git config --global user.email "azure-pipelines@ashcom.com.au"
+      git config --global user.name  "Azure Pipelines"
+
+      # --- 6. Push AshcomDev checkout to `main`. Use x-access-token:<PAT> form. ---
       git push "https://${GITHUB_USER}:${GITHUB_TOKEN}@${TARGET_REPO}" "HEAD:${TARGET_BRANCH}" --force
       echo "Pushed to cdrexler-ashcom/StampOrdersVercel:${TARGET_BRANCH}"
     displayName: 'Push AshcomDev -> StampOrdersVercel (main)'
