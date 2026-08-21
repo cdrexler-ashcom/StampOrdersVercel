@@ -2,7 +2,6 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ScanLine, Send } from "lucide-react";
-import Link from "next/link";
 import { useRef, useState } from "react";
 
 import {
@@ -37,7 +36,10 @@ import type { AddTrackingRequest } from "@/types/api";
  * The scan field stays focused and clears after each capture, so a barcode wedge can run
  * invoice-then-consignment without touching the keyboard.
  */
+import { useRowLink } from "@/lib/useRowLink";
+
 export default function DespatchPage() {
+  const rowLink = useRowLink();
   const queryClient = useQueryClient();
 
   const [invoiceNo, setInvoiceNo] = useState("");
@@ -222,12 +224,11 @@ export default function DespatchPage() {
                     <Th {...pendingSort.th("invoiceDate")}>Invoice date</Th>
                     <Th {...pendingSort.th("deliverTo")}>Deliver to</Th>
                     <Th {...pendingSort.th("status")}>Status</Th>
-                    <Th />
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {pendingSort.sorted?.map((invoice) => (
-                    <tr key={invoice.id} className="hover:bg-slate-50">
+                    <tr key={invoice.id} {...(invoice.invoiceNo ? rowLink(`/invoices/${encodeURIComponent(invoice.invoiceNo)}`) : {})}>
                       <Td>
                         <button
                           type="button"
@@ -252,16 +253,6 @@ export default function DespatchPage() {
                           {trackingStatusLabel[invoice.trackingStatus] ??
                             invoice.trackingStatus}
                         </Badge>
-                      </Td>
-                      <Td align="right">
-                        {invoice.invoiceNo && (
-                          <Link
-                            href={`/invoices/${encodeURIComponent(invoice.invoiceNo)}`}
-                            className="text-xs font-medium text-sky-700 hover:text-sky-900"
-                          >
-                            Open
-                          </Link>
-                        )}
                       </Td>
                     </tr>
                   ))}
@@ -294,7 +285,7 @@ export default function DespatchPage() {
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {awaitingSort.sorted?.map((invoice) => (
-                    <tr key={invoice.id} className="hover:bg-slate-50">
+                    <tr key={invoice.id} {...(invoice.invoiceNo ? rowLink(`/invoices/${encodeURIComponent(invoice.invoiceNo)}`) : {})}>
                       <Td>
                         <span className="font-medium text-slate-900">
                           {text(invoice.invoiceNo)}

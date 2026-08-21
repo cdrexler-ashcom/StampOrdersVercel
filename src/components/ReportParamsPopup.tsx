@@ -129,7 +129,7 @@ export function ReportParamsPopup({
         <SlidersHorizontal className="size-3.5" />
         Report options
         {active > 0 && (
-          <span className="flex size-4 items-center justify-center rounded-full bg-sky-600 text-[10px] font-semibold text-white">
+          <span className="flex size-4 items-center justify-center rounded-full bg-sky-600 text-[10px] font-semibold text-oncolor">
             {active}
           </span>
         )}

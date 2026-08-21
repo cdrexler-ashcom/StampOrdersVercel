@@ -1,7 +1,6 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import Link from "next/link";
 import { useState } from "react";
 
 import { CustomerPicker } from "@/components/CustomerPicker";
@@ -36,7 +35,10 @@ type SortDirection = "asc" | "desc";
  * reprinting were three separate screens in the legacy application; here the search
  * result links straight to the document, which is where reprint and email now live.
  */
+import { useRowLink } from "@/lib/useRowLink";
+
 export default function InvoiceHistoryPage() {
+  const rowLink = useRowLink();
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [invoiceNo, setInvoiceNo] = useState("");
 
@@ -185,7 +187,6 @@ export default function InvoiceHistoryPage() {
                   Run
                 </Th>
                 <Th filter={colFilter("tracking")}>Tracking</Th>
-                <Th />
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -204,7 +205,7 @@ export default function InvoiceHistoryPage() {
                 </tr>
               ) : (
                 filtered?.map((invoice) => (
-                  <tr key={invoice.id} className="hover:bg-slate-50">
+                  <tr key={invoice.id} {...(invoice.invoiceNo ? rowLink(`/invoices/${encodeURIComponent(invoice.invoiceNo)}`) : {})}>
                     <Td>
                       <span className="font-medium text-slate-900">
                         {text(invoice.invoiceNo)}
@@ -231,16 +232,6 @@ export default function InvoiceHistoryPage() {
                         </Badge>
                       ) : (
                         <span className="text-xs text-slate-400">Not required</span>
-                      )}
-                    </Td>
-                    <Td align="right">
-                      {invoice.invoiceNo && (
-                        <Link
-                          href={`/invoices/${encodeURIComponent(invoice.invoiceNo)}`}
-                          className="text-xs font-medium text-sky-700 hover:text-sky-900"
-                        >
-                          Open
-                        </Link>
                       )}
                     </Td>
                   </tr>

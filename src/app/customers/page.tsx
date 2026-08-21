@@ -32,7 +32,10 @@ type SortDirection = "asc" | "desc";
  * The legacy CustEdit.frm was a 1,050-line maintenance form. This is the search and view
  * surface; creation and editing (task C2) live on /customers/new and /customers/[custId].
  */
+import { useRowLink } from "@/lib/useRowLink";
+
 export default function CustomersPage() {
+  const rowLink = useRowLink();
   const [search, setSearch] = useState("");
   const [debounced, setDebounced] = useState("");
 
@@ -168,7 +171,6 @@ export default function CustomersPage() {
                   Discount
                 </Th>
                 <Th>Flags</Th>
-                <Th />
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -187,7 +189,7 @@ export default function CustomersPage() {
                 </tr>
               ) : (
                 filtered?.map((customer) => (
-                  <tr key={customer.uniqueId} className="hover:bg-slate-50">
+                  <tr key={customer.uniqueId} {...rowLink(`/customers/${customer.uniqueId}`)}>
                     <Td>
                       <span className="font-medium text-slate-900">
                         {text(customer.accountNo)}
@@ -212,14 +214,6 @@ export default function CustomersPage() {
                         {customer.gstExempt && <Badge tone="slate">GST exempt</Badge>}
                         {customer.emailInvoice && <Badge tone="sky">Email</Badge>}
                       </div>
-                    </Td>
-                    <Td align="right">
-                      <Link
-                        href={`/customers/${customer.uniqueId}`}
-                        className="text-xs font-medium text-sky-700 hover:text-sky-900"
-                      >
-                        Open
-                      </Link>
                     </Td>
                   </tr>
                 ))

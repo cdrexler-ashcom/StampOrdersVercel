@@ -36,7 +36,10 @@ import type { CustomerRequest } from "@/types/api";
  * body for CustomerForm rather than making individual DetailRows inline-editable — the same
  * component task C2 uses for creation, so the two can't drift on field set or widths.
  */
+import { useRowLink } from "@/lib/useRowLink";
+
 export default function CustomerDetailPage() {
+  const rowLink = useRowLink();
   const params = useParams<{ custId: string }>();
   const custId = Number(params.custId);
   const queryClient = useQueryClient();
@@ -205,23 +208,14 @@ export default function CustomerDetailPage() {
                         <Th>Order</Th>
                         <Th>Date</Th>
                         <Th>Run</Th>
-                        <Th />
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
                       {ordersQuery.data?.map((order) => (
-                        <tr key={order.orderId} className="hover:bg-slate-50">
+                        <tr key={order.orderId} {...rowLink(`/orders/${order.orderId}`)}>
                           <Td>{order.orderId}</Td>
                           <Td>{date(order.date)}</Td>
                           <Td>{text(order.runNo)}</Td>
-                          <Td align="right">
-                            <Link
-                              href={`/orders/${order.orderId}`}
-                              className="text-xs font-medium text-sky-700 hover:text-sky-900"
-                            >
-                              Open
-                            </Link>
-                          </Td>
                         </tr>
                       ))}
                     </tbody>
@@ -243,12 +237,11 @@ export default function CustomerDetailPage() {
                         <Th>Invoice</Th>
                         <Th>Date</Th>
                         <Th>Order</Th>
-                        <Th />
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
                       {invoicesQuery.data?.slice(0, 15).map((invoice) => (
-                        <tr key={invoice.id} className="hover:bg-slate-50">
+                        <tr key={invoice.id} {...(invoice.invoiceNo ? rowLink(`/invoices/${encodeURIComponent(invoice.invoiceNo)}`) : {})}>
                           <Td>
                             <span className="font-medium text-slate-900">
                               {text(invoice.invoiceNo)}
@@ -261,16 +254,6 @@ export default function CustomerDetailPage() {
                           </Td>
                           <Td>{date(invoice.invoiceDate)}</Td>
                           <Td>{invoice.orderId}</Td>
-                          <Td align="right">
-                            {invoice.invoiceNo && (
-                              <Link
-                                href={`/invoices/${encodeURIComponent(invoice.invoiceNo)}`}
-                                className="text-xs font-medium text-sky-700 hover:text-sky-900"
-                              >
-                                Open
-                              </Link>
-                            )}
-                          </Td>
                         </tr>
                       ))}
                     </tbody>

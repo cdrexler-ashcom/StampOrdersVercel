@@ -1,8 +1,50 @@
 @import "tailwindcss";
 
+/*
+ * Dark mode is class-based. This custom variant makes `.dark` on <html> the switch, so the
+ * ThemeProvider can offer Light / Dark / System.
+ */
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
     "Helvetica Neue", Arial, sans-serif;
+
+  /*
+   * Always white, in both themes — for text/icons on a saturated coloured button (e.g.
+   * bg-sky-700). Plain text-white can't be used there because dark mode remaps --color-white
+   * to a dark surface (below).
+   */
+  --color-oncolor: #ffffff;
+}
+
+/*
+ * Dark theme.
+ *
+ * Tailwind v4 emits colour utilities as `var(--color-<name>)`, and CSS custom properties cascade,
+ * so redefining the neutral (slate) scale + white here re-skins the ENTIRE app — every card,
+ * border, table, input and text colour — without touching a single component. Only neutrals are
+ * remapped; accent colours (sky/red/green/amber/violet) are left as-is so badges and alerts keep
+ * their meaning and stay legible.
+ *
+ * A tuned inversion: slate-50 becomes the darkest (page background), white becomes a lifted card
+ * surface, and 600–900 become progressively lighter text.
+ */
+.dark {
+  color-scheme: dark;
+
+  --color-white: #101a2e; /* card / surface (lifts above the page background) */
+
+  --color-slate-50: #0b1220; /* page background; also recessed tints (card headers) */
+  --color-slate-100: #182135; /* hover lift, subtle panels */
+  --color-slate-200: #26324b; /* borders, dividers */
+  --color-slate-300: #35435f; /* stronger borders, disabled outlines */
+  --color-slate-400: #64748b; /* faint icons, placeholders */
+  --color-slate-500: #94a3b8; /* muted text */
+  --color-slate-600: #c4cdda; /* secondary text, labels */
+  --color-slate-700: #dde3ec; /* body text */
+  --color-slate-800: #eef1f6; /* strong text */
+  --color-slate-900: #f8fafc; /* headings */
 }
 
 html,

@@ -24,6 +24,7 @@ import {
 import { orders } from "@/lib/endpoints";
 import { date, money, text } from "@/lib/format";
 import { setOrderListContext } from "@/lib/orderListContext";
+import { useRowLink } from "@/lib/useRowLink";
 import type { Customer } from "@/types/api";
 
 /** Columns the API's GET /api/orders accepts as `sortBy`. */
@@ -72,6 +73,8 @@ export default function OrdersPage() {
       setOrderListContext(query.data.map((order) => order.orderId));
     }
   }, [query.data]);
+
+  const rowLink = useRowLink();
 
   const th = (key: SortKey) => ({
     onSort: () => toggleSort(key),
@@ -146,12 +149,11 @@ export default function OrdersPage() {
                 <Th align="right">Lines</Th>
                 <Th align="right">Value</Th>
                 <Th>Flags</Th>
-                <Th />
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {query.data?.map((order) => (
-                <tr key={order.orderId} className="hover:bg-slate-50">
+                <tr key={order.orderId} {...rowLink(`/orders/${order.orderId}`)}>
                   <Td>
                     <span className="font-medium text-slate-900">
                       {order.orderId}
@@ -175,14 +177,6 @@ export default function OrdersPage() {
                       {order.freightApplies && <Badge tone="slate">Freight</Badge>}
                       {order.direct && <Badge tone="sky">Docket</Badge>}
                     </div>
-                  </Td>
-                  <Td align="right">
-                    <Link
-                      href={`/orders/${order.orderId}`}
-                      className="text-xs font-medium text-sky-700 hover:text-sky-900"
-                    >
-                      Open
-                    </Link>
                   </Td>
                 </tr>
               ))}

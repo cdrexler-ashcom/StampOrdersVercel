@@ -88,7 +88,7 @@ export default function InvoiceDocumentPage() {
               type="button"
               onClick={() => setDocumentType("invoice")}
               className={`rounded-l-md px-3 py-1.5 text-xs font-medium ${
-                !isDocket ? "bg-sky-700 text-white" : "bg-white text-slate-600"
+                !isDocket ? "bg-sky-700 text-oncolor" : "bg-white text-slate-600"
               }`}
             >
               {invoice.credit ? "Credit note" : "Invoice"}
@@ -97,7 +97,7 @@ export default function InvoiceDocumentPage() {
               type="button"
               onClick={() => setDocumentType("docket")}
               className={`rounded-r-md px-3 py-1.5 text-xs font-medium ${
-                isDocket ? "bg-sky-700 text-white" : "bg-white text-slate-600"
+                isDocket ? "bg-sky-700 text-oncolor" : "bg-white text-slate-600"
               }`}
             >
               Delivery docket
