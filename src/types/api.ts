@@ -600,6 +600,8 @@ export interface StateInvoice {
   bankName: string | null;
   bankBsb: string | null;
   bankAcct: string | null;
+  /** The "From" address for proofs and correspondence sent under this state. */
+  emailFrom: string | null;
 }
 
 export interface CreateStampLabelRequest { labelCode: string; labelText?: string | null; }
@@ -619,6 +621,7 @@ export interface CreateInvoiceStateRequest {
   bankName?: string | null;
   bankBsb?: string | null;
   bankAcct?: string | null;
+  emailFrom?: string | null;
 }
 
 export type UpdateInvoiceStateRequest = Omit<CreateInvoiceStateRequest, "state">;
@@ -776,6 +779,12 @@ export interface ProofColourOption {
   name: string;
 }
 
+/** One selectable invoicing company, carrying its StateInvoice.EmailFrom. */
+export interface ProofInvoiceCompOption {
+  state: string;
+  emailFrom: string | null;
+}
+
 /** GET /api/proofs/{jobNo} — the proof screen's defaults, from txJobNo_Validate. */
 export interface ProofJobResponse {
   jobNo: string;
@@ -801,7 +810,7 @@ export interface ProofJobResponse {
   subject: string;
 
   invoiceComp: string;
-  invoiceComps: string[];
+  invoiceComps: ProofInvoiceCompOption[];
 
   deliveryAmt: number;
 

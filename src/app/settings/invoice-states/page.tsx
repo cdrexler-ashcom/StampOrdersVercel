@@ -53,6 +53,7 @@ const MAX = {
   postCode: 4,
   letterHead: 100,
   bank: 50,
+  emailFrom: 50,
 } as const;
 
 type FormState = {
@@ -69,6 +70,7 @@ type FormState = {
   bankName: string;
   bankBsb: string;
   bankAcct: string;
+  emailFrom: string;
 };
 
 const emptyForm: FormState = {
@@ -85,6 +87,7 @@ const emptyForm: FormState = {
   bankName: "",
   bankBsb: "",
   bankAcct: "",
+  emailFrom: "",
 };
 
 function toForm(entity: StateInvoice): FormState {
@@ -104,6 +107,7 @@ function toForm(entity: StateInvoice): FormState {
     bankName: entity.bankName ?? "",
     bankBsb: entity.bankBsb ?? "",
     bankAcct: entity.bankAcct ?? "",
+    emailFrom: entity.emailFrom ?? "",
   };
 }
 
@@ -124,6 +128,7 @@ function toRequest(form: FormState): Omit<CreateInvoiceStateRequest, "state"> {
     bankName: orNull(form.bankName),
     bankBsb: orNull(form.bankBsb),
     bankAcct: orNull(form.bankAcct),
+    emailFrom: orNull(form.emailFrom),
   };
 }
 
@@ -405,6 +410,18 @@ export default function InvoiceStatesPage() {
               value={form.letterHead}
               maxLength={MAX.letterHead}
               onChange={(event) => set("letterHead", event.target.value)}
+            />
+          </Field>
+
+          <Field
+            label="Email from"
+            hint="The From address used when a proof is sent under this company."
+          >
+            <Input
+              type="email"
+              value={form.emailFrom}
+              maxLength={MAX.emailFrom}
+              onChange={(event) => set("emailFrom", event.target.value)}
             />
           </Field>
 

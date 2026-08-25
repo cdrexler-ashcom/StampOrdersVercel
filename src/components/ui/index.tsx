@@ -184,9 +184,12 @@ export function Select({
 
 export function Textarea({
   className,
+  ref,
   ...props
-}: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
-  return <textarea {...props} className={clsx(controlClass, className)} />;
+}: React.TextareaHTMLAttributes<HTMLTextAreaElement> & {
+  ref?: React.Ref<HTMLTextAreaElement>;
+}) {
+  return <textarea {...props} ref={ref} className={clsx(controlClass, className)} />;
 }
 
 export function Checkbox({

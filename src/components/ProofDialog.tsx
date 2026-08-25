@@ -1,8 +1,8 @@
 "use client";
 
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { Download, ExternalLink, Eye, RefreshCw } from "lucide-react";
-import { useEffect, useState } from "react";
+import { Download, ExternalLink, Eye, RefreshCw, Send } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 
 import { api } from "@/lib/api";
 import { proofs } from "@/lib/endpoints";
@@ -79,13 +79,17 @@ export function ProofDialog({
   const [price, setPrice] = useState("");
   const [discPct, setDiscPct] = useState("0");
   const [email, setEmail] = useState("");
-  const [faxNo, setFaxNo] = useState("");
   const [invoiceComp, setInvoiceComp] = useState("");
+  const [subject, setSubject] = useState("");
+  const [emailFrom, setEmailFrom] = useState("");
+  const [messageText, setMessageText] = useState("");
   const [extraText, setExtraText] = useState("");
   const [noProofHeader, setNoProofHeader] = useState(false);
   const [useCustomerLetterHead, setUseCustomerLetterHead] = useState(true);
   const [deliveryIncluded, setDeliveryIncluded] = useState(false);
   const [deliveryAmt, setDeliveryAmt] = useState("0.00");
+
+  const messageTextRef = useRef<HTMLTextAreaElement>(null);
 
   const [previewHtml, setPreviewHtml] = useState<string | null>(null);
 
@@ -101,8 +105,10 @@ export function ProofDialog({
     setPrice(job.price.toFixed(2));
     setDiscPct(String(job.discPct));
     setEmail(job.email);
-    setFaxNo(job.faxNo);
     setInvoiceComp(job.invoiceComp);
+    setSubject(job.subject);
+    setEmailFrom(job.emailFrom);
+    setMessageText(job.messageText);
     setExtraText("");
     setNoProofHeader(job.noProofHeader);
     setUseCustomerLetterHead(Boolean(job.proofHeader));
@@ -140,7 +146,6 @@ export function ProofDialog({
       price: Number(price),
       discPct: Number(discPct) || 0,
       email: email.trim(),
-      faxNo: faxNo.trim(),
       invoiceComp: invoiceComp.trim(),
       extraText: extraText.trim() || null,
       noProofHeader,
@@ -154,6 +159,34 @@ export function ProofDialog({
   const generate = () => {
     const body = buildRequest();
     if (body) previewMutation.mutate(body);
+  };
+
+  // Email From follows the selected Company — each has its own StateInvoice.EmailFrom — so
+  // switching companies re-populates it, the way the legacy screen re-read SendFromEmail on
+  // txJobNo_Validate. The operator can still edit it afterwards.
+  const changeInvoiceComp = (state: string) => {
+    setInvoiceComp(state);
+    const match = job?.invoiceComps.find((c) => c.state === state);
+    setEmailFrom(match?.emailFrom ?? "");
+  };
+
+  // Mirrors the legacy Insert Price / Insert Delivery buttons: <price> and <delivery> tokens
+  // dropped into the message body at the cursor. EmailProof only substitutes real figures for
+  // them when No proof header is ticked; otherwise they're stripped at send time.
+  const insertToken = (token: string) => {
+    const el = messageTextRef.current;
+    if (!el) {
+      setMessageText((current) => current + token);
+      return;
+    }
+    const start = el.selectionStart ?? messageText.length;
+    const end = el.selectionEnd ?? messageText.length;
+    const next = messageText.slice(0, start) + token + messageText.slice(end);
+    setMessageText(next);
+    requestAnimationFrame(() => {
+      el.focus();
+      el.selectionStart = el.selectionEnd = start + token.length;
+    });
   };
 
   const openInNewTab = () => {
@@ -174,6 +207,10 @@ export function ProofDialog({
       footer={
         <>
           <Button onClick={onClose}>Close</Button>
+          <Button disabled title="Emailing the proof is not available here yet.">
+            <Send className="size-3.5" />
+            Email
+          </Button>
           <Button
             variant="primary"
             onClick={generate}
@@ -273,15 +310,15 @@ export function ProofDialog({
                     onChange={(e) => setDiscPct(e.target.value)}
                   />
                 </Field>
-                <Field label="Invoicing entity">
+                <Field label="Company">
                   <Select
                     value={invoiceComp}
-                    onChange={(e) => setInvoiceComp(e.target.value)}
+                    onChange={(e) => changeInvoiceComp(e.target.value)}
                   >
                     <option value="">—</option>
                     {job.invoiceComps.map((comp) => (
-                      <option key={comp} value={comp}>
-                        {comp}
+                      <option key={comp.state} value={comp.state}>
+                        {comp.state}
                       </option>
                     ))}
                   </Select>
@@ -305,9 +342,42 @@ export function ProofDialog({
                 <Field label="Email">
                   <Input value={email} onChange={(e) => setEmail(e.target.value)} />
                 </Field>
-                <Field label="Fax no.">
-                  <Input value={faxNo} onChange={(e) => setFaxNo(e.target.value)} />
+                <Field label="Email from" hint="Follows Company — editable.">
+                  <Input
+                    type="email"
+                    value={emailFrom}
+                    onChange={(e) => setEmailFrom(e.target.value)}
+                  />
                 </Field>
+              </div>
+
+              <Field label="Subject">
+                <Input value={subject} onChange={(e) => setSubject(e.target.value)} />
+              </Field>
+
+              <Field
+                label="Email text"
+                hint={
+                  <>
+                    <code>{"<price>"}</code> and <code>{"<delivery>"}</code> are placeholders —
+                    see the buttons below.
+                  </>
+                }
+              >
+                <Textarea
+                  ref={messageTextRef}
+                  rows={4}
+                  value={messageText}
+                  onChange={(e) => setMessageText(e.target.value)}
+                />
+              </Field>
+              <div className="-mt-2 flex gap-2">
+                <Button size="sm" variant="secondary" onClick={() => insertToken("<price>")}>
+                  Insert price
+                </Button>
+                <Button size="sm" variant="secondary" onClick={() => insertToken("<delivery>")}>
+                  Insert delivery
+                </Button>
               </div>
 
               <Field label="Extra text" hint="Appended to the proof, optional.">
