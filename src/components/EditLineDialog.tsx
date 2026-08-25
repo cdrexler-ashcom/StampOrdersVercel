@@ -164,6 +164,8 @@ export function EditLineDialog({
   if (price === "" || !Number.isFinite(Number(price)))
     problems.push("Price must be a number.");
 
+  const canSubmit = problems.length === 0 && !mutation.isPending;
+
   const submit = () => {
     if (problems.length > 0 || !product || !line) return;
 
@@ -196,14 +198,25 @@ export function EditLineDialog({
             variant="primary"
             onClick={submit}
             loading={mutation.isPending}
-            disabled={problems.length > 0}
+            disabled={!canSubmit}
           >
             Save changes
           </Button>
         </>
       }
     >
-      <div className="space-y-4">
+      <div
+        className="space-y-4"
+        onKeyDown={(event) => {
+          // Enter acts as the Save changes button: same enablement check, and it defers
+          // to any field that already gave Enter a meaning of its own (e.g. ProductPicker
+          // selecting a highlighted result), which calls preventDefault when it does.
+          if (event.key !== "Enter" || event.defaultPrevented) return;
+          if (event.target instanceof HTMLTextAreaElement) return;
+          event.preventDefault();
+          if (canSubmit) submit();
+        }}
+      >
         {mutation.isError && (
           <Notice tone="red" title="Line was not saved">
             {(mutation.error as Error).message}
