@@ -83,6 +83,13 @@ function computePreset(key: PresetKey, today: Date): DateRange {
   }
 }
 
+/** The "This month" preset's range — 1st of the current month to today. Exposed so callers
+ * that want to default a date filter (rather than leave it blank) can match what the
+ * preset dropdown itself would select, instead of re-deriving the same dates. */
+export function thisMonthRange(today: Date = new Date()): DateRange {
+  return computePreset("thisMonth", today);
+}
+
 export function DateRangeField({
   value,
   onChange,
@@ -124,7 +131,9 @@ export function DateRangeField({
         ))}
       </Select>
 
-      <div className="grid grid-cols-2 gap-2">
+      {/* Stacked rather than side-by-side: a native date input needs more width than half of
+          a narrow panel (like ReportParamsPanel) leaves it, or its last digit gets clipped. */}
+      <div className="space-y-2">
         <Field label="From">
           <Input
             type="date"

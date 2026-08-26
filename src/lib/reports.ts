@@ -31,6 +31,12 @@ export interface ReportFilters {
   invoiceNo?: boolean;
 }
 
+/** One choice in a report's "Sort by" dropdown — `value` is sent to the API as `sortBy`. */
+export interface ReportSortOption {
+  value: string;
+  label: string;
+}
+
 export interface ReportMeta {
   /** The API key — the XML file name without extension. May contain spaces. */
   name: string;
@@ -41,40 +47,38 @@ export interface ReportMeta {
   bound: boolean;
   /** For bound reports, the filters worth showing. */
   filters?: ReportFilters;
+  /**
+   * Runtime sort order, offered as a "Sort by" dropdown in the params panel. Opt-in per report:
+   * `invreg` is the only one the API currently accepts a `sortBy` override for (see
+   * ReportEndpoints.cs) — it replaces the now-retired invregdate/invreginvc, which differed from
+   * invreg only in a fixed sort order baked into their own XML.
+   */
+  sortOptions?: ReportSortOption[];
   /** For unbound reports, a short note on what is blocking the binding. */
   blockedBy?: string;
 }
 
 /**
  * Every extracted report. Order here drives the debug list. `bound` reflects what the API can
- * render with live data as of the reporting work to date (14 of 20).
+ * render with live data as of the reporting work to date (12 of 18 — invregdate and invreginvc
+ * were retired as duplicates of invreg, which now covers both via its Sort by option).
  */
 export const REPORTS: ReportMeta[] = [
   // --- Invoice register (ArchHeader / ArchLine) ---
   {
     name: "invreg",
-    title: "Invoice Register (by date)",
+    title: "Invoice Register",
     description:
-      "Issued invoices with net, GST and inc-GST totals, grouped by invoice and ordered by date, with a grand total.",
+      "Issued invoices with net, GST and inc-GST totals, grouped by invoice, with a grand total. " +
+      "Sortable by date or invoice number — replaces the retired invregdate/invreginvc reports, " +
+      "which differed from this one only in fixed sort order.",
     category: "Invoice register",
     bound: true,
     filters: { dates: true, custId: true, invoiceNo: true },
-  },
-  {
-    name: "invregdate",
-    title: "Invoice Register (by invoice date)",
-    description: "As the invoice register, ordered by invoice date.",
-    category: "Invoice register",
-    bound: true,
-    filters: { dates: true, custId: true, invoiceNo: true },
-  },
-  {
-    name: "invreginvc",
-    title: "Invoice Register (by invoice no.)",
-    description: "As the invoice register, ordered by invoice number.",
-    category: "Invoice register",
-    bound: true,
-    filters: { dates: true, custId: true, invoiceNo: true },
+    sortOptions: [
+      { value: "date", label: "Date" },
+      { value: "invoiceNo", label: "Invoice no." },
+    ],
   },
 
   // --- Sales analysis (ArchHeader / ArchLine) ---
@@ -257,6 +261,8 @@ export interface ReportQueryParams {
   to?: string;
   custId?: string | number;
   invoiceNo?: string;
+  /** Runtime sort override — currently only honoured by the API for `invreg`. */
+  sortBy?: string;
 }
 
 /**
