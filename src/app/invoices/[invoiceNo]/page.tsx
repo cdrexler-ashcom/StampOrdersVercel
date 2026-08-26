@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Mail, Printer } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
@@ -46,9 +46,33 @@ export default function InvoiceDocumentPage() {
   const invoiceNo = decodeURIComponent(params.invoiceNo);
   const [documentType, setDocumentType] = useState<DocumentType>("invoice");
 
+  const queryClient = useQueryClient();
+  const [emailResult, setEmailResult] = useState<{
+    tone: "green" | "amber" | "red";
+    text: string;
+  } | null>(null);
+
   const query = useQuery({
     queryKey: ["invoice", invoiceNo],
     queryFn: () => invoices.historyDetail(invoiceNo),
+  });
+
+  // Real SMTP send of the invoice to the customer (E1). Uses the invoice's stored address.
+  const emailMutation = useMutation({
+    mutationFn: () => invoices.email(invoiceNo),
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ["invoice", invoiceNo] });
+      setEmailResult(
+        result.sent
+          ? { tone: "green", text: `Invoice emailed to ${result.recipient}.` }
+          : { tone: "amber", text: result.message ?? "The invoice was not emailed." },
+      );
+    },
+    onError: (error) =>
+      setEmailResult({
+        tone: "red",
+        text: error instanceof Error ? error.message : "The invoice could not be emailed.",
+      }),
   });
 
   if (query.isLoading) return <Spinner label="Loading invoice…" />;
@@ -65,11 +89,7 @@ export default function InvoiceDocumentPage() {
   const gst = lines.reduce((sum, line) => sum + (line.gst ?? 0), 0);
   const gross = lines.reduce((sum, line) => sum + (line.totalPrice ?? 0), 0);
 
-  const mailto = invoice.email?.trim()
-    ? `mailto:${encodeURIComponent(invoice.email.trim())}?subject=${encodeURIComponent(
-        `${invoice.credit ? "Credit note" : "Invoice"} ${invoice.invoiceNo ?? ""} — Stead Brothers`,
-      )}`
-    : null;
+  const hasEmail = Boolean(invoice.email?.trim());
 
   return (
     <>
@@ -104,13 +124,14 @@ export default function InvoiceDocumentPage() {
             </button>
           </div>
 
-          {mailto && (
-            <a href={mailto}>
-              <Button>
-                <Mail className="size-3.5" />
-                Email
-              </Button>
-            </a>
+          {hasEmail && (
+            <Button
+              loading={emailMutation.isPending}
+              onClick={() => emailMutation.mutate()}
+            >
+              <Mail className="size-3.5" />
+              Email invoice
+            </Button>
           )}
 
           <Button variant="primary" onClick={() => window.print()}>
@@ -318,10 +339,17 @@ export default function InvoiceDocumentPage() {
             </CardBody>
           </Card>
 
-          <Notice tone="slate" title="Sending">
-            The API does not expose a send endpoint, so Email opens your mail client with
-            the customer address and subject filled in. Attach the printed PDF to send it.
-          </Notice>
+          {emailResult ? (
+            <Notice tone={emailResult.tone} title="Email">
+              {emailResult.text}
+            </Notice>
+          ) : (
+            <Notice tone="slate" title="Emailing">
+              {hasEmail
+                ? "Email invoice sends a summary to the customer's stored address via the server."
+                : "This invoice has no email address, so it can't be emailed."}
+            </Notice>
+          )}
         </aside>
       </div>
     </>

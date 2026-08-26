@@ -881,3 +881,29 @@ export interface CurrentUser {
   username: string;
   roles: string[];
 }
+
+// --- Email (E1) -------------------------------------------------------------------------
+
+/** Result of a single email send (despatch notification or invoice email). */
+export interface EmailSendResult {
+  sent: boolean;
+  recipient: string | null;
+  message: string | null;
+}
+
+/** One invoice's result within a batch despatch-notification send. */
+export interface EmailBatchItem {
+  archiveId: number;
+  invoiceNo: string | null;
+  recipient: string | null;
+  sent: boolean;
+  message: string | null;
+}
+
+/** Result of sending every awaiting despatch notification. */
+export interface EmailBatchResult {
+  total: number;
+  sent: number;
+  failed: number;
+  items: EmailBatchItem[];
+}

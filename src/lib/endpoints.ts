@@ -4,6 +4,8 @@ import type {
   AddTrackingRequest,
   ArchiveHeader,
   ArchiveLine,
+  EmailBatchResult,
+  EmailSendResult,
   BankableReceipt,
   CreateOrderRequest,
   CreditCheckResult,
@@ -151,6 +153,13 @@ export const invoices = {
     api.get<{ invoice: ArchiveHeader; lines: ArchiveLine[] }>(
       `/api/invoices/history/${encodeURIComponent(invoiceNo)}`,
     ),
+
+  /** POST /api/invoices/history/{invoiceNo}/email — sends the invoice to the customer (E1) */
+  email: (invoiceNo: string, toOverride?: string) =>
+    api.post<EmailSendResult>(
+      `/api/invoices/history/${encodeURIComponent(invoiceNo)}/email`,
+      toOverride ? { toOverride } : {},
+    ),
 };
 
 // --- Receipts ---------------------------------------------------------------------------
@@ -199,6 +208,14 @@ export const tracking = {
   /** POST /api/tracking/{archiveId}/notified */
   markNotified: (archiveId: number) =>
     api.post<void>(`/api/tracking/${archiveId}/notified`),
+
+  /** POST /api/tracking/{archiveId}/send-notification — real SMTP send (E1) */
+  sendNotification: (archiveId: number) =>
+    api.post<EmailSendResult>(`/api/tracking/${archiveId}/send-notification`),
+
+  /** POST /api/tracking/send-notifications — send every awaiting notification (E1) */
+  sendAllNotifications: () =>
+    api.post<EmailBatchResult>("/api/tracking/send-notifications"),
 };
 
 // --- Reference --------------------------------------------------------------------------

@@ -113,6 +113,48 @@ export default function DespatchPage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["tracking"] }),
   });
 
+  // Real SMTP send of a single despatch notification (E1). On success the API stamps EmailSent,
+  // so the row drops out of the awaiting list when the query refetches.
+  const sendMutation = useMutation({
+    mutationFn: (archiveId: number) => tracking.sendNotification(archiveId),
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ["tracking"] });
+      setSendResult(
+        result.sent
+          ? { tone: "green", text: `Despatch notification sent to ${result.recipient}.` }
+          : { tone: "amber", text: result.message ?? "The notification was not sent." },
+      );
+    },
+    onError: (error) =>
+      setSendResult({
+        tone: "red",
+        text: error instanceof Error ? error.message : "The notification could not be sent.",
+      }),
+  });
+
+  // Send every awaiting notification in one go (E1). Reports how many succeeded/failed.
+  const sendAllMutation = useMutation({
+    mutationFn: () => tracking.sendAllNotifications(),
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ["tracking"] });
+      setSendResult({
+        tone: result.failed > 0 ? "amber" : "green",
+        text:
+          result.total === 0
+            ? "There were no notifications to send."
+            : `Sent ${result.sent} of ${result.total} notification(s)` +
+              (result.failed > 0 ? `, ${result.failed} failed.` : "."),
+      });
+    },
+    onError: (error) =>
+      setSendResult({
+        tone: "red",
+        text: error instanceof Error ? error.message : "The notifications could not be sent.",
+      }),
+  });
+
+  const [sendResult, setSendResult] = useState<{ tone: "green" | "amber" | "red"; text: string } | null>(null);
+
   const capture = () => {
     if (!invoiceNo.trim() || !trackingNo.trim()) return;
     addMutation.mutate({
@@ -285,13 +327,33 @@ export default function DespatchPage() {
               title="Ready to notify"
               description="Invoices with a consignment number, awaiting a despatch notification."
               actions={
-                awaitingSort.isSorted && (
-                  <Button size="sm" variant="ghost" onClick={awaitingSort.clear}>
-                    Clear sorting
+                <div className="flex items-center gap-2">
+                  {awaitingSort.isSorted && (
+                    <Button size="sm" variant="ghost" onClick={awaitingSort.clear}>
+                      Clear sorting
+                    </Button>
+                  )}
+                  <Button
+                    size="sm"
+                    variant="primary"
+                    disabled={(awaiting.data?.length ?? 0) === 0}
+                    loading={sendAllMutation.isPending}
+                    onClick={() => sendAllMutation.mutate()}
+                  >
+                    <Send className="size-3" />
+                    Send all awaiting
                   </Button>
-                )
+                </div>
               }
             />
+
+            {sendResult && (
+              <div className="px-4 pt-3">
+                <Notice tone={sendResult.tone} title="Despatch email">
+                  {sendResult.text}
+                </Notice>
+              </div>
+            )}
 
             {awaiting.isLoading ? (
               <Spinner />
@@ -332,22 +394,17 @@ export default function DespatchPage() {
                       <Td align="right">
                         <div className="flex justify-end gap-1.5">
                           {invoice.email?.trim() && (
-                            <a
-                              href={`mailto:${encodeURIComponent(
-                                invoice.email.trim(),
-                              )}?subject=${encodeURIComponent(
-                                `Despatch notification — invoice ${invoice.invoiceNo ?? ""}`,
-                              )}&body=${encodeURIComponent(
-                                `Your order has been despatched.\n\nInvoice: ${
-                                  invoice.invoiceNo ?? ""
-                                }\nConsignment: ${invoice.trackingNo ?? ""}\n`,
-                              )}`}
+                            <Button
+                              size="sm"
+                              loading={
+                                sendMutation.isPending &&
+                                sendMutation.variables === invoice.id
+                              }
+                              onClick={() => sendMutation.mutate(invoice.id)}
                             >
-                              <Button size="sm">
-                                <Send className="size-3" />
-                                Email
-                              </Button>
-                            </a>
+                              <Send className="size-3" />
+                              Send email
+                            </Button>
                           )}
                           <Button
                             size="sm"
