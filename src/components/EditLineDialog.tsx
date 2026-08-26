@@ -342,11 +342,13 @@ export function EditLineDialog({
         )}
 
         {problems.length > 0 && (
-          <ul className="space-y-0.5 text-xs text-slate-500">
-            {problems.map((problem) => (
-              <li key={problem}>{problem}</li>
-            ))}
-          </ul>
+          <Notice tone="amber" title="Before these changes can be saved">
+            <ul className="list-disc space-y-0.5 pl-4">
+              {problems.map((problem) => (
+                <li key={problem}>{problem}</li>
+              ))}
+            </ul>
+          </Notice>
         )}
       </div>
     </Modal>

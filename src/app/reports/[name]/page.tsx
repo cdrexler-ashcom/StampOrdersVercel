@@ -5,12 +5,13 @@ import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import { Suspense, useMemo, useState } from "react";
 
+import { thisMonthRange } from "@/components/DateRangeField";
 import { ReportFrame } from "@/components/ReportFrame";
 import {
   EMPTY_REPORT_PARAMS,
-  ReportParamsPopup,
+  ReportParamsPanel,
   type ReportParamsValue,
-} from "@/components/ReportParamsPopup";
+} from "@/components/ReportParamsPanel";
 import { Button, Notice, PageHeader, Spinner } from "@/components/ui";
 import {
   findReport,
@@ -33,15 +34,27 @@ function ReportViewer() {
 
   const [view, setView] = useState<ReportView>(initialView);
 
-  // Draft: what the popup is currently showing, edited freely without touching the report.
-  const [draft, setDraft] = useState<ReportParamsValue>(EMPTY_REPORT_PARAMS);
+  // Defaults to open so the options are visible the first time a report is opened; the
+  // operator's preference to collapse it isn't persisted across reports on purpose — each
+  // report screen starts from the same default.
+  const [panelOpen, setPanelOpen] = useState(true);
+
+  // Reports that take a date range default to the current month rather than opening blank —
+  // "this month" is what's asked for far more often than "all time", and it matches the
+  // range DateRangeField's own "This month" preset would select.
+  const defaultParams: ReportParamsValue = filters.dates
+    ? { ...EMPTY_REPORT_PARAMS, ...thisMonthRange() }
+    : EMPTY_REPORT_PARAMS;
+
+  // Draft: what the panel is currently showing, edited freely without touching the report.
+  const [draft, setDraft] = useState<ReportParamsValue>(defaultParams);
 
   // Applied: what the report was actually generated with. Kept as the rich
   // ReportParamsValue (not just the query-string values) so the filter chips below can
   // still show the customer's name, not just the id that went into the URL.
   const [applied, setApplied] = useState<{ view: ReportView; params: ReportParamsValue }>({
     view: initialView,
-    params: EMPTY_REPORT_PARAMS,
+    params: defaultParams,
   });
 
   const queryParams: ReportQueryParams = useMemo(
@@ -50,6 +63,7 @@ function ReportViewer() {
       to: applied.params.to || undefined,
       custId: applied.params.customer?.uniqueId ?? undefined,
       invoiceNo: applied.params.invoiceNo || undefined,
+      sortBy: applied.params.sortBy || undefined,
     }),
     [applied.params],
   );
@@ -88,26 +102,35 @@ function ReportViewer() {
         </div>
       )}
 
-      <div className="mb-4 flex flex-wrap items-center gap-2">
-        <ReportParamsPopup
+      <div className="flex items-start gap-4">
+        <ReportParamsPanel
           filters={filters}
           value={draft}
           onChange={setDraft}
           bound={bound}
           onGenerate={(nextView) => apply(draft, nextView)}
+          open={panelOpen}
+          onOpenChange={setPanelOpen}
+          sortOptions={meta?.sortOptions}
         />
 
-        {chips.map((chip) => (
-          <FilterChip key={chip.key} label={chip.label} onRemove={chip.onRemove} />
-        ))}
-      </div>
+        <div className="min-w-0 flex-1 space-y-4">
+          {chips.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2">
+              {chips.map((chip) => (
+                <FilterChip key={chip.key} label={chip.label} onRemove={chip.onRemove} />
+              ))}
+            </div>
+          )}
 
-      <ReportFrame
-        name={name}
-        view={applied.view}
-        params={queryParams}
-        title={meta?.title ?? name}
-      />
+          <ReportFrame
+            name={name}
+            view={applied.view}
+            params={queryParams}
+            title={meta?.title ?? name}
+          />
+        </div>
+      </div>
     </div>
   );
 }
