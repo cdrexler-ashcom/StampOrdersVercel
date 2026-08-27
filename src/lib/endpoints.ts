@@ -40,6 +40,7 @@ import type {
   CreateBinRequest,
   UpdateBinRequest,
   OverdueMessages,
+  ControlSettings,
   StateInvoice,
   UpdateInvoiceStateRequest,
   CreateInvoiceStateRequest,
@@ -299,6 +300,12 @@ export const settings = {
   /** PUT /api/settings/overdue-messages */
   updateOverdueMessages: (body: OverdueMessages) =>
     api.put<OverdueMessages>("/api/settings/overdue-messages", body),
+
+  /** GET /api/settings/control */
+  control: () => api.get<ControlSettings>("/api/settings/control"),
+  /** PUT /api/settings/control */
+  updateControl: (body: ControlSettings) =>
+    api.put<ControlSettings>("/api/settings/control", body),
 };
 
 export const reference = {

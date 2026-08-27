@@ -632,6 +632,46 @@ export interface OverdueMessages {
   message2: string | null;
 }
 
+/**
+ * Both the read result and the write body for /api/settings/control — the operator-maintained
+ * fields of the single Control row (the port of the legacy Ctrl.frm screen).
+ *
+ * The document number sequences and the SMTP password are intentionally not part of this
+ * slice: sequences so a screen cannot move one by accident, the password because it never
+ * leaves the server. Every string field is replace-semantics — sending null (or blank) clears
+ * that column.
+ */
+export interface ControlSettings {
+  // Freight & GL
+  prodAcct: string | null;
+  freightProd: string | null;
+  freightAcct: string | null;
+  freightAmt: number | null;
+  freightChargeCode: string | null;
+  freightDesc: string | null;
+  // GST — gstTaxCode is a smallint code, not text
+  gstTaxCode: number | null;
+  gstRate: number | null;
+  // Web order import
+  defImportCust: string | null;
+  // Remittance details
+  bankName: string | null;
+  bankBsb: string | null;
+  bankAcct: string | null;
+  // Email
+  smtpSrvr: string | null;
+  smtpPort: number | null;
+  smtpUserName: string | null;
+  emailFrom: string | null;
+  emailBcc: string | null;
+  // Directories
+  sosetDir: string | null;
+  stampImageDir: string | null;
+  proofDir: string | null;
+  proofImageDir: string | null;
+  statDir: string | null;
+}
+
 /** RFC 7807, as produced by the API's exception handler and Results.Problem. */
 export interface ProblemDetails {
   type?: string;

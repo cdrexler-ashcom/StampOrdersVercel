@@ -39,6 +39,7 @@ Navigation is grouped by the job being done rather than by the screen that used 
 | `PrtInvoice.frm` | 1,593 | `/invoicing` |
 | `InvoiceHistoryList.frm` | 1,266 | `/invoices` |
 | `CustEdit.frm` | 1,050 | `/customers/[custId]` (read-only — see §4) |
+| `Ctrl.frm` ("Control Information") | 846 | `/settings/control` (see §4 for the two omitted field groups) |
 | `menu.Frm` (Form1) | 617 | Dashboard + sidebar |
 
 ### Consolidated
@@ -113,7 +114,8 @@ endpoint, it is absent and listed here.
 | --- | --- | --- |
 | Customer maintenance | `CustEdit.frm` | `POST`/`PUT /api/customers` — customers are read-only |
 | Pricing maintenance | `Pricing.frm`, `PriceList.frm` | Pricing rule write endpoints |
-| Control record | `Ctrl.frm` (28 fields) | Control record read/write |
+| Control — number sequences | `Ctrl.frm` (Next Sales Inv/Credit, Next Receipt, Next Deposit, Next Delivery Job No) | No endpoint by design — a maintenance screen must not be able to move a sequence. `/settings/control` covers every other Control field. |
+| Control — SMTP password | `Ctrl.frm` | Not exposed — the secret stays on the server and is changed in the database directly. |
 | Bin maintenance | File → Bins | Bin endpoints |
 | Invoice states | `InvoiceStates.frm`, `frmEditInvoiceState.frm` | State endpoints |
 | Stamp labels | `frmStampLabels.frm` | Stamp label endpoints |
