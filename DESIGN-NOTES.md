@@ -88,6 +88,13 @@ an unexpected price can be explained without opening the pricing table.
 
 **Inc-GST entry mode.** Defaults from the customer's `PriceIncGST` flag.
 
+**Existing open order.** `invoice.Frm -> Customer_LostFocus` called `GetOrdByCust` once a
+customer was chosen and, if a live order already existed, asked whether to create a new one
+anyway. The same check runs here when a customer is selected on `/orders/new`
+(`GET /api/orders/open-order-check/{custId}` -> `ExistingOpenOrderDialog`). The prompt is
+turned around to offer the useful action first: yes opens the existing order to add to, no
+falls through to creating a new order.
+
 **Freight threshold.** `Finished_Click` and `Form_Unload` both raised a message box when
 the order total crossed the delivery threshold. The API returns this as
 `OrderTotalsResult.FreightSuggestion`; it is shown as a banner on the order rather than a

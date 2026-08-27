@@ -9,6 +9,7 @@ import type {
   BankableReceipt,
   CreateOrderRequest,
   CreditCheckResult,
+  OpenOrderCheckResult,
   Customer,
   DepositResult,
   DepositSummary,
@@ -116,6 +117,10 @@ export const orders = {
   /** GET /api/orders/credit-check/{custId} */
   creditCheck: (custId: number) =>
     api.get<CreditCheckResult>(`/api/orders/credit-check/${custId}`),
+
+  /** GET /api/orders/open-order-check/{custId} */
+  openOrderCheck: (custId: number) =>
+    api.get<OpenOrderCheckResult>(`/api/orders/open-order-check/${custId}`),
 
   /** GET /api/orders/{orderId}/job-card */
   jobCard: (orderId: number) =>

@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 
 import { CreditCheckPanel } from "@/components/CreditCheckPanel";
 import { CustomerPicker } from "@/components/CustomerPicker";
+import { ExistingOpenOrderDialog } from "@/components/ExistingOpenOrderDialog";
 import {
   Button,
   Card,
@@ -127,6 +128,8 @@ export default function NewOrderPage() {
 
               {customer && (
                 <>
+                  <ExistingOpenOrderDialog custId={customer.uniqueId} />
+
                   <CreditCheckPanel custId={customer.uniqueId} />
 
                   {customer.orderNote?.trim() && (

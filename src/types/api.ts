@@ -363,6 +363,19 @@ export interface CreditCheckResult {
   aging: AgingBuckets;
 }
 
+/**
+ * GET /api/orders/open-order-check/{custId}. Whether the customer already has a live
+ * (un-invoiced) order — the check `invoice.Frm` ran (`GetOrdByCust`) from
+ * `Customer_LostFocus` before letting a new order proceed. `orderId` is the most recent
+ * open order, offered as the job to add to instead of starting a new one.
+ */
+export interface OpenOrderCheckResult {
+  custId: number;
+  hasOpenOrder: boolean;
+  orderId: number | null;
+  orderCount: number;
+}
+
 export interface PostedInvoice {
   orderId: number;
   invoiceNo: string | null;
