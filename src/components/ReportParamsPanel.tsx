@@ -4,7 +4,7 @@ import { PanelLeftClose, PanelLeftOpen, SlidersHorizontal } from "lucide-react";
 
 import { CustomerPicker } from "@/components/CustomerPicker";
 import { DateRangeField, type DateRange } from "@/components/DateRangeField";
-import { Button, Field, Input, Select } from "@/components/ui";
+import { Button, Checkbox, Field, Input, Select } from "@/components/ui";
 import type { ReportFilters, ReportSortOption, ReportView } from "@/lib/reports";
 import type { Customer } from "@/types/api";
 
@@ -25,6 +25,8 @@ export interface ReportParamsValue {
   invoiceNo: string;
   /** Empty string means "report's default order" — only meaningful when sortOptions is set. */
   sortBy: string;
+  /** Only meaningful when detailToggleLabel is set. */
+  detail: boolean;
 }
 
 export const EMPTY_REPORT_PARAMS: ReportParamsValue = {
@@ -33,6 +35,7 @@ export const EMPTY_REPORT_PARAMS: ReportParamsValue = {
   customer: null,
   invoiceNo: "",
   sortBy: "",
+  detail: false,
 };
 
 function activeCount(value: ReportParamsValue): number {
@@ -52,6 +55,7 @@ export function ReportParamsPanel({
   open,
   onOpenChange,
   sortOptions,
+  detailToggleLabel,
 }: {
   filters: ReportFilters;
   value: ReportParamsValue;
@@ -62,9 +66,15 @@ export function ReportParamsPanel({
   onOpenChange: (open: boolean) => void;
   /** Offers a "Sort by" dropdown when set — see ReportMeta.sortOptions for why this is opt-in. */
   sortOptions?: ReportSortOption[];
+  /** Offers a "Show detail" checkbox when set — see ReportMeta.detailToggleLabel. */
+  detailToggleLabel?: string;
 }) {
   const hasAnyFilter = Boolean(
-    filters.dates || filters.custId || filters.invoiceNo || (sortOptions && sortOptions.length > 0),
+    filters.dates ||
+      filters.custId ||
+      filters.invoiceNo ||
+      (sortOptions && sortOptions.length > 0) ||
+      detailToggleLabel,
   );
   const active = activeCount(value);
 
@@ -161,6 +171,14 @@ export function ReportParamsPanel({
             ))}
           </Select>
         </Field>
+      )}
+
+      {detailToggleLabel && (
+        <Checkbox
+          label={detailToggleLabel}
+          checked={value.detail}
+          onChange={(e) => onChange({ ...value, detail: e.target.checked })}
+        />
       )}
 
       <div className="space-y-2 border-t border-slate-100 pt-3">

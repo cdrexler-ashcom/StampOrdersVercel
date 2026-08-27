@@ -54,6 +54,22 @@ export interface ReportMeta {
    * invreg only in a fixed sort order baked into their own XML.
    */
   sortOptions?: ReportSortOption[];
+  /**
+   * Label for a "Show detail" checkbox in the params panel, sent as `detail`. Opt-in per report:
+   * `rechist` is the only one the API currently accepts it for — it reproduces rechist.Frm's
+   * "Invoice Details:" checkbox (which toggled one report's label, not a separate report) as a
+   * request-time flag instead of a second report existing.
+   */
+  detailToggleLabel?: string;
+  /**
+   * Marks this catalog entry as a UI shortcut into another entry's report — same `name` (and so
+   * the same underlying API report), just a different link/initial params. `href` overrides the
+   * Reports-index card's link; the dynamic route still resolves purely against `name`. Kept out of
+   * the debug screen's per-report table and bound/total counts (see `PHYSICAL_REPORTS`), since
+   * it isn't a distinct report as far as the API's catalog is concerned.
+   */
+  variantOf?: string;
+  href?: string;
   /** For unbound reports, a short note on what is blocking the binding. */
   blockedBy?: string;
 }
@@ -153,6 +169,25 @@ export const REPORTS: ReportMeta[] = [
     category: "Operational",
     bound: true,
     filters: { dates: true, custId: true },
+    // Only flips the report's own "Summary"/"Detail" header label for now — the underlying
+    // per-receipt invoice breakdown is a suppressed Crystal subreport the rendering engine
+    // doesn't bind yet, so toggling this doesn't add rows until that's built.
+    detailToggleLabel: "Show invoice detail",
+  },
+  {
+    // Same report as above (rechist.Frm's single "Invoice Details:" checkbox, not a second
+    // report — see the entry above and ReportEndpoints.cs) — this is a shortcut card that opens
+    // it with the checkbox pre-ticked, for the common case of wanting that view directly rather
+    // than opening the plain report and ticking it by hand.
+    name: "rechist",
+    variantOf: "rechist",
+    href: "/reports/rechist?detail=true",
+    title: "Receipt History (with invoice detail)",
+    description: "As Receipt History, opened with \"Show invoice detail\" pre-selected.",
+    category: "Operational",
+    bound: true,
+    filters: { dates: true, custId: true },
+    detailToggleLabel: "Show invoice detail",
   },
 
   // --- Not yet bound ---
@@ -232,8 +267,14 @@ export const REPORTS: ReportMeta[] = [
   },
 ];
 
-/** Reports the API renders with live data, in catalog order. */
+/** Reports the API renders with live data, in catalog order. Includes shortcut variants (see
+ * ReportMeta.variantOf) — the Reports index wants every card, unlike the debug screen. */
 export const BOUND_REPORTS = REPORTS.filter((r) => r.bound);
+
+/** One row per report the API's catalog actually knows about — excludes shortcut variants (see
+ * ReportMeta.variantOf), which reuse another entry's `name` and so would double-count binding
+ * progress or duplicate a row on the debug screen. */
+export const PHYSICAL_REPORTS = REPORTS.filter((r) => !r.variantOf);
 
 /** Look up a report's metadata by API name (case-insensitive). */
 export function findReport(name: string): ReportMeta | undefined {
@@ -263,6 +304,8 @@ export interface ReportQueryParams {
   invoiceNo?: string;
   /** Runtime sort override — currently only honoured by the API for `invreg`. */
   sortBy?: string;
+  /** Runtime detail toggle — currently only honoured by the API for `rechist`. */
+  detail?: boolean;
 }
 
 /**

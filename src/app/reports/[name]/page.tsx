@@ -42,9 +42,14 @@ function ReportViewer() {
   // Reports that take a date range default to the current month rather than opening blank —
   // "this month" is what's asked for far more often than "all time", and it matches the
   // range DateRangeField's own "This month" preset would select.
-  const defaultParams: ReportParamsValue = filters.dates
-    ? { ...EMPTY_REPORT_PARAMS, ...thisMonthRange() }
-    : EMPTY_REPORT_PARAMS;
+  //
+  // `?detail=true` lets a link (the "Receipt History (with invoice detail)" shortcut card on the
+  // Reports index) open a report with its detail toggle pre-ticked, rather than the operator
+  // having to tick it by hand every time.
+  const defaultParams: ReportParamsValue = {
+    ...(filters.dates ? { ...EMPTY_REPORT_PARAMS, ...thisMonthRange() } : EMPTY_REPORT_PARAMS),
+    detail: search.get("detail") === "true",
+  };
 
   // Draft: what the panel is currently showing, edited freely without touching the report.
   const [draft, setDraft] = useState<ReportParamsValue>(defaultParams);
@@ -64,6 +69,7 @@ function ReportViewer() {
       custId: applied.params.customer?.uniqueId ?? undefined,
       invoiceNo: applied.params.invoiceNo || undefined,
       sortBy: applied.params.sortBy || undefined,
+      detail: applied.params.detail || undefined,
     }),
     [applied.params],
   );
@@ -112,6 +118,7 @@ function ReportViewer() {
           open={panelOpen}
           onOpenChange={setPanelOpen}
           sortOptions={meta?.sortOptions}
+          detailToggleLabel={meta?.detailToggleLabel}
         />
 
         <div className="min-w-0 flex-1 space-y-4">

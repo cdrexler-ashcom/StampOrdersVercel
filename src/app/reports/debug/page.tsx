@@ -24,7 +24,7 @@ import { text } from "@/lib/format";
 import {
   getReportDefinition,
   listReportNames,
-  REPORTS,
+  PHYSICAL_REPORTS,
   type ReportView,
 } from "@/lib/reports";
 
@@ -44,13 +44,13 @@ export default function ReportDebugPage() {
 
   const apiNames = namesQuery.data ?? [];
   const apiSet = new Set(apiNames.map((n) => n.toLowerCase()));
-  const catalogSet = new Set(REPORTS.map((r) => r.name.toLowerCase()));
+  const catalogSet = new Set(PHYSICAL_REPORTS.map((r) => r.name.toLowerCase()));
 
-  const boundCount = REPORTS.filter((r) => r.bound).length;
-  const total = REPORTS.length;
+  const boundCount = PHYSICAL_REPORTS.filter((r) => r.bound).length;
+  const total = PHYSICAL_REPORTS.length;
   const pct = Math.round((boundCount / total) * 100);
 
-  const missingFromApi = REPORTS.filter((r) => apiNames.length > 0 && !apiSet.has(r.name.toLowerCase()));
+  const missingFromApi = PHYSICAL_REPORTS.filter((r) => apiNames.length > 0 && !apiSet.has(r.name.toLowerCase()));
   const missingFromCatalog = apiNames.filter((n) => !catalogSet.has(n.toLowerCase()));
 
   return (
@@ -125,7 +125,7 @@ export default function ReportDebugPage() {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {REPORTS.map((report) => {
+            {PHYSICAL_REPORTS.map((report) => {
               const onApi = apiNames.length === 0 || apiSet.has(report.name.toLowerCase());
               return (
                 <tr key={report.name} className="align-top">

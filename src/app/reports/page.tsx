@@ -47,8 +47,8 @@ export default function ReportsPage() {
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
               {reports.map((report) => (
                 <Link
-                  key={report.name}
-                  href={`/reports/${encodeURIComponent(report.name)}`}
+                  key={report.href ?? report.name}
+                  href={report.href ?? `/reports/${encodeURIComponent(report.name)}`}
                   className="group block"
                 >
                   <Card className="h-full transition-colors group-hover:border-sky-300">
