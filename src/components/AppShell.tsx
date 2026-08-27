@@ -48,7 +48,6 @@ const navigation = [
     items: [
       { href: "/orders", label: "Orders", icon: ClipboardList },
       { href: "/invoicing", label: "Invoice run", icon: FileText },
-      { href: "/invoices", label: "Invoice history", icon: FileText },
       { href: "/despatch", label: "Despatch", icon: Truck },
       { href: "/imports", label: "Import orders", icon: Upload },
       { href: "/proofs", label: "Proofs", icon: FileSearch },
@@ -63,7 +62,10 @@ const navigation = [
   },
   {
     heading: "Reports",
-    items: [{ href: "/reports", label: "Reports", icon: FileBarChart2 }],
+    items: [
+      { href: "/reports", label: "Reports", icon: FileBarChart2 },
+      { href: "/invoices", label: "Invoice history", icon: FileText },
+    ],
   },
   {
     heading: "Reference",
