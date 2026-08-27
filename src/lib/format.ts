@@ -98,7 +98,14 @@ export function addressLines(...parts: (string | null | undefined)[]): string[] 
 // Line calculation — mirrors StampOrders.Domain.Calculations.LineCalculator
 // ---------------------------------------------------------------------------------------
 
-/** Money.RoundCents — round half away from zero, to two places. */
+/**
+ * Two places, round half away from zero.
+ *
+ * The API's Money.RoundCents is banker's rounding (MidpointRounding.ToEven, matching VB6's
+ * CLng); this differs only on an exact half-cent midpoint, which binary floating point can
+ * rarely represent anyway. The API stays authoritative on save — this is preview and
+ * document display only.
+ */
 export function roundCents(value: number): number {
   const scaled = value * 100;
   const rounded =
@@ -149,6 +156,72 @@ export function calculateLine(
  * (Form1!GstRate). The API applies the stored rate on save; this is display only.
  */
 export const DEFAULT_GST_RATE = 10;
+
+// ---------------------------------------------------------------------------------------
+// Document totalling — mirrors StampOrders.Domain.Calculations.OrderTotalCalculator
+// ---------------------------------------------------------------------------------------
+
+/**
+ * A line reduced to what totalling needs.
+ *
+ * Invoice and archive lines carry Price, Qty, DiscPct and the GST amount that was worked
+ * out at entry time, but no stored line total — ArchLine and InvLine have no such column,
+ * so the document rebuilds it the way the server (OrderTotalCalculator / GetTotPrc) and the
+ * legacy invoice print do. GST is summed as stored, never recalculated.
+ */
+export interface TotallableLine {
+  qty?: number | null;
+  price?: number | null;
+  discPct?: number | null;
+  gst?: number | null;
+}
+
+/** Net for one line: qty·price less the rounded discount. Not rounded — the caller rounds. */
+export function lineNet(line: TotallableLine): number {
+  const gross = (line.qty ?? 0) * (line.price ?? 0);
+  const discount = roundCents((gross * (line.discPct ?? 0)) / 100);
+  return gross - discount;
+}
+
+/**
+ * Gross for one line: net plus the stored GST, rounded to cents.
+ *
+ * Mirrors the legacy per-line `TotPrc = Qty*Price - DiscAmt + Gst` in Calculations.bas
+ * (GetTotPrc / GetTotPrcArch / CalcLineTot).
+ */
+export function lineTotal(line: TotallableLine): number {
+  return roundCents(lineNet(line) + (line.gst ?? 0));
+}
+
+export interface DocumentTotals {
+  net: number;
+  gst: number;
+  gross: number;
+}
+
+/**
+ * Net/GST/gross for a whole document.
+ *
+ * Accumulates the raw per-line net and the stored per-line GST, then rounds — net, GST, and
+ * their sum — exactly as StampOrders.Domain.Calculations.OrderTotalCalculator does. The
+ * legacy GetTotPrcArch rounds only the final combined figure, so the two can differ by a
+ * cent on a large multi-line invoice; this side follows the API, which is what posts to the
+ * customer's ledger.
+ */
+export function documentTotals(lines: readonly TotallableLine[]): DocumentTotals {
+  let net = 0;
+  let gst = 0;
+
+  for (const line of lines) {
+    net += lineNet(line);
+    gst += line.gst ?? 0;
+  }
+
+  net = roundCents(net);
+  gst = roundCents(gst);
+
+  return { net, gst, gross: roundCents(net + gst) };
+}
 
 // ---------------------------------------------------------------------------------------
 // Labels

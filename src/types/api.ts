@@ -252,8 +252,6 @@ export interface ArchiveLine {
   price: number | null;
   discPct: number | null;
   gst: number | null;
-  priceIncGst: boolean;
-  totalPrice: number | null;
 }
 
 export interface InvoiceHeader {
@@ -274,7 +272,8 @@ export interface InvoiceLine {
   details: string | null;
   qty: number | null;
   price: number | null;
-  totalPrice: number | null;
+  discPct: number | null;
+  gst: number | null;
 }
 
 export interface OpenItem {

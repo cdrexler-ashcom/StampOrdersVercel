@@ -22,6 +22,8 @@ import { invoices } from "@/lib/endpoints";
 import {
   addressLines,
   date,
+  documentTotals,
+  lineTotal,
   money,
   qty as formatQty,
   text,
@@ -82,12 +84,12 @@ export default function InvoiceDocumentPage() {
   const { invoice, lines } = query.data;
   const isDocket = documentType === "docket";
 
-  const net = lines.reduce(
-    (sum, line) => sum + ((line.totalPrice ?? 0) - (line.gst ?? 0)),
-    0,
-  );
-  const gst = lines.reduce((sum, line) => sum + (line.gst ?? 0), 0);
-  const gross = lines.reduce((sum, line) => sum + (line.totalPrice ?? 0), 0);
+  // Archive lines carry price/qty/discount/GST but no stored line total, so the document
+  // rebuilds net/GST/gross the same way the legacy GetTotPrcArch and the server's
+  // OrderTotalCalculator do: sum (qty·price − rounded discount) and add the GST stored on
+  // each line as-is. Freight, when charged, is itself one of these lines (product =
+  // Control.FreightProd) — there is no separate header amount to add.
+  const { net, gst, gross } = documentTotals(lines);
 
   const hasEmail = Boolean(invoice.email?.trim());
 
@@ -238,7 +240,7 @@ export default function InvoiceDocumentPage() {
                         {money(line.price)}
                       </td>
                       <td className="py-2 text-right tabular-nums font-medium text-slate-900">
-                        {money(line.totalPrice)}
+                        {money(lineTotal(line))}
                       </td>
                     </>
                   )}
@@ -258,14 +260,6 @@ export default function InvoiceDocumentPage() {
                   <dt className="text-slate-500">GST</dt>
                   <dd className="tabular-nums text-slate-700">{money(gst)}</dd>
                 </div>
-                {invoice.freightApplies && (
-                  <div className="flex justify-between">
-                    <dt className="text-slate-500">Freight</dt>
-                    <dd className="tabular-nums text-slate-700">
-                      {money(invoice.freight)}
-                    </dd>
-                  </div>
-                )}
                 <div className="flex justify-between border-t border-slate-200 pt-1">
                   <dt className="font-semibold text-slate-900">Total</dt>
                   <dd className="tabular-nums font-semibold text-slate-900">

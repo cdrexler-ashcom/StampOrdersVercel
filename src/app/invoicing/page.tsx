@@ -23,7 +23,7 @@ import {
   Th,
 } from "@/components/ui";
 import { invoices, orders } from "@/lib/endpoints";
-import { date, dateInput, money, text } from "@/lib/format";
+import { date, dateInput, documentTotals, money, text } from "@/lib/format";
 import type { InvoiceRunRequest, InvoiceRunResult } from "@/types/api";
 
 /**
@@ -299,12 +299,7 @@ export default function InvoicingPage() {
                       <Td>{date(invoice.invoiceDate)}</Td>
                       <Td align="right">{invoice.lines?.length ?? 0}</Td>
                       <Td align="right">
-                        {money(
-                          (invoice.lines ?? []).reduce(
-                            (sum, line) => sum + (line.totalPrice ?? 0),
-                            0,
-                          ),
-                        )}
+                        {money(documentTotals(invoice.lines ?? []).gross)}
                       </Td>
                     </tr>
                   ))}
