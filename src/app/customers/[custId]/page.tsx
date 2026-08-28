@@ -321,6 +321,9 @@ export default function CustomerDetailPage() {
                     <DetailRow label="Credit status">
                       {text(customer.creditStatus, "No hold")}
                     </DetailRow>
+                    <DetailRow label="Alternative pricing">
+                      {customer.altPricing ? "Yes" : "No"}
+                    </DetailRow>
                   </dl>
                 </CardBody>
               </Card>
@@ -335,6 +338,12 @@ export default function CustomerDetailPage() {
                     <DetailRow label="Accounts email">
                       {text(customer.accountsEmail)}
                     </DetailRow>
+                    <DetailRow label="Contact email">
+                      {text(customer.email)}
+                    </DetailRow>
+                    <DetailRow label="Fax number">
+                      {text(customer.faxNo)}
+                    </DetailRow>
                     <DetailRow label="Delivery docket">
                       {customer.deliveryDocket ? "Yes" : "No"}
                     </DetailRow>
@@ -343,6 +352,23 @@ export default function CustomerDetailPage() {
                     </DetailRow>
                     <DetailRow label="Dealer return address">
                       {customer.dealerReturnAddress ? "Yes" : "No"}
+                    </DetailRow>
+                  </dl>
+                </CardBody>
+              </Card>
+
+              <Card>
+                <CardHeader title="Proofs" />
+                <CardBody>
+                  <dl className="divide-y divide-slate-100">
+                    <DetailRow label="Plain proof (no letterhead)">
+                      {customer.noProofHeader ? "Yes" : "No"}
+                    </DetailRow>
+                    <DetailRow label="Letterhead image">
+                      {text(customer.proofHeader)}
+                    </DetailRow>
+                    <DetailRow label="Proof email from">
+                      {text(customer.sendFromEmail)}
                     </DetailRow>
                   </dl>
                 </CardBody>

@@ -200,6 +200,14 @@ export interface Customer {
   cardNumber: string | null;
   expiryDate: string | null;
   paidDefault: boolean;
+  // Proof / ordering-contact fields (ProofSQL). Email is the ordering contact, distinct
+  // from accountsEmail (the accounts contact used for invoice delivery).
+  email: string | null;
+  faxNo: string | null;
+  proofHeader: string | null;
+  sendFromEmail: string | null;
+  altPricing: boolean;
+  noProofHeader: boolean;
 }
 
 export interface ArchiveHeader {
@@ -734,6 +742,14 @@ export interface CustomerRequest {
   cardNumber: string | null;
   expiryDate: string | null;
   paidDefault: boolean;
+  // Proof / ordering-contact fields (ProofSQL). Already returned on the read side; the
+  // API's UpdateCustomerAsync/CreateCustomerAsync now accept them too.
+  email: string | null;
+  faxNo: string | null;
+  proofHeader: string | null;
+  sendFromEmail: string | null;
+  altPricing: boolean;
+  noProofHeader: boolean;
 }
 
 // ---------------------------------------------------------------------------------------

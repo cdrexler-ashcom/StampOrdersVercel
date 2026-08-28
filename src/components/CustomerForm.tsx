@@ -52,6 +52,10 @@ const MAX = {
   bankBranch: 30,
   cardNumber: 20,
   expiryDate: 10,
+  email: 45,
+  faxNo: 15,
+  proofHeader: 100,
+  sendFromEmail: 50,
 } as const;
 
 /** PriceCode is stored as smallint; CustomerService rejects anything outside this range. */
@@ -111,6 +115,12 @@ interface FormState {
   cardNumber: string;
   expiryDate: string;
   paidDefault: boolean;
+  email: string;
+  faxNo: string;
+  proofHeader: string;
+  sendFromEmail: string;
+  altPricing: boolean;
+  noProofHeader: boolean;
 }
 
 const emptyForm: FormState = {
@@ -153,6 +163,12 @@ const emptyForm: FormState = {
   cardNumber: "",
   expiryDate: "",
   paidDefault: false,
+  email: "",
+  faxNo: "",
+  proofHeader: "",
+  sendFromEmail: "",
+  altPricing: false,
+  noProofHeader: false,
 };
 
 function toForm(customer: Customer): FormState {
@@ -196,6 +212,12 @@ function toForm(customer: Customer): FormState {
     cardNumber: customer.cardNumber ?? "",
     expiryDate: customer.expiryDate ?? "",
     paidDefault: customer.paidDefault,
+    email: customer.email ?? "",
+    faxNo: customer.faxNo ?? "",
+    proofHeader: customer.proofHeader ?? "",
+    sendFromEmail: customer.sendFromEmail ?? "",
+    altPricing: customer.altPricing,
+    noProofHeader: customer.noProofHeader,
   };
 }
 
@@ -253,6 +275,12 @@ function toRequest(form: FormState): CustomerRequest {
     cardNumber: orNull(form.cardNumber),
     expiryDate: orNull(form.expiryDate),
     paidDefault: form.paidDefault,
+    email: orNull(form.email),
+    faxNo: orNull(form.faxNo),
+    proofHeader: orNull(form.proofHeader),
+    sendFromEmail: orNull(form.sendFromEmail),
+    altPricing: form.altPricing,
+    noProofHeader: form.noProofHeader,
   };
 }
 
@@ -290,6 +318,10 @@ function validate(form: FormState): string[] {
     ["Bank branch", form.bankBranch, MAX.bankBranch],
     ["Card number", form.cardNumber, MAX.cardNumber],
     ["Expiry date", form.expiryDate, MAX.expiryDate],
+    ["Contact email", form.email, MAX.email],
+    ["Fax number", form.faxNo, MAX.faxNo],
+    ["Letterhead image path", form.proofHeader, MAX.proofHeader],
+    ["Proof email “from” address", form.sendFromEmail, MAX.sendFromEmail],
   ];
 
   for (const [field, value, max] of widths) {
@@ -486,12 +518,27 @@ export function CustomerForm({
                 onChange={(e) => set("phoneNo", e.target.value)}
               />
             </Field>
+            <Field label="Fax number">
+              <Input
+                value={form.faxNo}
+                maxLength={MAX.faxNo}
+                onChange={(e) => set("faxNo", e.target.value)}
+              />
+            </Field>
             <Field label="Accounts email" hint="Used for invoice delivery.">
               <Input
                 type="email"
                 value={form.accountsEmail}
                 maxLength={MAX.accountsEmail}
                 onChange={(e) => set("accountsEmail", e.target.value)}
+              />
+            </Field>
+            <Field label="Contact email" hint="Ordering contact; used when sending proofs.">
+              <Input
+                type="email"
+                value={form.email}
+                maxLength={MAX.email}
+                onChange={(e) => set("email", e.target.value)}
               />
             </Field>
           </CardBody>
@@ -530,7 +577,16 @@ export function CustomerForm({
                 checked={form.priceIncGst}
                 onChange={(e) => set("priceIncGst", e.target.checked)}
               />
+              <Checkbox
+                label="Alternative pricing (catalogue columns)"
+                checked={form.altPricing}
+                onChange={(e) => set("altPricing", e.target.checked)}
+              />
             </div>
+            <p className="text-xs text-slate-500 sm:col-span-2">
+              Alternative pricing makes price codes read the product&rsquo;s catalogue columns
+              instead of its unit prices.
+            </p>
           </CardBody>
         </Card>
 
@@ -640,6 +696,44 @@ export function CustomerForm({
                   value={form.orderNote}
                   maxLength={MAX.orderNote}
                   onChange={(e) => set("orderNote", e.target.value)}
+                />
+              </Field>
+            </div>
+          </CardBody>
+        </Card>
+
+        <Card>
+          <CardHeader
+            title="Proofs"
+            description="Per-customer overrides used when a stamp proof is emailed or faxed."
+          />
+          <CardBody className="space-y-3">
+            <Checkbox
+              label="Plain proof (no letterhead)"
+              checked={form.noProofHeader}
+              onChange={(e) => set("noProofHeader", e.target.checked)}
+            />
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field
+                label="Letterhead image"
+                hint="Path to this customer's own letterhead, overriding the invoice entity's."
+                className="sm:col-span-2"
+              >
+                <Input
+                  value={form.proofHeader}
+                  maxLength={MAX.proofHeader}
+                  onChange={(e) => set("proofHeader", e.target.value)}
+                />
+              </Field>
+              <Field
+                label="Proof email “from”"
+                hint="Overrides the default sender address for this customer's proof emails."
+              >
+                <Input
+                  type="email"
+                  value={form.sendFromEmail}
+                  maxLength={MAX.sendFromEmail}
+                  onChange={(e) => set("sendFromEmail", e.target.value)}
                 />
               </Field>
             </div>
