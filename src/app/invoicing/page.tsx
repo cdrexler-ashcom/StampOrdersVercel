@@ -24,7 +24,7 @@ import {
 } from "@/components/ui";
 import { invoices, orders } from "@/lib/endpoints";
 import { date, dateInput, documentTotals, money, text } from "@/lib/format";
-import type { InvoiceRunRequest, InvoiceRunResult } from "@/types/api";
+import type { InvoiceHeader, InvoiceRunRequest, InvoiceRunResult } from "@/types/api";
 
 /**
  * Invoice run.
@@ -45,7 +45,9 @@ export default function InvoicingPage() {
   const [endRun, setEndRun] = useState("");
   const [invoiceDate, setInvoiceDate] = useState(dateInput(new Date()));
   const [selected, setSelected] = useState<Set<number>>(new Set());
-  const [stageResult, setStageResult] = useState<InvoiceRunResult | null>(null);
+  // POST /api/invoices/runs/stage returns the staged headers, not a run summary — the
+  // net/GST figures are derived from their lines the same way the review table below is.
+  const [stageResult, setStageResult] = useState<InvoiceHeader[] | null>(null);
   const [postResult, setPostResult] = useState<InvoiceRunResult | null>(null);
 
   const liveOrders = useQuery({ queryKey: ["orders", {}], queryFn: () => orders.list() });
@@ -100,6 +102,13 @@ export default function InvoicingPage() {
   };
 
   const stagedCount = staged.data?.length ?? 0;
+  const stagedTotals = stageResult?.reduce(
+    (acc, header) => {
+      const totals = documentTotals(header.lines ?? []);
+      return { net: acc.net + totals.net, gst: acc.gst + totals.gst };
+    },
+    { net: 0, gst: 0 },
+  );
   const canStage =
     mode === "selected" ? selected.size > 0 : startRun.trim() !== "" || endRun.trim() !== "";
 
@@ -318,10 +327,10 @@ export default function InvoicingPage() {
                 orders from the live list.
               </p>
 
-              {stageResult && (
+              {stageResult && stagedTotals && (
                 <Notice tone="amber" title="Staged and ready">
-                  {stageResult.invoiceCount} invoice(s) · Net{" "}
-                  {money(stageResult.totalNet)} · GST {money(stageResult.totalGst)}
+                  {stageResult.length} invoice(s) · Net {money(stagedTotals.net)} · GST{" "}
+                  {money(stagedTotals.gst)}
                 </Notice>
               )}
 

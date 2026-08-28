@@ -130,9 +130,9 @@ export const orders = {
 // --- Invoicing --------------------------------------------------------------------------
 
 export const invoices = {
-  /** POST /api/invoices/runs/stage */
+  /** POST /api/invoices/runs/stage — returns the staged invoice headers, with their lines. */
   stageRun: (body: InvoiceRunRequest) =>
-    api.post<InvoiceRunResult>("/api/invoices/runs/stage", body),
+    api.post<InvoiceHeader[]>("/api/invoices/runs/stage", body),
 
   /** POST /api/invoices/runs/post */
   postStaged: () => api.post<InvoiceRunResult>("/api/invoices/runs/post"),
