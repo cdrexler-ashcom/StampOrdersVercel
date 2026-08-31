@@ -160,7 +160,7 @@ function AuthenticatedShell({
   return (
     <div className="flex min-h-screen">
       {/* Desktop sidebar */}
-      <aside className="no-print hidden w-56 shrink-0 flex-col border-r border-slate-200 bg-white lg:flex">
+      <aside className="no-print sticky top-0 hidden h-screen w-56 shrink-0 flex-col overflow-hidden border-r border-slate-200 bg-white lg:flex">
         <SidebarBody pathname={pathname} />
       </aside>
 
