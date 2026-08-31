@@ -6,6 +6,8 @@ import { useEffect, useState } from "react";
 import { orders } from "@/lib/endpoints";
 import type { OrderHeader, UpdateOrderRequest } from "@/types/api";
 
+import { InvoiceEntityPicker } from "./InvoiceEntityPicker";
+
 import {
   Button,
   Checkbox,
@@ -307,11 +309,10 @@ export function EditOrderDialog({
               onChange={(e) => setFreight(e.target.value)}
             />
           </Field>
-          <Field label="Invoice entity" hint="State invoicing code.">
-            <Input
+          <Field label="Invoice entity" hint="The company this order is invoiced under.">
+            <InvoiceEntityPicker
               value={invoiceComp}
-              maxLength={20}
-              onChange={(e) => setInvoiceComp(e.target.value)}
+              onChange={(state) => setInvoiceComp(state ?? "")}
             />
           </Field>
           {order.credit && (

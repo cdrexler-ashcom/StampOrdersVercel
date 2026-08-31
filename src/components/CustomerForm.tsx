@@ -15,6 +15,7 @@ import {
   Select,
   Textarea,
 } from "@/components/ui";
+import { InvoiceEntityPicker } from "@/components/InvoiceEntityPicker";
 import type { Customer, CustomerRequest } from "@/types/api";
 
 /**
@@ -683,12 +684,11 @@ export function CustomerForm({
             <div className="grid gap-3 sm:grid-cols-2">
               <Field
                 label="Invoice entity"
-                hint="The invoicing state entity used for this account's letterhead."
+                hint="The company (letterhead and bank block) this account is invoiced under."
               >
-                <Input
+                <InvoiceEntityPicker
                   value={form.invoiceComp}
-                  maxLength={MAX.invoiceComp}
-                  onChange={(e) => set("invoiceComp", e.target.value)}
+                  onChange={(state) => set("invoiceComp", state ?? "")}
                 />
               </Field>
               <Field label="Order note" hint="Shown whenever a new order is raised for this account.">

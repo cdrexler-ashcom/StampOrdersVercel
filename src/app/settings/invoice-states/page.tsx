@@ -209,18 +209,18 @@ export default function InvoiceStatesPage() {
   return (
     <>
       <PageHeader
-        title="Invoice states"
-        description="The letterhead and bank block each invoice is printed under."
+        title="Companies"
+        description="The letterhead and bank block each invoice is printed under. This screen was previously called Invoice states."
       />
 
       <Card>
         <CardHeader
-          title="State entities"
+          title="Companies"
           description={`${all.length} state${all.length === 1 ? "" : "s"} set up`}
           actions={
             <Button size="sm" variant="primary" onClick={startCreate}>
               <Plus className="size-3.5" />
-              Add state
+              Add company
             </Button>
           }
         />
@@ -231,12 +231,12 @@ export default function InvoiceStatesPage() {
           <ErrorState error={query.error} />
         ) : all.length === 0 ? (
           <EmptyState
-            title="No invoice states set up"
+            title="No companies set up"
             description="Each trading state needs one before invoices can be printed with a letterhead."
             action={
               <Button size="sm" variant="primary" onClick={startCreate}>
                 <Plus className="size-3.5" />
-                Add state
+                Add company
               </Button>
             }
           />
@@ -307,7 +307,7 @@ export default function InvoiceStatesPage() {
         open={editingKey !== null}
         onClose={() => setEditingKey(null)}
         width="lg"
-        title={isCreating ? "Add invoice state" : `Edit ${editingKey}`}
+        title={isCreating ? "Add company" : `Edit ${editingKey}`}
         description="Printed at the top of every invoice raised under this state."
         footer={
           <>
@@ -318,7 +318,7 @@ export default function InvoiceStatesPage() {
               disabled={!canSave}
               onClick={() => saveMutation.mutate()}
             >
-              {isCreating ? "Create state" : "Save changes"}
+              {isCreating ? "Create company" : "Save changes"}
             </Button>
           </>
         }

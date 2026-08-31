@@ -74,7 +74,7 @@ const navigation = [
       { href: "/products", label: "Products", icon: Boxes },
       { href: "/settings/bins", label: "Bins", icon: Archive },
       { href: "/settings/stamp-labels", label: "Stamp labels", icon: Tag },
-      { href: "/settings/invoice-states", label: "Invoice states", icon: Building2 },
+      { href: "/settings/invoice-states", label: "Companies", icon: Building2 },
       { href: "/settings/overdue-messages", label: "Overdue messages", icon: MessageSquareWarning },
       { href: "/settings/pricing", label: "Pricing", icon: Tag },
       { href: "/settings/control", label: "System control", icon: SlidersHorizontal },
