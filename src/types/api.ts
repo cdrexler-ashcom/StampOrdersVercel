@@ -839,7 +839,8 @@ export interface ImportResult {
 }
 
 // ---------------------------------------------------------------------------------------
-// Proofs — the web equivalent of ProofSQL's frmSelect. Preview only; see ProofDialog.
+// Proofs — the web equivalent of ProofSQL's frmSelect: job lookup, preview, and emailing
+// the proof to the customer as a PDF. See ProofDialog.
 // ---------------------------------------------------------------------------------------
 
 export interface ProofColourOption {
@@ -925,6 +926,19 @@ export interface ProofPreviewRequest {
 
   /** Must match the customer's stored ProofHeader, or be omitted/empty. */
   proofHeader?: string | null;
+}
+
+/**
+ * POST /api/proofs/email body — the proof screen's state when Send is pressed (btAccept_Click).
+ * Wraps the same preview request (recipient, price, discount, delivery, noProofHeader all live
+ * there) plus the send-only fields: subject, the optional "Email From" override, and the message
+ * body with its <price> / <delivery> tokens.
+ */
+export interface ProofEmailRequest {
+  preview: ProofPreviewRequest;
+  subject: string;
+  emailFrom?: string | null;
+  messageText: string;
 }
 
 // --- Auth (H2) --------------------------------------------------------------------------

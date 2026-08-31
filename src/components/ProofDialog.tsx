@@ -7,7 +7,7 @@ import { useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import { proofs } from "@/lib/endpoints";
 import { printHtml } from "@/lib/print";
-import type { ProofPreviewRequest } from "@/types/api";
+import type { ProofEmailRequest, ProofPreviewRequest } from "@/types/api";
 
 import {
   Button,
@@ -22,8 +22,9 @@ import {
 } from "./ui";
 
 /**
- * Proof preview — the web equivalent of ProofSQL's frmSelect, minus its fax/email sending
- * (see ProofEndpoints.cs: preview only for now).
+ * Proof preview and email — the web equivalent of ProofSQL's frmSelect, minus its fax output
+ * (the legacy fax server is gone). Preview renders the document in an iframe; Email sends it to
+ * the customer as a PDF attachment via POST /api/proofs/email (see ProofEndpoints.cs).
  *
  * A standalone dialog rather than something baked into the order line row, because the job
  * number is all it needs: opened here from the order line's Proof button, but nothing about
@@ -92,6 +93,10 @@ export function ProofDialog({
   const messageTextRef = useRef<HTMLTextAreaElement>(null);
 
   const [previewHtml, setPreviewHtml] = useState<string | null>(null);
+  const [emailResult, setEmailResult] = useState<{
+    tone: "green" | "amber" | "red";
+    text: string;
+  } | null>(null);
 
   // Seed the form from the job lookup whenever the dialog opens for a (possibly different)
   // job. Keyed on jobNo so reopening on another line re-seeds rather than keeping stale values.
@@ -115,12 +120,30 @@ export function ProofDialog({
     setDeliveryIncluded(false);
     setDeliveryAmt(job.deliveryAmt.toFixed(2));
     setPreviewHtml(null);
+    setEmailResult(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, job?.jobNo]);
 
   const previewMutation = useMutation({
     mutationFn: (body: ProofPreviewRequest) => proofs.preview(body),
     onSuccess: (html) => setPreviewHtml(html),
+  });
+
+  // Real SMTP send of the proof to the customer, with the rendered proof PDF attached —
+  // ProofSQL's btAccept_Click / EmailProof.
+  const emailMutation = useMutation({
+    mutationFn: (body: ProofEmailRequest) => proofs.email(body),
+    onSuccess: (result) =>
+      setEmailResult(
+        result.sent
+          ? { tone: "green", text: `Proof emailed to ${result.recipient}.` }
+          : { tone: "amber", text: result.message ?? "The proof was not emailed." },
+      ),
+    onError: (error) =>
+      setEmailResult({
+        tone: "red",
+        text: error instanceof Error ? error.message : "The proof could not be emailed.",
+      }),
   });
 
   const selectedColour = job?.colours.find((c) => c.colourId === colourId);
@@ -159,6 +182,16 @@ export function ProofDialog({
   const generate = () => {
     const body = buildRequest();
     if (body) previewMutation.mutate(body);
+  };
+
+  // Mirrors btAccept_Click: confirm, then send. buildRequest() already enforces a loaded job
+  // with no field problems and carries the recipient, price, discount, delivery and
+  // No-proof-header flags; the email adds the subject, the From override and the message body.
+  const sendEmail = () => {
+    const preview = buildRequest();
+    if (!preview) return;
+    if (!window.confirm("Do you really want to send this now?")) return;
+    emailMutation.mutate({ preview, subject, emailFrom, messageText });
   };
 
   // Email From follows the selected Company — each has its own StateInvoice.EmailFrom — so
@@ -202,12 +235,21 @@ export function ProofDialog({
       open={open}
       onClose={onClose}
       title={jobNo ? `Proof — job ${jobNo}` : "Proof"}
-      description="Preview only. Faxing and emailing the proof are not available here yet."
+      description="Preview the proof, or email it to the customer as a PDF. Faxing is not available."
       width="xl"
       footer={
         <>
           <Button onClick={onClose}>Close</Button>
-          <Button disabled title="Emailing the proof is not available here yet.">
+          <Button
+            onClick={sendEmail}
+            loading={emailMutation.isPending}
+            disabled={!job || problems.length > 0 || !email.trim()}
+            title={
+              !email.trim()
+                ? "Enter an email address to send the proof."
+                : undefined
+            }
+          >
             <Send className="size-3.5" />
             Email
           </Button>
@@ -236,6 +278,11 @@ export function ProofDialog({
           {previewMutation.isError && (
             <Notice tone="red" title="Preview could not be generated">
               {(previewMutation.error as Error).message}
+            </Notice>
+          )}
+          {emailResult && (
+            <Notice tone={emailResult.tone} title="Email">
+              {emailResult.text}
             </Notice>
           )}
           {!job.stampImageAvailable && (

@@ -29,6 +29,7 @@ import type {
   ProcessReceiptsResult,
   ProofJobResponse,
   ProofPreviewRequest,
+  ProofEmailRequest,
   Receipt,
   RecordReceiptRequest,
   SosetColour,
@@ -367,6 +368,10 @@ export const proofs = {
 
   /** POST /api/proofs/preview — renders the proof as a self-contained HTML document. */
   preview: (body: ProofPreviewRequest) => api.postText("/api/proofs/preview", body),
+
+  /** POST /api/proofs/email — emails the proof to the customer as a PDF (ProofSQL btAccept). */
+  email: (body: ProofEmailRequest) =>
+    api.post<EmailSendResult>("/api/proofs/email", body),
 };
 
 // --- Health -----------------------------------------------------------------------------
