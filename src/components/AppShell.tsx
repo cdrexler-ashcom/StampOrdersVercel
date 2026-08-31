@@ -29,7 +29,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { useAuth } from "./AuthProvider";
 import { SosetStatusPill } from "./SosetStatusPill";
 import { ThemeToggle } from "./ThemeToggle";
-import { Spinner } from "./ui";
+import { Button, Modal, Spinner } from "./ui";
 
 /**
  * Navigation.
@@ -227,6 +227,7 @@ function SidebarBody({
   wideFooter?: boolean;
 }) {
   const { user, logout } = useAuth();
+  const [confirmSignOut, setConfirmSignOut] = useState(false);
 
   return (
     <>
@@ -286,7 +287,7 @@ function SidebarBody({
           </div>
           <button
             type="button"
-            onClick={logout}
+            onClick={() => setConfirmSignOut(true)}
             title="Sign out"
             className="flex shrink-0 items-center gap-1 rounded-md px-2 py-1 text-xs text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900"
           >
@@ -295,6 +296,34 @@ function SidebarBody({
           </button>
         </div>
       </div>
+
+      <Modal
+        open={confirmSignOut}
+        onClose={() => setConfirmSignOut(false)}
+        title="Sign out"
+        footer={
+          <>
+            <Button type="button" onClick={() => setConfirmSignOut(false)}>
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="primary"
+              onClick={() => {
+                setConfirmSignOut(false);
+                logout();
+              }}
+            >
+              Sign out
+            </Button>
+          </>
+        }
+      >
+        <p className="text-sm text-slate-600">
+          Are you sure you want to sign out{user?.username ? ` as ${user.username}` : ""}? Any
+          unsaved changes will be lost.
+        </p>
+      </Modal>
     </>
   );
 }
