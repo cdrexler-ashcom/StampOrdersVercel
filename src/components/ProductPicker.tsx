@@ -45,8 +45,8 @@ export function ProductPicker({
     const handler = (event: MouseEvent) => {
       if (!containerRef.current?.contains(event.target as Node)) setOpen(false);
     };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
+    document.addEventListener("pointerdown", handler);
+    return () => document.removeEventListener("pointerdown", handler);
   }, []);
 
   useEffect(() => setHighlight(0), [debounced]);
@@ -149,7 +149,10 @@ export function ProductPicker({
       </div>
 
       {open && (
-        <div className="absolute z-30 mt-1 max-h-72 w-full overflow-y-auto rounded-md bg-white py-1 shadow-lg ring-1 ring-slate-200">
+        <div
+          onMouseDown={(event) => event.preventDefault()}
+          className="absolute z-30 mt-1 max-h-72 w-full overflow-y-auto rounded-md bg-white py-1 shadow-lg ring-1 ring-slate-200"
+        >
           {isFetching && results.length === 0 && (
             <p className="px-3 py-2 text-xs text-slate-500">Searching Soset…</p>
           )}
@@ -163,6 +166,12 @@ export function ProductPicker({
               key={product.prodId}
               type="button"
               onMouseEnter={() => setHighlight(index)}
+              // Touch: select on pointerup so a tap works even where iOS Safari
+              // suppresses the click after the panel's mousedown preventDefault
+              // (which is what keeps the search input focused — no blur, no reflow).
+              onPointerUp={(event) => {
+                if (event.pointerType !== "mouse") select(product);
+              }}
               onClick={() => select(product)}
               className={`flex w-full items-baseline justify-between gap-3 px-3 py-1.5 text-left text-sm ${
                 index === highlight ? "bg-sky-50" : ""
