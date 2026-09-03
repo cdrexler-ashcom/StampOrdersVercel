@@ -149,9 +149,12 @@ export const invoices = {
       sortBy?: string;
       sortDir?: "asc" | "desc";
       custTitle?: string[];
+      custCode?: string[];
       runNo?: string[];
       invoiceNos?: string[];
       orderId?: string[];
+      email?: string[];
+      phoneNo?: string[];
     } = {},
   ) => api.get<ArchiveHeader[]>("/api/invoices/history", params),
 

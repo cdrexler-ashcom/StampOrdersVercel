@@ -24,8 +24,16 @@ import { useFilterableTable } from "@/lib/useFilterableTable";
 import { useGridState } from "@/lib/useGridState";
 import type { ArchiveHeader, Customer } from "@/types/api";
 
-/** Columns the API's GET /api/invoices/history accepts as `sortBy`. */
-type SortKey = "invoiceNo" | "custTitle" | "invoiceDate" | "orderId" | "runNo";
+/** Columns the API's GET /api/invoices/history accepts as `sortBy` (matched case-insensitively). */
+type SortKey =
+  | "invoiceNo"
+  | "custTitle"
+  | "custCode"
+  | "invoiceDate"
+  | "orderId"
+  | "runNo"
+  | "email"
+  | "phoneNo";
 type SortDirection = "asc" | "desc";
 
 /**
@@ -61,15 +69,28 @@ export default function InvoiceHistoryPage() {
     );
   };
 
-  // Column filter selections, covering all six filterable columns even though only
-  // custTitle/runNo/invoiceNo(→invoiceNos)/orderId get forwarded to the API below — see
-  // the note on the useFilterableTable call for why invoiceDate/tracking stay client-side.
-  // Every one of these needs to either be forwarded or documented as not being forwarded:
-  // a filter that's silently client-side-only will look correct until a sort or another
-  // filter changes which page of rows is loaded, at which point it can go from "one
-  // matching row" to "zero rows", with nothing about the filter itself having changed.
+  // Column filter selections, covering all nine filterable columns even though only
+  // custTitle/custCode/runNo/invoiceNo(→invoiceNos)/orderId/email/phoneNo get forwarded to
+  // the API below — see the note on the useFilterableTable call for why invoiceDate/tracking
+  // stay client-side. Every one of these needs to either be forwarded or documented as not
+  // being forwarded: a filter that's silently client-side-only will look correct until a
+  // sort or another filter changes which page of rows is loaded, at which point it can go
+  // from "one matching row" to "zero rows", with nothing about the filter itself having changed.
   const [filterSelected, setFilterSelected] = useGridState<
-    Partial<Record<"invoiceNo" | "custTitle" | "invoiceDate" | "orderId" | "runNo" | "tracking", string[]>>
+    Partial<
+      Record<
+        | "invoiceNo"
+        | "custTitle"
+        | "custCode"
+        | "invoiceDate"
+        | "orderId"
+        | "runNo"
+        | "email"
+        | "phoneNo"
+        | "tracking",
+        string[]
+      >
+    >
   >("invoices:filters", {});
 
   const query = useQuery({
@@ -79,9 +100,12 @@ export default function InvoiceHistoryPage() {
       { custId: customer?.uniqueId, invoiceNo },
       sort,
       filterSelected.custTitle,
+      filterSelected.custCode,
       filterSelected.runNo,
       filterSelected.invoiceNo,
       filterSelected.orderId,
+      filterSelected.email,
+      filterSelected.phoneNo,
     ],
     queryFn: () =>
       invoices.history({
@@ -90,9 +114,12 @@ export default function InvoiceHistoryPage() {
         sortBy: sort?.key,
         sortDir: sort?.direction,
         custTitle: filterSelected.custTitle,
+        custCode: filterSelected.custCode,
         runNo: filterSelected.runNo,
         invoiceNos: filterSelected.invoiceNo,
         orderId: filterSelected.orderId,
+        email: filterSelected.email,
+        phoneNo: filterSelected.phoneNo,
       }),
   });
 
@@ -101,9 +128,10 @@ export default function InvoiceHistoryPage() {
     sortDirection: sort?.key === key ? sort.direction : null,
   });
 
-  // custTitle/runNo/invoiceNo/orderId all filter server-side now (see InvoiceEndpoints.cs),
-  // applied before Take(200) — a filter narrows the full matching set correctly, not just
-  // the loaded page. Two stay client-side, both for the same reason: their filter popup
+  // custTitle/custCode/runNo/invoiceNo/orderId/email/phoneNo all filter server-side now (see
+  // InvoiceEndpoints.cs), applied before Take(200) — a filter narrows the full matching set
+  // correctly, not just the loaded page. custCode is Customer.AccountNo joined on by CustId.
+  // Two stay client-side, both for the same reason: their filter popup
   // doesn't show a raw column value, it shows something derived —
   //   - tracking: a label built from three columns (TrackingNo/TrackingRequired/
   //     TrackingStatus)
@@ -119,9 +147,12 @@ export default function InvoiceHistoryPage() {
     {
       invoiceNo: (i: ArchiveHeader) => i.invoiceNo?.trim() ?? "",
       custTitle: (i: ArchiveHeader) => i.custTitle?.trim() ?? "",
+      custCode: (i: ArchiveHeader) => i.custAccountNo?.trim() ?? "",
       invoiceDate: (i: ArchiveHeader) => (i.invoiceDate ? date(i.invoiceDate) : ""),
       orderId: (i: ArchiveHeader) => i.orderId.toString(),
       runNo: (i: ArchiveHeader) => i.runNo?.trim() ?? "",
+      email: (i: ArchiveHeader) => i.email?.trim() ?? "",
+      phoneNo: (i: ArchiveHeader) => i.phoneNo?.trim() ?? "",
       tracking: (i: ArchiveHeader) =>
         i.trackingNo?.trim()
           ? "Tracking captured"
@@ -193,20 +224,23 @@ export default function InvoiceHistoryPage() {
           <Table>
             <thead>
               <tr>
-                <Th {...th("invoiceNo")} filter={colFilter("invoiceNo")}>Invoice</Th>
+                <Th {...th("custCode")} filter={colFilter("custCode")}>Customer No.</Th>
                 <Th {...th("custTitle")} filter={colFilter("custTitle")}>Customer</Th>
-                <Th {...th("invoiceDate")} filter={colFilter("invoiceDate")}>Invoice date</Th>
+                <Th {...th("invoiceDate")} filter={colFilter("invoiceDate")}>Date</Th>
+                <Th {...th("invoiceNo")} filter={colFilter("invoiceNo")}>Invoice</Th>
                 <Th {...th("orderId")} filter={colFilter("orderId")}>Order</Th>
                 <Th {...th("runNo")} filter={colFilter("runNo")}>
                   Run
                 </Th>
+                <Th {...th("email")} filter={colFilter("email")}>Email</Th>
+                <Th {...th("phoneNo")} filter={colFilter("phoneNo")}>Phone</Th>
                 <Th filter={colFilter("tracking")}>Tracking</Th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {(filtered?.length ?? 0) === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-8">
+                  <td colSpan={9} className="px-4 py-8">
                     <EmptyState
                       title="No invoices match the selected filters"
                       action={
@@ -220,6 +254,9 @@ export default function InvoiceHistoryPage() {
               ) : (
                 filtered?.map((invoice) => (
                   <tr key={invoice.id} {...(invoice.invoiceNo ? rowLink(`/invoices/${encodeURIComponent(invoice.invoiceNo)}`) : {})}>
+                    <Td>{text(invoice.custAccountNo)}</Td>
+                    <Td>{text(invoice.custTitle)}</Td>
+                    <Td>{date(invoice.invoiceDate)}</Td>
                     <Td>
                       <span className="font-medium text-slate-900">
                         {text(invoice.invoiceNo)}
@@ -230,10 +267,10 @@ export default function InvoiceHistoryPage() {
                         </Badge>
                       )}
                     </Td>
-                    <Td>{text(invoice.custTitle)}</Td>
-                    <Td>{date(invoice.invoiceDate)}</Td>
                     <Td>{invoice.orderId}</Td>
                     <Td>{text(invoice.runNo)}</Td>
+                    <Td>{text(invoice.email)}</Td>
+                    <Td>{text(invoice.phoneNo)}</Td>
                     <Td>
                       {invoice.trackingNo?.trim() ? (
                         <span className="text-xs text-slate-600">

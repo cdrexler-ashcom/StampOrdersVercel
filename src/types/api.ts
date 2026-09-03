@@ -215,6 +215,11 @@ export interface ArchiveHeader {
   orderId: number;
   custId: number | null;
   custTitle: string | null;
+  /**
+   * The customer's account number (their "customer code"). Not stored on the archive row —
+   * GET /api/invoices/history joins it on from Customer for the list; null elsewhere.
+   */
+  custAccountNo: string | null;
   date: string | null;
   invoiceDate: string | null;
   invoiceNo: string | null;
