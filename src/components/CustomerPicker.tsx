@@ -20,11 +20,18 @@ export function CustomerPicker({
   onChange,
   placeholder = "Search account number or name…",
   autoFocus,
+  disableF2,
 }: {
   value: Customer | null;
   onChange: (customer: Customer | null) => void;
   placeholder?: string;
   autoFocus?: boolean;
+  /**
+   * Suppresses the window-level F2 shortcut. Set this where more than one picker is on
+   * screen at once, so a single F2 handler on the page can decide which field to jump to
+   * rather than every picker reacting to the same keystroke.
+   */
+  disableF2?: boolean;
 }) {
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
@@ -76,6 +83,7 @@ export function CustomerPicker({
    * mirrors the original intent rather than a narrower one-control binding.
    */
   useEffect(() => {
+    if (disableF2) return;
     const handler = (event: KeyboardEvent) => {
       if (event.key !== "F2") return;
       event.preventDefault();
@@ -89,7 +97,7 @@ export function CustomerPicker({
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [value, onChange]);
+  }, [value, onChange, disableF2]);
 
   if (value) {
     return (

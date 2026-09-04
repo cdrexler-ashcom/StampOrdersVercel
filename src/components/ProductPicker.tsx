@@ -19,10 +19,17 @@ export function ProductPicker({
   value,
   onChange,
   autoFocus,
+  disableF2,
 }: {
   value: SosetProduct | null;
   onChange: (product: SosetProduct | null) => void;
   autoFocus?: boolean;
+  /**
+   * Suppresses the window-level F2 shortcut. Set this where more than one picker is on
+   * screen at once, so a single F2 handler on the page can decide which field to jump to
+   * rather than every picker reacting to the same keystroke.
+   */
+  disableF2?: boolean;
 }) {
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
@@ -72,6 +79,7 @@ export function ProductPicker({
    * element, so it works regardless of what currently has focus.
    */
   useEffect(() => {
+    if (disableF2) return;
     const handler = (event: KeyboardEvent) => {
       if (event.key !== "F2") return;
       event.preventDefault();
@@ -85,7 +93,7 @@ export function ProductPicker({
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [value, onChange]);
+  }, [value, onChange, disableF2]);
 
   if (value) {
     return (

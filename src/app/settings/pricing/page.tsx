@@ -1,8 +1,8 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Pencil, Plus, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { Calculator, Pencil, Plus, Trash2 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 
 import { CustomerPicker } from "@/components/CustomerPicker";
 import { ProductPicker } from "@/components/ProductPicker";
@@ -24,8 +24,8 @@ import {
   Td,
   Th,
 } from "@/components/ui";
-import { customers as customersApi, pricing } from "@/lib/endpoints";
-import { money, text } from "@/lib/format";
+import { customers as customersApi, pricing, reference } from "@/lib/endpoints";
+import { money, priceSourceLabel, text } from "@/lib/format";
 import { useFilterableTable } from "@/lib/useFilterableTable";
 import { useSortableTable } from "@/lib/useSortableTable";
 import type { Customer, PricingRuleRequest, PricingRuleResult, SosetProduct } from "@/types/api";
@@ -127,6 +127,49 @@ export default function PricingPage() {
   // The picker + price used to stage a new line before it's added to form.lines.
   const [pickedCustomer, setPickedCustomer] = useState<Customer | null>(null);
   const [pickedPrice, setPickedPrice] = useState("");
+
+  // Quick pricing check — stands in for prcLookup.frm, which had no page of its own here
+  // and was only reachable from an order line. Resolves what a customer would be charged
+  // for a product right now, through the same GET /api/reference/price the line dialogs use.
+  const [checkOpen, setCheckOpen] = useState(false);
+  const [checkProduct, setCheckProduct] = useState<SosetProduct | null>(null);
+  const [checkCustomer, setCheckCustomer] = useState<Customer | null>(null);
+
+  const priceCheck = useMutation({
+    mutationFn: () => reference.price(checkProduct!.prodId, checkCustomer!.uniqueId),
+  });
+
+  const openCheck = () => {
+    priceCheck.reset();
+    setCheckProduct(null);
+    setCheckCustomer(null);
+    setCheckOpen(true);
+  };
+
+  // Both pickers here would otherwise each answer F2, since the shortcut is bound
+  // window-wide. With two on screen, one handler decides: jump to the first field still
+  // without a value — customer, then product — mirroring how F2 moved to the field that
+  // needed input on the single-field legacy forms. If both are filled there's nothing to
+  // do; the per-picker "Change" button covers replacing a value.
+  const checkCustomerRef = useRef<HTMLDivElement>(null);
+  const checkProductRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!checkOpen) return;
+    const handler = (event: KeyboardEvent) => {
+      if (event.key !== "F2") return;
+      const target = !checkCustomer
+        ? checkCustomerRef.current
+        : !checkProduct
+          ? checkProductRef.current
+          : null;
+      if (!target) return;
+      event.preventDefault();
+      target.querySelector("input")?.focus();
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [checkOpen, checkCustomer, checkProduct]);
 
   const isCreating = editingId === "";
 
@@ -259,6 +302,10 @@ export default function PricingPage() {
                   Clear column filters
                 </Button>
               )}
+              <Button size="sm" variant="secondary" onClick={openCheck}>
+                <Calculator className="size-3.5" />
+                Quick price check
+              </Button>
               <Button size="sm" variant="primary" onClick={startCreate}>
                 <Plus className="size-3.5" />
                 Add rule
@@ -512,6 +559,93 @@ export default function PricingPage() {
               </div>
             </div>
           )}
+        </div>
+      </Modal>
+
+      <Modal
+        open={checkOpen}
+        onClose={() => setCheckOpen(false)}
+        bodyOverflow="visible"
+        title="Quick price check"
+        description="Resolves the price a customer would be charged for a product right now — the same lookup order entry runs when a line is added."
+        footer={
+          <>
+            <Button onClick={() => setCheckOpen(false)}>Close</Button>
+            <Button
+              variant="primary"
+              loading={priceCheck.isPending}
+              disabled={!checkProduct || !checkCustomer}
+              onClick={() => priceCheck.mutate()}
+            >
+              Calculate price
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <Field label="Customer" required>
+            <div ref={checkCustomerRef}>
+              <CustomerPicker
+                value={checkCustomer}
+                onChange={(customer) => {
+                  setCheckCustomer(customer);
+                  priceCheck.reset();
+                }}
+                disableF2
+              />
+            </div>
+          </Field>
+
+          <Field label="Product" required>
+            <div ref={checkProductRef}>
+              <ProductPicker
+                value={checkProduct}
+                onChange={(product) => {
+                  setCheckProduct(product);
+                  priceCheck.reset();
+                }}
+                disableF2
+              />
+            </div>
+          </Field>
+
+          {priceCheck.isError && (
+            <Notice tone="red" title="Price could not be resolved">
+              {(priceCheck.error as Error).message}
+            </Notice>
+          )}
+
+          {/* Always shown, so the boxes convey what the tool returns before a check is run. */}
+          <div className="space-y-2 rounded-md border border-slate-200 bg-slate-50 p-4">
+            <div className="flex items-baseline justify-between">
+              <span className="text-sm text-slate-600">Unit price</span>
+              <span className="text-lg font-semibold text-slate-900">
+                {priceCheck.data ? money(priceCheck.data.price) : "—"}
+              </span>
+            </div>
+            <div className="flex items-baseline justify-between">
+              <span className="text-sm text-slate-600">Customer discount</span>
+              <span className="text-sm font-medium text-slate-900">
+                {checkCustomer ? `${(checkCustomer.discPct ?? 0).toFixed(1)}%` : "—"}
+              </span>
+            </div>
+            <div className="flex items-baseline justify-between">
+              <span className="text-sm text-slate-600">Source</span>
+              {priceCheck.data ? (
+                <Badge tone={priceCheck.data.source === "None" ? "slate" : "sky"}>
+                  {priceSourceLabel[priceCheck.data.source] ?? priceCheck.data.source}
+                </Badge>
+              ) : (
+                <span className="text-sm text-slate-400">—</span>
+              )}
+            </div>
+            {priceCheck.data?.source === "None" && (
+              <p className="text-xs text-slate-500">
+                No pricing rule or product price code matched — order entry falls back to the
+                Soset unit price.
+              </p>
+            )}
+          </div>
         </div>
       </Modal>
 

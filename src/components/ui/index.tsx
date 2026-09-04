@@ -462,6 +462,7 @@ export function Modal({
   width = "md",
   children,
   footer,
+  bodyOverflow = "auto",
 }: {
   open: boolean;
   onClose: () => void;
@@ -470,6 +471,12 @@ export function Modal({
   width?: "md" | "lg" | "xl";
   children: ReactNode;
   footer?: ReactNode;
+  /**
+   * "auto" (default) caps the body height and scrolls it, which clips any absolutely
+   * positioned child (e.g. a picker's dropdown). "visible" lets such children escape the
+   * body — use it for short modals whose content can't outgrow the viewport.
+   */
+  bodyOverflow?: "auto" | "visible";
 }) {
   useEffect(() => {
     if (!open) return;
@@ -509,7 +516,14 @@ export function Modal({
           </button>
         </div>
 
-        <div className="max-h-[70vh] overflow-y-auto p-4">{children}</div>
+        <div
+          className={clsx(
+            "p-4",
+            bodyOverflow === "visible" ? "overflow-visible" : "max-h-[70vh] overflow-y-auto",
+          )}
+        >
+          {children}
+        </div>
 
         {footer && (
           <div className="flex items-center justify-end gap-2 border-t border-slate-200 bg-slate-50 px-4 py-3">
