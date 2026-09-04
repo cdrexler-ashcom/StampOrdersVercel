@@ -199,74 +199,78 @@ export default function DepositsPage() {
                 description="Receipts appear here once they have been processed."
               />
             ) : (
-              <Table>
-                <thead>
-                  <tr>
-                    <Th />
-                    <Th {...th("receiptNo")} filter={colFilter("receiptNo")}>
-                      Receipt
-                    </Th>
-                    <Th {...th("transDate")} filter={colFilter("transDate")}>
-                      Date
-                    </Th>
-                    <Th {...th("customer")} filter={colFilter("customer")}>
-                      Customer
-                    </Th>
-                    <Th {...th("paymentType")} filter={colFilter("paymentType")}> 
-                      Type
-                    </Th>
-                    <Th {...th("description")} filter={colFilter("description")}>
-                      Description
-                    </Th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {(filtered?.length ?? 0) === 0 ? (
+              // Capped height so a long list scrolls within its own pane instead of
+              // pushing the Deposit history card far down the page. Header stays pinned.
+              <div className="max-h-96 overflow-y-auto">
+                <Table>
+                  <thead className="sticky top-0 z-10 [&_th]:bg-white">
                     <tr>
-                      <td colSpan={7} className="px-4 py-8">
-                        <EmptyState
-                          title="No receipts match the selected filters"
-                          action={
-                            <Button size="sm" variant="secondary" onClick={clearAll}>
-                              Clear column filters
-                            </Button>
-                          }
-                        />
-                      </td>
+                      <Th />
+                      <Th {...th("receiptNo")} filter={colFilter("receiptNo")}>
+                        Receipt
+                      </Th>
+                      <Th {...th("transDate")} filter={colFilter("transDate")}>
+                        Date
+                      </Th>
+                      <Th {...th("customer")} filter={colFilter("customer")}>
+                        Customer
+                      </Th>
+                      <Th {...th("paymentType")} filter={colFilter("paymentType")}>
+                        Type
+                      </Th>
+                      <Th {...th("description")} filter={colFilter("description")}>
+                        Description
+                      </Th>
                     </tr>
-                  ) : (
-                    filtered?.map((receipt) => (
-                      <tr
-                        key={receipt.id}
-                        className={selected.has(receipt.id) ? "bg-sky-50" : "hover:bg-slate-50"}
-                      >
-                        <Td>
-                          <input
-                            type="checkbox"
-                            checked={selected.has(receipt.id)}
-                            onChange={() => toggle(receipt.id)}
-                            className="size-4 rounded border-slate-300 text-sky-700 focus:ring-sky-600"
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {(filtered?.length ?? 0) === 0 ? (
+                      <tr>
+                        <td colSpan={7} className="px-4 py-8">
+                          <EmptyState
+                            title="No receipts match the selected filters"
+                            action={
+                              <Button size="sm" variant="secondary" onClick={clearAll}>
+                                Clear column filters
+                              </Button>
+                            }
                           />
-                        </Td>
-                        <Td>{receipt.receiptNo ?? receipt.id}</Td>
-                        <Td>{date(receipt.transDate)}</Td>
-                        <Td>{text(receipt.customerTitle ?? String(receipt.custId ?? ""))}</Td>
-                        <Td>
-                          <Badge tone="slate">{text(receipt.paymentType)}</Badge>
-                        </Td>
-                        <Td>
-                          <span className="block max-w-48 truncate">
-                            {text(receipt.description)}
-                          </span>
-                        </Td>
-                        <Td align="right" className="font-medium">
-                          {money(receipt.amount)}
-                        </Td>
+                        </td>
                       </tr>
-                    ))
-                  )}
-                </tbody>
-              </Table>
+                    ) : (
+                      filtered?.map((receipt) => (
+                        <tr
+                          key={receipt.id}
+                          className={selected.has(receipt.id) ? "bg-sky-50" : "hover:bg-slate-50"}
+                        >
+                          <Td>
+                            <input
+                              type="checkbox"
+                              checked={selected.has(receipt.id)}
+                              onChange={() => toggle(receipt.id)}
+                              className="size-4 rounded border-slate-300 text-sky-700 focus:ring-sky-600"
+                            />
+                          </Td>
+                          <Td>{receipt.receiptNo ?? receipt.id}</Td>
+                          <Td>{date(receipt.transDate)}</Td>
+                          <Td>{text(receipt.customerTitle ?? String(receipt.custId ?? ""))}</Td>
+                          <Td>
+                            <Badge tone="slate">{text(receipt.paymentType)}</Badge>
+                          </Td>
+                          <Td>
+                            <span className="block max-w-48 truncate">
+                              {text(receipt.description)}
+                            </span>
+                          </Td>
+                          <Td align="right" className="font-medium">
+                            {money(receipt.amount)}
+                          </Td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </Table>
+              </div>
             )}
           </Card>
 
@@ -278,30 +282,32 @@ export default function DepositsPage() {
             ) : (history.data?.length ?? 0) === 0 ? (
               <EmptyState title="No deposits recorded yet" />
             ) : (
-              <Table>
-                <thead>
-                  <tr>
-                    <Th>Deposit</Th>
-                    <Th>Date</Th>
-                    <Th align="right">Receipts</Th>
-                    <Th align="right">Total</Th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {history.data?.map((deposit) => (
-                    <tr key={deposit.depositNo} className="hover:bg-slate-50">
-                      <Td>
-                        <span className="font-medium text-slate-900">
-                          {deposit.depositNo}
-                        </span>
-                      </Td>
-                      <Td>{date(deposit.depositDate)}</Td>
-                      <Td align="right">{deposit.receiptCount}</Td>
-                      <Td align="right">{money(deposit.totalAmount)}</Td>
+              <div className="max-h-96 overflow-y-auto">
+                <Table>
+                  <thead className="sticky top-0 z-10 [&_th]:bg-white">
+                    <tr>
+                      <Th>Deposit</Th>
+                      <Th>Date</Th>
+                      <Th align="right">Receipts</Th>
+                      <Th align="right">Total</Th>
                     </tr>
-                  ))}
-                </tbody>
-              </Table>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {history.data?.map((deposit) => (
+                      <tr key={deposit.depositNo} className="hover:bg-slate-50">
+                        <Td>
+                          <span className="font-medium text-slate-900">
+                            {deposit.depositNo}
+                          </span>
+                        </Td>
+                        <Td>{date(deposit.depositDate)}</Td>
+                        <Td align="right">{deposit.receiptCount}</Td>
+                        <Td align="right">{money(deposit.totalAmount)}</Td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </Table>
+              </div>
             )}
           </Card>
         </div>
