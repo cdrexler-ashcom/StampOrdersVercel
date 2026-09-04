@@ -285,7 +285,7 @@ export default function InvoicingPage() {
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {staged.data?.map((invoice) => (
-                    <tr key={invoice.id}>
+                    <tr key={invoice.invoiceNo ?? invoice.orderId}>
                       <Td>
                         <span className="font-medium text-slate-900">
                           {text(invoice.invoiceNo)}
