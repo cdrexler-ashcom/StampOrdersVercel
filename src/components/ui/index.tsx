@@ -536,6 +536,46 @@ export function Modal({
 }
 
 // ---------------------------------------------------------------------------------------
+// Grid toolbar
+// ---------------------------------------------------------------------------------------
+
+/**
+ * The "Clear sorting / Clear column filters" strip shown above a list grid. Pass a
+ * handler only while that action is actually available — e.g.
+ * `onClearSort={sort ? () => setSort(null) : undefined}` — and the button appears only
+ * then. Renders nothing when neither handler nor any extra `children` is given.
+ */
+export function GridToolbar({
+  onClearSort,
+  onClearFilters,
+  children,
+  className,
+}: {
+  onClearSort?: () => void;
+  onClearFilters?: () => void;
+  children?: ReactNode;
+  className?: string;
+}) {
+  if (!onClearSort && !onClearFilters && !children) return null;
+
+  return (
+    <div className={clsx("mb-4 flex flex-wrap items-center gap-2", className)}>
+      {children}
+      {onClearSort && (
+        <Button size="sm" variant="ghost" onClick={onClearSort}>
+          Clear sorting
+        </Button>
+      )}
+      {onClearFilters && (
+        <Button size="sm" variant="ghost" onClick={onClearFilters}>
+          Clear column filters
+        </Button>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------------------
 // Page header
 // ---------------------------------------------------------------------------------------
 

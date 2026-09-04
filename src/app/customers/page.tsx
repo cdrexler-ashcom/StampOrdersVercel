@@ -11,6 +11,7 @@ import {
   Card,
   EmptyState,
   ErrorState,
+  GridToolbar,
   PageHeader,
   Spinner,
   Table,
@@ -126,8 +127,8 @@ export default function CustomersPage() {
         }
       />
 
-      <div className="mb-4 flex flex-wrap items-center gap-3">
-        <div className="relative max-w-md flex-1">
+      <div className="mb-4 max-w-md">
+        <div className="relative">
           <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
           <input
             type="text"
@@ -138,19 +139,12 @@ export default function CustomersPage() {
             className="block w-full rounded-md border-0 bg-white py-2 pl-8 pr-2.5 text-sm text-slate-900 ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-sky-600"
           />
         </div>
-
-        {sort && (
-          <Button size="sm" variant="ghost" onClick={() => setSort(null)}>
-            Clear sorting
-          </Button>
-        )}
-
-        {isFiltered && (
-          <Button size="sm" variant="ghost" onClick={clearAll}>
-            Clear column filters
-          </Button>
-        )}
       </div>
+
+      <GridToolbar
+        onClearSort={sort ? () => setSort(null) : undefined}
+        onClearFilters={isFiltered ? clearAll : undefined}
+      />
 
       <Card>
         {query.isLoading ? (

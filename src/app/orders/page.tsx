@@ -14,6 +14,7 @@ import {
   EmptyState,
   ErrorState,
   Field,
+  GridToolbar,
   Input,
   PageHeader,
   Spinner,
@@ -165,20 +166,10 @@ export default function OrdersPage() {
         </CardBody>
       </Card>
 
-      {(sort || isFiltered) && (
-        <div className="mb-4 flex flex-wrap gap-2">
-          {sort && (
-            <Button size="sm" variant="ghost" onClick={() => setSort(null)}>
-              Clear sorting
-            </Button>
-          )}
-          {isFiltered && (
-            <Button size="sm" variant="ghost" onClick={clearAll}>
-              Clear column filters
-            </Button>
-          )}
-        </div>
-      )}
+      <GridToolbar
+        onClearSort={sort ? () => setSort(null) : undefined}
+        onClearFilters={isFiltered ? clearAll : undefined}
+      />
 
       <Card>
         {query.isLoading ? (
