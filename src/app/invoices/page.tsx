@@ -14,6 +14,7 @@ import {
   GridToolbar,
   Input,
   PageHeader,
+  ResultCapNotice,
   Spinner,
   Table,
   Td,
@@ -284,14 +285,18 @@ export default function InvoiceHistoryPage() {
         )}
 
         {(query.data?.length ?? 0) === 200 && (
-          <p className="border-t border-slate-100 px-4 py-2 text-xs text-slate-500">
-            Showing the most recent 200 invoices
-            {(filterSelected.invoiceDate?.length ?? 0) > 0 ||
-            (filterSelected.tracking?.length ?? 0) > 0
-              ? ", before the invoice date and tracking filters are applied"
-              : ""}
-            . Filter or search to narrow the list.
-          </p>
+          <ResultCapNotice
+            cap={200}
+            noun="invoices"
+            qualifier={
+              (filterSelected.invoiceDate?.length ?? 0) > 0 ||
+              (filterSelected.tracking?.length ?? 0) > 0
+                ? ", before the invoice date and tracking filters are applied"
+                : undefined
+            }
+          >
+            Filter or search to narrow the list.
+          </ResultCapNotice>
         )}
       </Card>
     </>

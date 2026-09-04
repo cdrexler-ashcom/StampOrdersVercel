@@ -12,6 +12,7 @@ import {
   ErrorState,
   Notice,
   PageHeader,
+  ResultCapNotice,
   Spinner,
   Table,
   Td,
@@ -237,10 +238,9 @@ export default function ProductsPage() {
         )}
 
         {(filtered?.length ?? 0) > 200 && (
-          <p className="border-t border-slate-100 px-4 py-2 text-xs text-slate-500">
-            Showing 200 of {filtered?.length} products. Refine the search or filters to
-            narrow them.
-          </p>
+          <ResultCapNotice cap={200} total={filtered?.length} noun="products">
+            Refine the search or filters to narrow them.
+          </ResultCapNotice>
         )}
       </Card>
     </>

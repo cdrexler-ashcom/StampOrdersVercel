@@ -576,6 +576,50 @@ export function GridToolbar({
 }
 
 // ---------------------------------------------------------------------------------------
+// Result cap notice
+// ---------------------------------------------------------------------------------------
+
+/**
+ * The strip under a capped result grid explaining that not every row is shown. Renders
+ * "Showing the first {cap} {noun}", or "Showing {cap} of {total} {noun}" when the full
+ * count is known locally (a client-side slice). `qualifier` is inline text placed before
+ * the sentence's full stop (e.g. a note that a client-side filter hasn't been applied
+ * yet); `children` is the trailing guidance sentence, defaulting to a search hint.
+ */
+export function ResultCapNotice({
+  cap,
+  total,
+  noun,
+  qualifier,
+  dense,
+  children,
+}: {
+  cap: number;
+  /** The full result count, when known — switches the wording to "{cap} of {total}". */
+  total?: number;
+  /** Plural noun for the rows, e.g. "orders", "matches". */
+  noun: string;
+  qualifier?: ReactNode;
+  /** Tighter padding, for use inside a dropdown rather than a card. */
+  dense?: boolean;
+  children?: ReactNode;
+}) {
+  return (
+    <p
+      className={clsx(
+        "border-t border-slate-100 text-xs text-slate-500",
+        dense ? "px-3 py-1.5" : "px-4 py-2",
+      )}
+    >
+      {total != null
+        ? `Showing ${cap} of ${total} ${noun}`
+        : `Showing the first ${cap} ${noun}`}
+      {qualifier}. {children ?? "Refine the search to narrow them."}
+    </p>
+  );
+}
+
+// ---------------------------------------------------------------------------------------
 // Page header
 // ---------------------------------------------------------------------------------------
 

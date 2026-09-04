@@ -13,6 +13,7 @@ import {
   ErrorState,
   GridToolbar,
   PageHeader,
+  ResultCapNotice,
   Spinner,
   Table,
   Td,
@@ -230,9 +231,7 @@ export default function CustomersPage() {
         )}
 
         {(query.data?.length ?? 0) === 100 && (
-          <p className="border-t border-slate-100 px-4 py-2 text-xs text-slate-500">
-            Showing the first 100 matches. Refine the search to narrow them.
-          </p>
+          <ResultCapNotice cap={100} noun="matches" />
         )}
       </Card>
     </>

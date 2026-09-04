@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Search } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
+import { ResultCapNotice } from "@/components/ui";
 import { customers } from "@/lib/endpoints";
 import { text } from "@/lib/format";
 import type { Customer } from "@/types/api";
@@ -197,9 +198,7 @@ export function CustomerPicker({
           ))}
 
           {results.length === 100 && (
-            <p className="border-t border-slate-100 px-3 py-1.5 text-xs text-slate-500">
-              Showing the first 100 matches. Refine the search to narrow them.
-            </p>
+            <ResultCapNotice cap={100} noun="matches" dense />
           )}
         </div>
       )}
