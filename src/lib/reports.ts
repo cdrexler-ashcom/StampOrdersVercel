@@ -29,6 +29,13 @@ export interface ReportFilters {
   dates?: boolean; // from / to
   custId?: boolean;
   invoiceNo?: boolean;
+  /**
+   * A single "as at" date instead of a from/to range. Sent as the `to` param (the `from` is left
+   * blank). Used by the customer statement (`stcuststat`), which is always "everything outstanding
+   * as at a date" with no lower bound — the API ages the statement to this date and selects the
+   * rows by it. Mutually exclusive with `dates`.
+   */
+  asAtDate?: boolean;
 }
 
 /** One choice in a report's "Sort by" dropdown — `value` is sent to the API as `sortBy`. */
@@ -76,7 +83,7 @@ export interface ReportMeta {
 
 /**
  * Every extracted report. Order here drives the debug list. `bound` reflects what the API can
- * render with live data as of the reporting work to date (12 of 18 — invregdate and invreginvc
+ * render with live data as of the reporting work to date (13 of 18 — invregdate and invreginvc
  * were retired as duplicates of invreg, which now covers both via its Sort by option).
  */
 export const REPORTS: ReportMeta[] = [
@@ -152,6 +159,16 @@ export const REPORTS: ReportMeta[] = [
     bound: true,
     filters: { dates: true, custId: true },
   },
+  {
+    name: "stcuststat",
+    title: "Customer Statement",
+    description:
+      "Printed statement per customer — every open item still outstanding as at the statement " +
+      "date, with the aged summary (current, 30, 60+) and the remittance advice.",
+    category: "Debtors",
+    bound: true,
+    filters: { asAtDate: true, custId: true },
+  },
 
   // --- Receipts history (Receipts_History / Customer) ---
   {
@@ -198,14 +215,6 @@ export const REPORTS: ReportMeta[] = [
     category: "Debtors",
     bound: false,
     blockedBy: "Aged buckets use Crystal NumberVar formulas the evaluator doesn't support yet.",
-  },
-  {
-    name: "stcuststat",
-    title: "Customer Statement",
-    description: "Printed statement per customer with aged balances.",
-    category: "Debtors",
-    bound: false,
-    blockedBy: "Needs the Statements table (no EF entity) plus NumberVar ageing.",
   },
   {
     name: "STINVOICE",

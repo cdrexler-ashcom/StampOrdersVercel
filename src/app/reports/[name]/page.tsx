@@ -47,7 +47,11 @@ function ReportViewer() {
   // Reports index) open a report with its detail toggle pre-ticked, rather than the operator
   // having to tick it by hand every time.
   const defaultParams: ReportParamsValue = {
-    ...(filters.dates ? { ...EMPTY_REPORT_PARAMS, ...thisMonthRange() } : EMPTY_REPORT_PARAMS),
+    ...EMPTY_REPORT_PARAMS,
+    // A date-range report opens on "this month"; an "as at" report (the customer statement)
+    // opens on today — thisMonthRange().to is today's local date.
+    ...(filters.dates ? thisMonthRange() : {}),
+    ...(filters.asAtDate ? { to: thisMonthRange().to } : {}),
     detail: search.get("detail") === "true",
   };
 
@@ -81,7 +85,7 @@ function ReportViewer() {
     setApplied({ view: nextView, params: nextParams });
   }
 
-  const chips = buildChips(applied.params, (next) => apply(next));
+  const chips = buildChips(applied.params, (next) => apply(next), Boolean(filters.asAtDate));
 
   return (
     <div>
@@ -166,12 +170,14 @@ function FilterChip({ label, onRemove }: { label: string; onRemove: () => void }
 function buildChips(
   applied: ReportParamsValue,
   onApply: (next: ReportParamsValue) => void,
+  asAtDate = false,
 ): { key: string; label: string; onRemove: () => void }[] {
   const chips: { key: string; label: string; onRemove: () => void }[] = [];
 
   if (applied.from || applied.to) {
-    const label =
-      applied.from && applied.to
+    const label = asAtDate
+      ? `As at ${applied.to}`
+      : applied.from && applied.to
         ? `${applied.from} → ${applied.to}`
         : applied.from
           ? `From ${applied.from}`

@@ -71,6 +71,7 @@ export function ReportParamsPanel({
 }) {
   const hasAnyFilter = Boolean(
     filters.dates ||
+      filters.asAtDate ||
       filters.custId ||
       filters.invoiceNo ||
       (sortOptions && sortOptions.length > 0) ||
@@ -135,6 +136,16 @@ export function ReportParamsPanel({
           <DateRangeField
             value={{ from: value.from, to: value.to }}
             onChange={(range: DateRange) => onChange({ ...value, ...range })}
+          />
+        </Field>
+      )}
+
+      {filters.asAtDate && (
+        <Field label="Statement date" hint="Everything outstanding as at this date.">
+          <Input
+            type="date"
+            value={value.to}
+            onChange={(e) => onChange({ ...value, from: "", to: e.target.value })}
           />
         </Field>
       )}
