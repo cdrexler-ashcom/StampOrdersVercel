@@ -363,8 +363,8 @@ export const soset = {
 
 export const proofs = {
   /** GET /api/proofs/{jobNo} — the proof screen's defaults, from txJobNo_Validate. */
-  job: (jobNo: string) =>
-    api.get<ProofJobResponse>(`/api/proofs/${encodeURIComponent(jobNo)}`),
+  job: (jobNo: string, signal?: AbortSignal) =>
+    api.get<ProofJobResponse>(`/api/proofs/${encodeURIComponent(jobNo)}`, undefined, signal),
 
   /** GET /api/proofs/{jobNo}/image — the scanned stamp design, or 404 if none was scanned. */
   imageUrl: (jobNo: string) => `/api/proofs/${encodeURIComponent(jobNo)}/image`,
