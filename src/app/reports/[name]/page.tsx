@@ -74,9 +74,16 @@ function ReportViewer() {
       invoiceNo: applied.params.invoiceNo || undefined,
       sortBy: applied.params.sortBy || undefined,
       detail: applied.params.detail || undefined,
+      jobNo: applied.params.jobNo || undefined,
     }),
     [applied.params],
   );
+
+  // Reports that need a job number (Proof) can't fetch live data blind — hold the frame back
+  // until one is applied, rather than firing a request that just errors. The layout-only view
+  // needs no data, so it still shows.
+  const awaitingJobNo =
+    Boolean(filters.jobNo) && applied.view === "html" && !applied.params.jobNo.trim();
 
   /** Applies a full parameter set immediately — used by both Generate and chip removal. */
   function apply(nextParams: ReportParamsValue, nextView: ReportView = view) {
@@ -134,12 +141,19 @@ function ReportViewer() {
             </div>
           )}
 
-          <ReportFrame
-            name={name}
-            view={applied.view}
-            params={queryParams}
-            title={meta?.title ?? name}
-          />
+          {awaitingJobNo ? (
+            <Notice tone="sky" title="Enter a job number">
+              This report is generated for one job. Type a job number in the options panel and
+              press Generate.
+            </Notice>
+          ) : (
+            <ReportFrame
+              name={name}
+              view={applied.view}
+              params={queryParams}
+              title={meta?.title ?? name}
+            />
+          )}
         </div>
       </div>
     </div>
@@ -205,6 +219,14 @@ function buildChips(
       key: "invoiceNo",
       label: `Invoice ${applied.invoiceNo.trim()}`,
       onRemove: () => onApply({ ...applied, invoiceNo: "" }),
+    });
+  }
+
+  if (applied.jobNo.trim()) {
+    chips.push({
+      key: "jobNo",
+      label: `Job ${applied.jobNo.trim()}`,
+      onRemove: () => onApply({ ...applied, jobNo: "" }),
     });
   }
 

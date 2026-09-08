@@ -14,6 +14,7 @@
  */
 
 import { api } from "./api";
+import { proofs } from "./endpoints";
 import type { ReportDefinitionInfo } from "@/types/api";
 
 export type ReportCategory =
@@ -36,6 +37,13 @@ export interface ReportFilters {
    * rows by it. Mutually exclusive with `dates`.
    */
   asAtDate?: boolean;
+  /**
+   * A Soset job number, and nothing else. Required — the report can't generate without it. Used by
+   * `Proof`, which isn't an `IReportDataProvider` on the API: the live view is built by the proof
+   * pipeline (`GET /api/proofs/{jobNo}` for the defaults, then `POST /api/proofs/preview`), so
+   * `fetchReportHtml` routes `Proof` there instead of the generic `/api/reports/{name}/html`.
+   */
+  jobNo?: boolean;
 }
 
 /** One choice in a report's "Sort by" dropdown — `value` is sent to the API as `sortBy`. */
@@ -83,7 +91,7 @@ export interface ReportMeta {
 
 /**
  * Every extracted report. Order here drives the debug list. `bound` reflects what the API can
- * render with live data as of the reporting work to date (13 of 18 — invregdate and invreginvc
+ * render with live data as of the reporting work to date (15 of 18 — invregdate and invreginvc
  * were retired as duplicates of invreg, which now covers both via its Sort by option).
  */
 export const REPORTS: ReportMeta[] = [
@@ -235,10 +243,12 @@ export const REPORTS: ReportMeta[] = [
   {
     name: "DelDocket",
     title: "Delivery Docket",
-    description: "The printed delivery docket document.",
+    description:
+      "The printed delivery docket per invoice in the current staging batch — delivery address, " +
+      "bin no. and the lines to pack (order no, job no, details, qty), with the invoice barcode.",
     category: "Documents",
-    bound: false,
-    blockedBy: "Full document: per-invoice layout and bank-detail parameters.",
+    bound: true,
+    filters: { custId: true, invoiceNo: true },
   },
   // --- Status change log / daily sales / job card (StatChangeLog / Daily_Sales_Report / JobCard) ---
   {
@@ -269,10 +279,12 @@ export const REPORTS: ReportMeta[] = [
   {
     name: "Proof",
     title: "Proof",
-    description: "Proof sheet.",
+    description:
+      "Customer proof for a single job — stamp design, product, price and the letterhead. " +
+      "Enter a job number to generate; the full edit-and-email workflow is on the Proofs page.",
     category: "Operational",
-    bound: false,
-    blockedBy: "Backs onto a Crystal SQL command, not a mapped table.",
+    bound: true,
+    filters: { jobNo: true },
   },
 ];
 
@@ -315,6 +327,8 @@ export interface ReportQueryParams {
   sortBy?: string;
   /** Runtime detail toggle — currently only honoured by the API for `rechist`. */
   detail?: boolean;
+  /** Soset job number — required for `Proof`, ignored by every other report. */
+  jobNo?: string;
 }
 
 /**
@@ -350,12 +364,51 @@ export function fetchReportHtml(
   params: ReportQueryParams = {},
   signal?: AbortSignal,
 ): Promise<string> {
+  // Proof isn't a data provider on the API — its live view comes from the proof pipeline, keyed
+  // by a job number. The layout preview still goes through the generic path below.
+  if (name.toLowerCase() === "proof" && view === "html") {
+    return fetchProofHtml(params.jobNo, signal);
+  }
+
   const query: Record<string, string> = {};
   for (const [key, value] of Object.entries(params)) {
     if (value === null || value === undefined || value === "") continue;
     query[key] = String(value);
   }
   return api.getText(`/api/reports/${encodeURIComponent(name)}/${view}`, query, signal);
+}
+
+/**
+ * Builds the live Proof for one job: reads the proof screen's defaults for the job
+ * (`GET /api/proofs/{jobNo}`), then renders them unchanged (`POST /api/proofs/preview`) — the
+ * same two calls the Proofs page makes, minus the operator edits. Any tweaking (price, delivery,
+ * message, emailing) belongs on the Proofs page / order-line Proof button, not the Reports screen.
+ */
+async function fetchProofHtml(jobNo: string | undefined, signal?: AbortSignal): Promise<string> {
+  const job = (jobNo ?? "").trim();
+  if (!job) throw new Error("Enter a job number to generate the proof.");
+
+  const defaults = await proofs.job(job, signal);
+  return proofs.preview({
+    jobNo: defaults.jobNo,
+    accountNo: defaults.accountNo,
+    custTitle: defaults.custTitle,
+    prodId: defaults.prodId,
+    prodName: defaults.prodName,
+    colour: defaults.colour,
+    qty: defaults.qty,
+    priceCode: defaults.priceCode,
+    price: defaults.price,
+    discPct: defaults.discPct,
+    email: defaults.email,
+    invoiceComp: defaults.invoiceComp,
+    extraText: null,
+    noProofHeader: defaults.noProofHeader,
+    priceIncGst: defaults.priceIncGst,
+    deliveryIncluded: false,
+    deliveryAmt: defaults.deliveryAmt,
+    proofHeader: null,
+  });
 }
 
 /** GET /api/reports — the report names the API can render. */

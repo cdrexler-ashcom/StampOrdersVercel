@@ -12,6 +12,8 @@ import {
   Card,
   CardBody,
   ErrorState,
+  Field,
+  Input,
   Modal,
   Notice,
   PageHeader,
@@ -29,7 +31,7 @@ import {
 } from "@/lib/reports";
 
 type Dialog =
-  | { kind: "preview"; name: string; title: string; view: ReportView }
+  | { kind: "preview"; name: string; title: string; view: ReportView; needsJobNo: boolean }
   | { kind: "definition"; name: string; title: string };
 
 export default function ReportDebugPage() {
@@ -167,6 +169,7 @@ export default function ReportDebugPage() {
                             name: report.name,
                             title: report.title,
                             view: report.bound ? "html" : "layout",
+                            needsJobNo: Boolean(report.filters?.jobNo),
                           })
                         }
                       >
@@ -209,13 +212,7 @@ export default function ReportDebugPage() {
         width="xl"
       >
         {dialog?.kind === "preview" && (
-          <ReportFrame
-            name={dialog.name}
-            view={dialog.view}
-            params={{}}
-            title={dialog.title}
-            height={620}
-          />
+          <PreviewBody key={dialog.name} dialog={dialog} />
         )}
       </Modal>
 
@@ -230,6 +227,66 @@ export default function ReportDebugPage() {
         {dialog?.kind === "definition" && <DefinitionInspector name={dialog.name} />}
       </Modal>
     </div>
+  );
+}
+
+/**
+ * The preview modal's body. Most reports just render straight into a ReportFrame; a report that
+ * needs a job number (Proof) has nowhere else in this modal to ask for one, so it shows a small
+ * job-number form first and only renders the frame once a number is entered.
+ */
+function PreviewBody({ dialog }: { dialog: Extract<Dialog, { kind: "preview" }> }) {
+  const [jobNo, setJobNo] = useState("");
+  const [applied, setApplied] = useState<string | null>(null);
+
+  if (dialog.needsJobNo && dialog.view === "html") {
+    return (
+      <div className="space-y-3">
+        <form
+          className="flex items-end gap-2"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (jobNo.trim()) setApplied(jobNo.trim());
+          }}
+        >
+          <Field label="Job number" className="flex-1">
+            <Input
+              value={jobNo}
+              onChange={(e) => setJobNo(e.target.value)}
+              placeholder="e.g. 100757"
+              autoFocus
+            />
+          </Field>
+          <Button type="submit" variant="primary" disabled={!jobNo.trim()}>
+            Generate
+          </Button>
+        </form>
+
+        {applied ? (
+          <ReportFrame
+            name={dialog.name}
+            view="html"
+            params={{ jobNo: applied }}
+            title={dialog.title}
+            height={560}
+          />
+        ) : (
+          <Notice tone="sky" title="Enter a job number">
+            This report is generated for one job.
+          </Notice>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <ReportFrame
+      name={dialog.name}
+      view={dialog.view}
+      params={{}}
+      title={dialog.title}
+      height={620}
+    />
   );
 }
 

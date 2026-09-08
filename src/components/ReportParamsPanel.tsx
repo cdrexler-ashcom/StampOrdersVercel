@@ -27,6 +27,8 @@ export interface ReportParamsValue {
   sortBy: string;
   /** Only meaningful when detailToggleLabel is set. */
   detail: boolean;
+  /** Only meaningful when filters.jobNo is set (Proof); required there to generate. */
+  jobNo: string;
 }
 
 export const EMPTY_REPORT_PARAMS: ReportParamsValue = {
@@ -36,6 +38,7 @@ export const EMPTY_REPORT_PARAMS: ReportParamsValue = {
   invoiceNo: "",
   sortBy: "",
   detail: false,
+  jobNo: "",
 };
 
 function activeCount(value: ReportParamsValue): number {
@@ -43,6 +46,7 @@ function activeCount(value: ReportParamsValue): number {
   if (value.from || value.to) n += 1;
   if (value.customer) n += 1;
   if (value.invoiceNo.trim()) n += 1;
+  if (value.jobNo.trim()) n += 1;
   return n;
 }
 
@@ -74,9 +78,13 @@ export function ReportParamsPanel({
       filters.asAtDate ||
       filters.custId ||
       filters.invoiceNo ||
+      filters.jobNo ||
       (sortOptions && sortOptions.length > 0) ||
       detailToggleLabel,
   );
+
+  // Reports with a required filter can't generate until it's filled in.
+  const missingRequired = Boolean(filters.jobNo && !value.jobNo.trim());
   const active = activeCount(value);
 
   const clearAll = () => onChange(EMPTY_REPORT_PARAMS);
@@ -169,6 +177,16 @@ export function ReportParamsPanel({
         </Field>
       )}
 
+      {filters.jobNo && (
+        <Field label="Job number" hint="Required — the job to proof.">
+          <Input
+            value={value.jobNo}
+            onChange={(e) => onChange({ ...value, jobNo: e.target.value })}
+            placeholder="e.g. 100757"
+          />
+        </Field>
+      )}
+
       {sortOptions && sortOptions.length > 0 && (
         <Field label="Sort by">
           <Select
@@ -199,7 +217,12 @@ export function ReportParamsPanel({
               Layout only
             </Button>
           )}
-          <Button size="sm" variant="primary" onClick={() => onGenerate(bound ? "html" : "layout")}>
+          <Button
+            size="sm"
+            variant="primary"
+            disabled={missingRequired}
+            onClick={() => onGenerate(bound ? "html" : "layout")}
+          >
             {bound ? "Generate" : "Generate preview"}
           </Button>
         </div>
