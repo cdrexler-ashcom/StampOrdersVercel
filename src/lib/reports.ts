@@ -91,7 +91,7 @@ export interface ReportMeta {
 
 /**
  * Every extracted report. Order here drives the debug list. `bound` reflects what the API can
- * render with live data as of the reporting work to date (14 of 18 — invregdate and invreginvc
+ * render with live data as of the reporting work to date (13 of 18 — invregdate and invreginvc
  * were retired as duplicates of invreg, which now covers both via its Sort by option).
  */
 export const REPORTS: ReportMeta[] = [
@@ -243,10 +243,12 @@ export const REPORTS: ReportMeta[] = [
   {
     name: "DelDocket",
     title: "Delivery Docket",
-    description: "The printed delivery docket document.",
+    description:
+      "The printed delivery docket per invoice in the current staging batch — delivery address, " +
+      "bin no. and the lines to pack (order no, job no, details, qty), with the invoice barcode.",
     category: "Documents",
-    bound: false,
-    blockedBy: "Full document: per-invoice layout and bank-detail parameters.",
+    bound: true,
+    filters: { custId: true, invoiceNo: true },
   },
   // --- Status change log / daily sales / job card (StatChangeLog / Daily_Sales_Report / JobCard) ---
   {
