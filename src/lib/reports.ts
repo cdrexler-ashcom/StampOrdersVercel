@@ -91,7 +91,7 @@ export interface ReportMeta {
 
 /**
  * Every extracted report. Order here drives the debug list. `bound` reflects what the API can
- * render with live data as of the reporting work to date (13 of 18 — invregdate and invreginvc
+ * render with live data as of the reporting work to date (all 18 — invregdate and invreginvc
  * were retired as duplicates of invreg, which now covers both via its Sort by option).
  */
 export const REPORTS: ReportMeta[] = [
@@ -177,6 +177,20 @@ export const REPORTS: ReportMeta[] = [
     bound: true,
     filters: { asAtDate: true, custId: true },
   },
+  {
+    name: "ageopen",
+    title: "Aged Debtors",
+    description:
+      "Aged-balance buckets (current month, then prior months) per customer as at a chosen " +
+      "date, with a per-customer balance and a grand total.",
+    category: "Debtors",
+    bound: true,
+    filters: { asAtDate: true, custId: true },
+    // Summary view by default (per-customer bucket totals). Ticking this reveals the per-item
+    // lines under each customer — the API un-suppresses ageopen's DetailSection1 / account
+    // GroupHeader, reproducing openrpt.Frm's "Summary Only:" checkbox.
+    detailToggleLabel: "Show item detail",
+  },
 
   // --- Receipts history (Receipts_History / Customer) ---
   {
@@ -215,30 +229,28 @@ export const REPORTS: ReportMeta[] = [
     detailToggleLabel: "Show invoice detail",
   },
 
-  // --- Not yet bound ---
-  {
-    name: "ageopen",
-    title: "Aged Debtors",
-    description: "Aged-balance buckets (current, 30/60/90+) per customer.",
-    category: "Debtors",
-    bound: false,
-    blockedBy: "Aged buckets use Crystal NumberVar formulas the evaluator doesn't support yet.",
-  },
+  // --- Documents (InvHeader / InvLine — invoice staging tables) ---
   {
     name: "STINVOICE",
     title: "Tax Invoice",
-    description: "The full printed tax invoice document.",
+    description:
+      "The full printed tax invoice per invoice in the current staging batch — invoice and " +
+      "delivery address, the lines billed (order no, job no, details, qty, price, line total) and " +
+      "the GST-inclusive total, with the invoicing entity's letterhead, bank details and the " +
+      "invoice barcode.",
     category: "Documents",
-    bound: false,
-    blockedBy: "Full document: bank-detail params, per-invoice layout and running tax summary.",
+    bound: true,
+    filters: { custId: true, invoiceNo: true },
   },
   {
     name: "STINVOICE - Save",
     title: "Tax Invoice (save copy)",
-    description: "Save-copy variant of the tax invoice document.",
+    description:
+      "The office save copy of the tax invoice — same per-invoice layout as the Tax Invoice, with " +
+      "the letterhead and the per-line price/total columns suppressed.",
     category: "Documents",
-    bound: false,
-    blockedBy: "Full document: bank-detail params, per-invoice layout and running tax summary.",
+    bound: true,
+    filters: { custId: true, invoiceNo: true },
   },
   {
     name: "DelDocket",
