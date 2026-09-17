@@ -87,6 +87,19 @@ export interface ReportMeta {
   href?: string;
   /** For unbound reports, a short note on what is blocking the binding. */
   blockedBy?: string;
+  /**
+   * Hides this report from the Reports index (BOUND_REPORTS) without touching its `bound` status
+   * or removing it from the debug screen's catalog (PHYSICAL_REPORTS). Used for `history`,
+   * `ositems`, `dephist`, `STINVOICE`, `"STINVOICE - Save"` and `DelDocket` — these read the
+   * invoice *staging* tables (cleared as soon as the next invoicing run starts, and again after
+   * posting), so a report generated from this generic, arbitrary-invoice-number/date-range screen
+   * silently comes back empty outside the narrow staged-but-not-yet-posted window. The legacy app
+   * never exposed them from its own generic Reports menu either — they were only ever invoked
+   * from the specific invoice print/reprint/email screens, bound to whatever order set that
+   * screen had loaded. Still reachable directly at /reports/{name} until the underlying data
+   * source is revisited.
+   */
+  hiddenFromIndex?: boolean;
 }
 
 /**
@@ -139,6 +152,7 @@ export const REPORTS: ReportMeta[] = [
     category: "Invoice detail",
     bound: true,
     filters: { custId: true, invoiceNo: true },
+    hiddenFromIndex: true,
   },
   {
     name: "ositems",
@@ -147,6 +161,7 @@ export const REPORTS: ReportMeta[] = [
     category: "Invoice detail",
     bound: true,
     filters: { custId: true, invoiceNo: true },
+    hiddenFromIndex: true,
   },
   {
     name: "dephist",
@@ -155,6 +170,7 @@ export const REPORTS: ReportMeta[] = [
     category: "Invoice detail",
     bound: true,
     filters: { custId: true, invoiceNo: true },
+    hiddenFromIndex: true,
   },
 
   // --- Debtors (OpenItem / Customer) ---
@@ -241,6 +257,7 @@ export const REPORTS: ReportMeta[] = [
     category: "Documents",
     bound: true,
     filters: { custId: true, invoiceNo: true },
+    hiddenFromIndex: true,
   },
   {
     name: "STINVOICE - Save",
@@ -251,6 +268,7 @@ export const REPORTS: ReportMeta[] = [
     category: "Documents",
     bound: true,
     filters: { custId: true, invoiceNo: true },
+    hiddenFromIndex: true,
   },
   {
     name: "DelDocket",
@@ -261,6 +279,7 @@ export const REPORTS: ReportMeta[] = [
     category: "Documents",
     bound: true,
     filters: { custId: true, invoiceNo: true },
+    hiddenFromIndex: true,
   },
   // --- Status change log / daily sales / job card (StatChangeLog / Daily_Sales_Report / JobCard) ---
   {
@@ -301,8 +320,9 @@ export const REPORTS: ReportMeta[] = [
 ];
 
 /** Reports the API renders with live data, in catalog order. Includes shortcut variants (see
- * ReportMeta.variantOf) — the Reports index wants every card, unlike the debug screen. */
-export const BOUND_REPORTS = REPORTS.filter((r) => r.bound);
+ * ReportMeta.variantOf) — the Reports index wants every card, unlike the debug screen. Excludes
+ * entries marked `hiddenFromIndex` (see ReportMeta.hiddenFromIndex). */
+export const BOUND_REPORTS = REPORTS.filter((r) => r.bound && !r.hiddenFromIndex);
 
 /** One row per report the API's catalog actually knows about — excludes shortcut variants (see
  * ReportMeta.variantOf), which reuse another entry's `name` and so would double-count binding
