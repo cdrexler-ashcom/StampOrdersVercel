@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CheckCircle2, FileText } from "lucide-react";
+import { CheckCircle2, FileText, Printer } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 
@@ -24,6 +24,8 @@ import {
 } from "@/components/ui";
 import { invoices, orders } from "@/lib/endpoints";
 import { date, dateInput, documentTotals, money, text } from "@/lib/format";
+import { printReportHtml } from "@/lib/print";
+import { fetchReportHtml } from "@/lib/reports";
 import type { InvoiceHeader, InvoiceRunRequest, InvoiceRunResult } from "@/types/api";
 
 /**
@@ -49,6 +51,10 @@ export default function InvoicingPage() {
   // net/GST figures are derived from their lines the same way the review table below is.
   const [stageResult, setStageResult] = useState<InvoiceHeader[] | null>(null);
   const [postResult, setPostResult] = useState<InvoiceRunResult | null>(null);
+  const [printDockets, setPrintDockets] = useState(true);
+  // Set once the dockets have been sent to the printer; holds how many, and drives the
+  // "did they print correctly?" confirmation that gates posting.
+  const [docketCheck, setDocketCheck] = useState<number | null>(null);
 
   const liveOrders = useQuery({ queryKey: ["orders", {}], queryFn: () => orders.list() });
   const staged = useQuery({
@@ -61,7 +67,33 @@ export default function InvoicingPage() {
     onSuccess: (result) => {
       setStageResult(result);
       setPostResult(null);
+      setDocketCheck(null);
       queryClient.invalidateQueries({ queryKey: ["invoices", "staged"] });
+    },
+  });
+
+  // Legacy PrtInvoice.frm printed the delivery dockets between staging and posting, then asked
+  // "N delivery docket(s) should have been printed. Have they printed correctly?" and only
+  // posted on Yes. The DelDocket report reads the staging tables, which posting empties, so
+  // this order is required, not just a courtesy. Dockets are the staged invoices flagged
+  // DirectDel — the API sets that from the run number (runs 1, 2, 5, 6).
+  const docketMutation = useMutation({
+    mutationFn: async () => {
+      const html = await fetchReportHtml("DelDocket", "html", { directDel: true });
+      printReportHtml(html);
+    },
+    onSuccess: () => setDocketCheck(docketCount),
+  });
+
+  // Legacy ReprintBatch.frm: reprint the last batch's dockets (DirectDel only). Posting empties
+  // staging, so the API reads the last posted batch back from the archive.
+  const reprintMutation = useMutation({
+    mutationFn: async () => {
+      const html = await fetchReportHtml("DelDocket", "html", {
+        directDel: true,
+        lastBatch: true,
+      });
+      printReportHtml(html);
     },
   });
 
@@ -102,6 +134,7 @@ export default function InvoicingPage() {
   };
 
   const stagedCount = staged.data?.length ?? 0;
+  const docketCount = staged.data?.filter((header) => header.directDel).length ?? 0;
   const stagedTotals = stageResult?.reduce(
     (acc, header) => {
       const totals = documentTotals(header.lines ?? []);
@@ -334,21 +367,93 @@ export default function InvoicingPage() {
                 </Notice>
               )}
 
+              <label className="flex items-start gap-2 text-sm text-slate-700">
+                <input
+                  type="checkbox"
+                  checked={printDockets}
+                  disabled={docketCheck !== null}
+                  onChange={(e) => setPrintDockets(e.target.checked)}
+                  className="mt-0.5 size-4 rounded border-slate-300 text-sky-700 focus:ring-sky-600"
+                />
+                <span>
+                  Generate delivery dockets for all invoices in the run
+                  <span className="block text-xs text-slate-500">
+                    {stagedCount === 0
+                      ? "Printed before posting; you confirm they printed before it posts."
+                      : docketCount > 0
+                        ? `${docketCount} of ${stagedCount} staged invoice(s) are on a delivery docket run (1, 2, 5, 6).`
+                        : "None of the staged invoices are on a delivery docket run (1, 2, 5, 6)."}
+                  </span>
+                </span>
+              </label>
+
+              {(docketMutation.isError || reprintMutation.isError) && (
+                <Notice tone="red" title="Delivery dockets failed">
+                  {((docketMutation.error ?? reprintMutation.error) as Error).message}
+                </Notice>
+              )}
+
               {postMutation.isError && (
                 <Notice tone="red" title="Posting failed">
                   {(postMutation.error as Error).message}
                 </Notice>
               )}
 
+              {docketCheck !== null ? (
+                <Notice tone="amber" title="Delivery dockets">
+                  <p>
+                    {docketCheck} delivery docket(s) should have been printed. Have they
+                    printed correctly?
+                  </p>
+                  <div className="mt-2 flex gap-2">
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      loading={postMutation.isPending}
+                      onClick={() => {
+                        setDocketCheck(null);
+                        postMutation.mutate();
+                      }}
+                    >
+                      Yes, post
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      disabled={postMutation.isPending}
+                      onClick={() => setDocketCheck(null)}
+                    >
+                      No, don&apos;t post
+                    </Button>
+                  </div>
+                </Notice>
+              ) : (
+                <Button
+                  variant="primary"
+                  className="w-full"
+                  loading={postMutation.isPending || docketMutation.isPending}
+                  disabled={stagedCount === 0}
+                  onClick={() =>
+                    printDockets && docketCount > 0
+                      ? docketMutation.mutate()
+                      : postMutation.mutate()
+                  }
+                >
+                  <CheckCircle2 className="size-3.5" />
+                  {printDockets && docketCount > 0
+                    ? `Print dockets, then post ${stagedCount} invoice(s)`
+                    : `Post ${stagedCount > 0 ? `${stagedCount} invoice(s)` : "staged run"}`}
+                </Button>
+              )}
+
               <Button
-                variant="primary"
+                variant="secondary"
                 className="w-full"
-                loading={postMutation.isPending}
-                disabled={stagedCount === 0}
-                onClick={() => postMutation.mutate()}
+                loading={reprintMutation.isPending}
+                onClick={() => reprintMutation.mutate()}
               >
-                <CheckCircle2 className="size-3.5" />
-                Post {stagedCount > 0 ? `${stagedCount} invoice(s)` : "staged run"}
+                <Printer className="size-3.5" />
+                Reprint last batch delivery dockets
               </Button>
             </CardBody>
           </Card>

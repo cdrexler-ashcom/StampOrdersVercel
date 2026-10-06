@@ -274,6 +274,9 @@ export interface InvoiceHeader {
   custId: number | null;
   custTitle: string | null;
   invoiceDate: string | null;
+  runNo?: string | null;
+  /** Delivery docket flag — set at staging from the run number (runs 1, 2, 5, 6). */
+  directDel?: boolean | null;
   credit: boolean;
   lines: InvoiceLine[];
 }

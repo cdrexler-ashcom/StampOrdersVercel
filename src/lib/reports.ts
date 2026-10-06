@@ -361,6 +361,12 @@ export interface ReportQueryParams {
   detail?: boolean;
   /** Soset job number — required for `Proof`, ignored by every other report. */
   jobNo?: string;
+  /** Invoice-staging reports only (DelDocket etc.): restrict to one run. */
+  runNo?: string;
+  /** Invoice-staging reports only: restrict on the delivery docket flag. */
+  directDel?: boolean;
+  /** Invoice-staging reports only: read the last posted batch (posting empties staging). */
+  lastBatch?: boolean;
 }
 
 /**
