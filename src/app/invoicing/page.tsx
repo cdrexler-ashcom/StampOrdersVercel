@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CheckCircle2, FileText, Printer } from "lucide-react";
+import { CheckCircle2, FileText } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 
@@ -31,8 +31,9 @@ import type { InvoiceHeader, InvoiceRunRequest, InvoiceRunResult } from "@/types
 /**
  * Invoice run.
  *
- * Replaces PrtInvoice.frm, EmailInvoices.frm, ReprintBatch.frm and the run-number boxes
- * that were scattered across them. The API separates staging from posting deliberately
+ * Replaces PrtInvoice.frm, EmailInvoices.frm and the run-number boxes that were scattered
+ * across them. (ReprintBatch.frm — "Reprint last batch" — was dropped at the customer's
+ * request.) The API separates staging from posting deliberately
  * ("Stages orders and allocates invoice numbers. Does not post."), so the screen is built
  * around that: select, stage, review, then commit.
  *
@@ -83,18 +84,6 @@ export default function InvoicingPage() {
       printReportHtml(html);
     },
     onSuccess: () => setDocketCheck(docketCount),
-  });
-
-  // Legacy ReprintBatch.frm: reprint the last batch's dockets (DirectDel only). Posting empties
-  // staging, so the API reads the last posted batch back from the archive.
-  const reprintMutation = useMutation({
-    mutationFn: async () => {
-      const html = await fetchReportHtml("DelDocket", "html", {
-        directDel: true,
-        lastBatch: true,
-      });
-      printReportHtml(html);
-    },
   });
 
   const postMutation = useMutation({
@@ -387,9 +376,9 @@ export default function InvoicingPage() {
                 </span>
               </label>
 
-              {(docketMutation.isError || reprintMutation.isError) && (
+              {docketMutation.isError && (
                 <Notice tone="red" title="Delivery dockets failed">
-                  {((docketMutation.error ?? reprintMutation.error) as Error).message}
+                  {(docketMutation.error as Error).message}
                 </Notice>
               )}
 
@@ -445,16 +434,6 @@ export default function InvoicingPage() {
                     : `Post ${stagedCount > 0 ? `${stagedCount} invoice(s)` : "staged run"}`}
                 </Button>
               )}
-
-              <Button
-                variant="secondary"
-                className="w-full"
-                loading={reprintMutation.isPending}
-                onClick={() => reprintMutation.mutate()}
-              >
-                <Printer className="size-3.5" />
-                Reprint last batch delivery dockets
-              </Button>
             </CardBody>
           </Card>
 

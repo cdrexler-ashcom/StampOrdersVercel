@@ -5,7 +5,6 @@ import { AlertTriangle, CheckCircle2, Upload } from "lucide-react";
 import Link from "next/link";
 import { useRef, useState } from "react";
 
-import { CustomerPicker } from "@/components/CustomerPicker";
 import {
   Badge,
   Button,
@@ -21,124 +20,34 @@ import {
   Th,
 } from "@/components/ui";
 import { imports } from "@/lib/endpoints";
-import type { Customer, ImportResult, ImportRowResult, ImportRowStatus } from "@/types/api";
+import type { ImportResult, ImportRowResult, ImportRowStatus } from "@/types/api";
 
 /**
- * Order import — replaces ImportOrders.frm (D1) and ImportWebOrders.frm (D2).
+ * Web order import — replaces ImportWebOrders.frm (D2). It is a CSV upload that creates one
+ * order with a line per row. (The Soset stamp import, ImportOrders.frm / D1, was dropped at the
+ * customer's request.)
  *
- * The two imports share a name but not a shape, so they're not one form with a toggle:
- *  - D1 (Soset stamps) isn't a file import at all. It reads stamps already sitting at
- *    status '07' in Soset and builds one order from them; the only input is which customer
- *    to import them against, and even that's optional — it falls back to the configured
- *    default importer.
- *  - D2 (web orders) is a CSV upload that creates one order with a line per row.
- *
- * Both endpoints always return 200 with a row-by-row ImportResult, never a per-row HTTP
+ * The endpoint always returns 200 with a row-by-row ImportResult, never a per-row HTTP
  * error: a bad product code or an unrecognised colour on one row doesn't stop the run, it's
  * reported alongside the rows that succeeded. That's rendered here as a summary line plus a
  * table where "Failed" and "Skipped" are shown as warnings, not as the page having failed —
  * the run itself succeeded even when individual rows didn't.
  */
-
-type Mode = "stamps" | "web";
-
 export default function ImportsPage() {
-  const [mode, setMode] = useState<Mode>("stamps");
-
   return (
     <>
       <PageHeader
-        title="Import orders"
-        description="Bring Soset stamps or a web-order CSV into the system as a new order."
+        title="Import web orders"
+        description="Bring a web-order CSV into the system as a new order."
       />
 
-      <div className="mb-4 inline-flex rounded-md bg-slate-100 p-1 text-sm">
-        <ModeTab active={mode === "stamps"} onClick={() => setMode("stamps")}>
-          Soset stamps
-        </ModeTab>
-        <ModeTab active={mode === "web"} onClick={() => setMode("web")}>
-          Web orders (CSV)
-        </ModeTab>
-      </div>
-
-      {mode === "stamps" ? <StampImportPanel /> : <WebOrderImportPanel />}
-    </>
-  );
-}
-
-function ModeTab({
-  active,
-  onClick,
-  children,
-}: {
-  active: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`rounded px-3 py-1.5 font-medium transition-colors ${
-        active ? "bg-white text-slate-900 shadow-sm" : "text-slate-600 hover:text-slate-900"
-      }`}
-    >
-      {children}
-    </button>
-  );
-}
-
-// ---------------------------------------------------------------------------------------
-// D1 — Soset stamps
-// ---------------------------------------------------------------------------------------
-
-function StampImportPanel() {
-  const [customer, setCustomer] = useState<Customer | null>(null);
-
-  const mutation = useMutation({
-    mutationFn: () =>
-      imports.orders({ customerAccountNo: customer?.accountNo ?? null }),
-  });
-
-  return (
-    <>
-      <Card>
-        <CardHeader
-          title="Import Soset stamps"
-          description="Pulls every stamp at status &lsquo;07&rsquo; into one new order."
-        />
-        <CardBody className="space-y-3">
-          <Field
-            label="Customer"
-            hint="Leave blank to use the default import customer configured in Control."
-          >
-            <CustomerPicker value={customer} onChange={setCustomer} />
-          </Field>
-
-          <Button
-            variant="primary"
-            loading={mutation.isPending}
-            onClick={() => mutation.mutate()}
-          >
-            <Upload className="size-3.5" />
-            Run import
-          </Button>
-
-          {mutation.isError && (
-            <Notice tone="red" title="Import did not run">
-              {(mutation.error as Error).message}
-            </Notice>
-          )}
-        </CardBody>
-      </Card>
-
-      {mutation.data && <ImportResultView result={mutation.data} />}
+      <WebOrderImportPanel />
     </>
   );
 }
 
 // ---------------------------------------------------------------------------------------
-// D2 — web order CSV
+// Web order CSV
 // ---------------------------------------------------------------------------------------
 
 function WebOrderImportPanel() {

@@ -281,7 +281,7 @@ export const REPORTS: ReportMeta[] = [
     filters: { custId: true, invoiceNo: true },
     hiddenFromIndex: true,
   },
-  // --- Status change log / daily sales / job card (StatChangeLog / Daily_Sales_Report / JobCard) ---
+  // --- Status change log / job card (StatChangeLog / JobCard) ---
   {
     name: "ChangeLog",
     title: "Status Change Log",
@@ -289,14 +289,6 @@ export const REPORTS: ReportMeta[] = [
     category: "Operational",
     bound: true,
     filters: { dates: true, invoiceNo: true },
-  },
-  {
-    name: "DailySales",
-    title: "Daily Sales",
-    description: "Daily sales summary grouped by order, with sell/cost/margin, freight and grand totals.",
-    category: "Operational",
-    bound: true,
-    filters: { dates: true },
   },
   {
     name: "jobcard",
@@ -365,8 +357,6 @@ export interface ReportQueryParams {
   runNo?: string;
   /** Invoice-staging reports only: restrict on the delivery docket flag. */
   directDel?: boolean;
-  /** Invoice-staging reports only: read the last posted batch (posting empties staging). */
-  lastBatch?: boolean;
 }
 
 /**

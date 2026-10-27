@@ -203,7 +203,6 @@ export interface Customer {
   // Proof / ordering-contact fields (ProofSQL). Email is the ordering contact, distinct
   // from accountsEmail (the accounts contact used for invoice delivery).
   email: string | null;
-  faxNo: string | null;
   proofHeader: string | null;
   sendFromEmail: string | null;
   altPricing: boolean;
@@ -654,12 +653,6 @@ export interface CreateInvoiceStateRequest {
 
 export type UpdateInvoiceStateRequest = Omit<CreateInvoiceStateRequest, "state">;
 
-/** Both the read result and the write body for /api/settings/overdue-messages. */
-export interface OverdueMessages {
-  message1: string | null;
-  message2: string | null;
-}
-
 /**
  * Both the read result and the write body for /api/settings/control — the operator-maintained
  * fields of the single Control row (the port of the legacy Ctrl.frm screen).
@@ -753,7 +746,6 @@ export interface CustomerRequest {
   // Proof / ordering-contact fields (ProofSQL). Already returned on the read side; the
   // API's UpdateCustomerAsync/CreateCustomerAsync now accept them too.
   email: string | null;
-  faxNo: string | null;
   proofHeader: string | null;
   sendFromEmail: string | null;
   altPricing: boolean;
@@ -822,9 +814,6 @@ export interface PricingRuleRequest {
   price: number | null;
   lines: PricingRuleLineRequest[] | null;
 }
-export interface ImportOrdersRequest {
-  customerAccountNo?: string | null;
-}
 
 export type ImportRowStatus = "Imported" | "Skipped" | "Failed";
 
@@ -881,7 +870,6 @@ export interface ProofJobResponse {
   discPct: number;
 
   email: string;
-  faxNo: string;
   emailFrom: string;
 
   subject: string;
@@ -920,7 +908,6 @@ export interface ProofPreviewRequest {
   discPct: number;
 
   email?: string | null;
-  faxNo?: string | null;
 
   invoiceComp?: string | null;
   extraText?: string | null;

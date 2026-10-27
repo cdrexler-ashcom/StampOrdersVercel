@@ -41,7 +41,6 @@ import type {
   Bin,
   CreateBinRequest,
   UpdateBinRequest,
-  OverdueMessages,
   ControlSettings,
   StateInvoice,
   UpdateInvoiceStateRequest,
@@ -55,7 +54,6 @@ import type {
   LoginResult,
   PricingRuleRequest,
   PricingRuleResult,
-  ImportOrdersRequest,
   ImportResult,
 } from "@/types/api";
 
@@ -304,12 +302,6 @@ export const invoiceStates = {
 };
 
 export const settings = {
-  /** GET /api/settings/overdue-messages */
-  overdueMessages: () => api.get<OverdueMessages>("/api/settings/overdue-messages"),
-  /** PUT /api/settings/overdue-messages */
-  updateOverdueMessages: (body: OverdueMessages) =>
-    api.put<OverdueMessages>("/api/settings/overdue-messages", body),
-
   /** GET /api/settings/control */
   control: () => api.get<ControlSettings>("/api/settings/control"),
   /** PUT /api/settings/control */
@@ -393,10 +385,6 @@ export const health = {
 
 // --- Imports -----------------------------------------------------------------------------
 export const imports = {
-  /** POST /api/imports/orders (D1). No file — customer is optional, falls back server-side. */
-  orders: (body: ImportOrdersRequest = {}) =>
-    api.post<ImportResult>("/api/imports/orders", body),
-
   /** POST /api/imports/web-orders (D2). Multipart CSV upload. */
   webOrders: (file: File) => {
     const formData = new FormData();

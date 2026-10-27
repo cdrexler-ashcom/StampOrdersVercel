@@ -309,7 +309,7 @@ export function EditOrderDialog({
               onChange={(e) => setFreight(e.target.value)}
             />
           </Field>
-          <Field label="Invoice entity" hint="The company this order is invoiced under.">
+          <Field label="Company" hint="The company this order is invoiced under.">
             <InvoiceEntityPicker
               value={invoiceComp}
               onChange={(state) => setInvoiceComp(state ?? "")}

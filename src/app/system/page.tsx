@@ -30,8 +30,8 @@ import { text } from "@/lib/format";
  * Set Debug On, Change Stamp Status. Only the Soset side has API support, and it is the
  * part that actually generates support calls, so that is what this page covers.
  *
- * Ctrl.frm (28 control fields), Bins, Invoice States, Stamp Labels and the overdue
- * message editors have no endpoints; they are listed in DESIGN-NOTES.md.
+ * Ctrl.frm (28 control fields), Bins, Invoice States and Stamp Labels have no endpoints;
+ * they are listed in DESIGN-NOTES.md.
  */
 export default function SystemPage() {
   const [jobNo, setJobNo] = useState("");
@@ -277,7 +277,7 @@ export default function SystemPage() {
           </Card>
 
           <Notice tone="slate" title="Not yet available through the API">
-            Control record, bins, invoice states, stamp labels, overdue messages, order
+            Control record, bins, invoice states, stamp labels, order
             imports and the reporting suite have no endpoints in the current API. They
             are listed with their legacy sources in DESIGN-NOTES.md.
           </Notice>

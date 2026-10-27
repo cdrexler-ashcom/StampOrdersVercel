@@ -235,7 +235,7 @@ export function ProofDialog({
       open={open}
       onClose={onClose}
       title={jobNo ? `Proof — job ${jobNo}` : "Proof"}
-      description="Preview the proof, or email it to the customer as a PDF. Faxing is not available."
+      description="Preview the proof, or email it to the customer as a PDF."
       width="xl"
       footer={
         <>

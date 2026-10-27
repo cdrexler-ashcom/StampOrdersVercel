@@ -344,7 +344,7 @@ export function OrderWorkspace({ initialOrderId }: { initialOrderId?: number }) 
               )}
               <Button
                 onClick={() => setEditOrderOpen(true)}
-                title="Freight, price code, invoice entity and flags"
+                title="Freight, price code, company and flags"
               >
                 <Pencil className="size-3.5" />
                 More fields

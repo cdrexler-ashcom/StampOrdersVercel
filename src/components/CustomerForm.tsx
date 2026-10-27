@@ -54,7 +54,6 @@ const MAX = {
   cardNumber: 20,
   expiryDate: 10,
   email: 45,
-  faxNo: 15,
   proofHeader: 100,
   sendFromEmail: 50,
 } as const;
@@ -117,7 +116,6 @@ interface FormState {
   expiryDate: string;
   paidDefault: boolean;
   email: string;
-  faxNo: string;
   proofHeader: string;
   sendFromEmail: string;
   altPricing: boolean;
@@ -150,7 +148,7 @@ const emptyForm: FormState = {
   creditMsg: "",
   emailInvoice: false,
   accountsEmail: "",
-  deliveryDocket: false,
+  deliveryDocket: true,
   invoiceComp: "",
   orderNote: "",
   dealerReturnAddress: false,
@@ -165,7 +163,6 @@ const emptyForm: FormState = {
   expiryDate: "",
   paidDefault: false,
   email: "",
-  faxNo: "",
   proofHeader: "",
   sendFromEmail: "",
   altPricing: false,
@@ -214,7 +211,6 @@ function toForm(customer: Customer): FormState {
     expiryDate: customer.expiryDate ?? "",
     paidDefault: customer.paidDefault,
     email: customer.email ?? "",
-    faxNo: customer.faxNo ?? "",
     proofHeader: customer.proofHeader ?? "",
     sendFromEmail: customer.sendFromEmail ?? "",
     altPricing: customer.altPricing,
@@ -277,7 +273,6 @@ function toRequest(form: FormState): CustomerRequest {
     expiryDate: orNull(form.expiryDate),
     paidDefault: form.paidDefault,
     email: orNull(form.email),
-    faxNo: orNull(form.faxNo),
     proofHeader: orNull(form.proofHeader),
     sendFromEmail: orNull(form.sendFromEmail),
     altPricing: form.altPricing,
@@ -312,7 +307,7 @@ function validate(form: FormState): string[] {
     ["Run number", form.runNo, MAX.runNo],
     ["Web run number", form.webRunNo, MAX.webRunNo],
     ["Accounts email", form.accountsEmail, MAX.accountsEmail],
-    ["Invoice entity", form.invoiceComp, MAX.invoiceComp],
+    ["Company", form.invoiceComp, MAX.invoiceComp],
     ["Order note", form.orderNote, MAX.orderNote],
     ["Drawer name", form.drawerName, MAX.drawerName],
     ["Bank name", form.bankName, MAX.bankName],
@@ -320,7 +315,6 @@ function validate(form: FormState): string[] {
     ["Card number", form.cardNumber, MAX.cardNumber],
     ["Expiry date", form.expiryDate, MAX.expiryDate],
     ["Contact email", form.email, MAX.email],
-    ["Fax number", form.faxNo, MAX.faxNo],
     ["Letterhead image path", form.proofHeader, MAX.proofHeader],
     ["Proof email “from” address", form.sendFromEmail, MAX.sendFromEmail],
   ];
@@ -371,6 +365,20 @@ export function CustomerForm({
 
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) =>
     setForm((current) => ({ ...current, [key]: value }));
+
+  /**
+   * Copies the invoice address into the delivery address. The delivery post code is a 4-digit
+   * field (the invoice one allows 15), so it is cut to fit rather than failing validation. The
+   * invoice address has no state, so the delivery state is left as entered.
+   */
+  const copyInvoiceAddress = () =>
+    setForm((current) => ({
+      ...current,
+      delivery1: current.address1,
+      delivery2: current.address2,
+      delivery3: current.address3,
+      delPostCode: current.postCode.trim().slice(0, MAX.delPostCode),
+    }));
 
   const problems = validate(form);
 
@@ -467,7 +475,14 @@ export function CustomerForm({
         </Card>
 
         <Card>
-          <CardHeader title="Delivery address" />
+          <CardHeader
+            title="Delivery address"
+            actions={
+              <Button type="button" size="sm" onClick={copyInvoiceAddress}>
+                Copy invoice address
+              </Button>
+            }
+          />
           <CardBody className="grid gap-3 sm:grid-cols-2">
             <Field label="Address line 1" className="sm:col-span-2">
               <Input
@@ -517,13 +532,6 @@ export function CustomerForm({
                 value={form.phoneNo}
                 maxLength={MAX.phoneNo}
                 onChange={(e) => set("phoneNo", e.target.value)}
-              />
-            </Field>
-            <Field label="Fax number">
-              <Input
-                value={form.faxNo}
-                maxLength={MAX.faxNo}
-                onChange={(e) => set("faxNo", e.target.value)}
               />
             </Field>
             <Field label="Accounts email" hint="Used for invoice delivery.">
@@ -683,7 +691,7 @@ export function CustomerForm({
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
               <Field
-                label="Invoice entity"
+                label="Company"
                 hint="The company (letterhead and bank block) this account is invoiced under."
               >
                 <InvoiceEntityPicker
@@ -705,7 +713,7 @@ export function CustomerForm({
         <Card>
           <CardHeader
             title="Proofs"
-            description="Per-customer overrides used when a stamp proof is emailed or faxed."
+            description="Per-customer overrides used when a stamp proof is emailed."
           />
           <CardBody className="space-y-3">
             <Checkbox
@@ -716,7 +724,7 @@ export function CustomerForm({
             <div className="grid gap-3 sm:grid-cols-2">
               <Field
                 label="Letterhead image"
-                hint="Path to this customer's own letterhead, overriding the invoice entity's."
+                hint="Path to this customer's own letterhead, overriding the company's."
                 className="sm:col-span-2"
               >
                 <Input

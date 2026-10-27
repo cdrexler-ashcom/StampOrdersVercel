@@ -341,13 +341,10 @@ export default function CustomerDetailPage() {
                     <DetailRow label="Contact email">
                       {text(customer.email)}
                     </DetailRow>
-                    <DetailRow label="Fax number">
-                      {text(customer.faxNo)}
-                    </DetailRow>
                     <DetailRow label="Delivery docket">
                       {customer.deliveryDocket ? "Yes" : "No"}
                     </DetailRow>
-                    <DetailRow label="Invoice entity">
+                    <DetailRow label="Company">
                       {text(customer.invoiceComp)}
                     </DetailRow>
                     <DetailRow label="Dealer return address">

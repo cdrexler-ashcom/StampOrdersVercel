@@ -48,7 +48,7 @@ Navigation is grouped by the job being done rather than by the screen that used 
 | --- | --- | --- |
 | `addLine.frm` + `UpdLine.Frm` | `AddLineDialog` | Identical field sets — job, product, details, colour, qty, price, discount, GST, stamp label. Two forms maintained in parallel, with the same `CalcValue` transcribed into each. |
 | `GetCust.Frm`, `GetProd.frm`, `Getcol.Frm`, `prcLookup.frm`, `Wildsearch.frm` | `CustomerPicker`, `ProductPicker`, inline colour select | Five modal grids opened with F2 or a `...` button. Replaced with type-ahead in place. Nothing is hidden behind a function key. |
-| `PrtInvoice.frm`, `EmailInvoices.frm`, `ReprintBatch.frm` | `/invoicing` | All three were stages of one run. The API separates staging from posting, so the screen follows: select → stage → review → post. |
+| `PrtInvoice.frm`, `EmailInvoices.frm`, `ReprintBatch.frm` | `/invoicing` | All three were stages of one run (the "Reprint last batch" step was dropped at the customer's request, July 2026). The API separates staging from posting, so the screen follows: select → stage → review → post. |
 | `Reprint.Frm`, `ProForma.Frm`, `ReprintJobCard.frm`, `ReprintDeposit.frm` | Document actions on the entity | Four screens whose only job was "produce that document again". Reprinting is now an action where the record lives. |
 | `InvoiceHistory.frm` + `InvoiceHistoryList.frm` | `/invoices` | A search form and a result form. One page. |
 | `OpenItems.frm` | Outstanding items table on `/receipts` and `/customers/[custId]` | It existed to be opened from the receipt screen; now it is the receipt screen. |
@@ -126,9 +126,9 @@ endpoint, it is absent and listed here.
 | Bin maintenance | File → Bins | Bin endpoints |
 | Invoice states | `InvoiceStates.frm`, `frmEditInvoiceState.frm` | State endpoints |
 | Stamp labels | `frmStampLabels.frm` | Stamp label endpoints |
-| Overdue messages | `frmOdueMsg1/2.frm` | Message template endpoints |
+| Overdue messages | `frmOdueMsg1/2.frm` | Dropped at the customer's request (July 2026) |
 | Change stamp status | `StampStatus.frm` | Soset write endpoint for status |
-| Import orders | `ImportOrders.frm` | Import endpoint |
+| Import orders (Soset stamps) | `ImportOrders.frm` | Dropped at the customer's request (July 2026) |
 | Import web orders | `ImportWebOrders.frm` | Import endpoint |
 | Job cards | `PrtJobCard.frm`, `ReprintJobCard.frm` | Job card data endpoint |
 | Proof preview and email | `Reports/Proof.rpt` | Proof endpoint |
@@ -137,7 +137,7 @@ endpoint, it is absent and listed here.
 | Aged open items | `openrpt.Frm` | Reporting endpoints |
 | Invoice register | `invreg.Frm` | Reporting endpoints |
 | Receipt history | `rechist.Frm` | Reporting endpoints |
-| Daily / customer / product sales | `DailySales.Frm`, `CustSales.Frm`, `ProductSales.Frm` | Reporting endpoints |
+| Customer / product sales | `CustSales.Frm`, `ProductSales.Frm` | Reporting endpoints (Daily Sales, `DailySales.Frm`, was dropped at the customer's request, July 2026) |
 
 One further gap worth noting: `GET /api/orders` does not `Include(o => o.Lines)`, so list
 responses carry no lines. Line counts and order totals are therefore shown only on the

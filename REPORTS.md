@@ -43,5 +43,5 @@ bound, layout preview otherwise — so even unimplemented reports can be exercis
 
 As of this change: **14 of 20** reports are bound to live data
 (`invreg`, `invregdate`, `invreginvc`, `CustSales`, `ProdSales`, `history`, `ositems`, `dephist`,
-`ageopen_excel`, `bankdep`, `rechist`, `ChangeLog`, `DailySales`, `jobcard`). The rest render as
+`ageopen_excel`, `bankdep`, `rechist`, `ChangeLog`, `jobcard`). The rest render as
 layout previews with a noted blocker.
