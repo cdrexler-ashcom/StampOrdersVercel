@@ -1,6 +1,6 @@
 "use client";
 
-import { Download, ExternalLink, RefreshCw } from "lucide-react";
+import { Download, ExternalLink, Printer, RefreshCw } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { Badge, Button, Notice } from "@/components/ui";
@@ -23,12 +23,15 @@ export function ReportFrame({
   params,
   title,
   height = 780,
+  simple = false,
 }: {
   name: string;
   view: ReportView;
   params: ReportQueryParams;
   title: string;
   height?: number;
+  /** Toolbar with just a Print button — see ReportMeta.simple. */
+  simple?: boolean;
 }) {
   const [html, setHtml] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -82,24 +85,33 @@ export function ReportFrame({
           )}
         </div>
         <div className="flex items-center gap-2">
-          <Button size="sm" variant="ghost" onClick={() => setNonce((n) => n + 1)}>
-            <RefreshCw className="size-3.5" />
-            Refresh
-          </Button>
-          <Button
-            size="sm"
-            variant="secondary"
-            type="button"
-            onClick={onOpen}
-            disabled={!html}
-          >
-            <ExternalLink className="size-3.5" />
-            Open in new tab
-          </Button>
-          <Button size="sm" variant="primary" onClick={onPrint} disabled={!html}>
-            <Download className="size-3.5" />
-            Save as PDF
-          </Button>
+          {simple ? (
+            <Button size="sm" variant="primary" onClick={onPrint} disabled={!html}>
+              <Printer className="size-3.5" />
+              Print
+            </Button>
+          ) : (
+            <>
+              <Button size="sm" variant="ghost" onClick={() => setNonce((n) => n + 1)}>
+                <RefreshCw className="size-3.5" />
+                Refresh
+              </Button>
+              <Button
+                size="sm"
+                variant="secondary"
+                type="button"
+                onClick={onOpen}
+                disabled={!html}
+              >
+                <ExternalLink className="size-3.5" />
+                Open in new tab
+              </Button>
+              <Button size="sm" variant="primary" onClick={onPrint} disabled={!html}>
+                <Download className="size-3.5" />
+                Save as PDF
+              </Button>
+            </>
+          )}
         </div>
       </div>
 

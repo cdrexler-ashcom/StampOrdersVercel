@@ -48,9 +48,6 @@ const MAX = {
   accountsEmail: 45,
   invoiceComp: 20,
   orderNote: 60,
-  drawerName: 35,
-  bankName: 40,
-  bankBranch: 30,
   cardNumber: 20,
   expiryDate: 10,
   email: 45,
@@ -109,9 +106,6 @@ interface FormState {
   webFreightApplies: boolean;
   webDeliveryDocket: boolean;
   webRunNo: string;
-  drawerName: string;
-  bankName: string;
-  bankBranch: string;
   cardNumber: string;
   expiryDate: string;
   paidDefault: boolean;
@@ -156,9 +150,6 @@ const emptyForm: FormState = {
   webFreightApplies: false,
   webDeliveryDocket: false,
   webRunNo: "",
-  drawerName: "",
-  bankName: "",
-  bankBranch: "",
   cardNumber: "",
   expiryDate: "",
   paidDefault: false,
@@ -204,9 +195,6 @@ function toForm(customer: Customer): FormState {
     webFreightApplies: customer.webFreightApplies,
     webDeliveryDocket: customer.webDeliveryDocket,
     webRunNo: customer.webRunNo ?? "",
-    drawerName: customer.drawerName ?? "",
-    bankName: customer.bankName ?? "",
-    bankBranch: customer.bankBranch ?? "",
     cardNumber: customer.cardNumber ?? "",
     expiryDate: customer.expiryDate ?? "",
     paidDefault: customer.paidDefault,
@@ -268,9 +256,6 @@ function toRequest(form: FormState): CustomerRequest {
     webFreightApplies: form.webFreightApplies,
     webDeliveryDocket: form.webDeliveryDocket,
     webRunNo: orNull(form.webRunNo),
-    drawerName: orNull(form.drawerName),
-    bankName: orNull(form.bankName),
-    bankBranch: orNull(form.bankBranch),
     cardNumber: orNull(form.cardNumber),
     expiryDate: orNull(form.expiryDate),
     paidDefault: form.paidDefault,
@@ -311,9 +296,6 @@ function validate(form: FormState): string[] {
     ["Accounts email", form.accountsEmail, MAX.accountsEmail],
     ["Company", form.invoiceComp, MAX.invoiceComp],
     ["Order note", form.orderNote, MAX.orderNote],
-    ["Drawer name", form.drawerName, MAX.drawerName],
-    ["Bank name", form.bankName, MAX.bankName],
-    ["Bank branch", form.bankBranch, MAX.bankBranch],
     ["Card number", form.cardNumber, MAX.cardNumber],
     ["Expiry date", form.expiryDate, MAX.expiryDate],
     ["Contact email", form.email, MAX.email],
@@ -778,31 +760,10 @@ export function CustomerForm({
         <Card>
           <CardHeader
             title="Remembered payment details"
-            description="Written back by the receipt screen; editable here for correction."
+            description="Not written back from the receipt screen, and not shown anywhere else."
           />
           <CardBody className="space-y-3">
             <div className="grid gap-3 sm:grid-cols-2">
-              <Field label="Drawer name" hint={`${MAX.drawerName} chars`}>
-                <Input
-                  value={form.drawerName}
-                  maxLength={MAX.drawerName}
-                  onChange={(e) => set("drawerName", e.target.value)}
-                />
-              </Field>
-              <Field label="Bank name" hint={`${MAX.bankName} chars`}>
-                <Input
-                  value={form.bankName}
-                  maxLength={MAX.bankName}
-                  onChange={(e) => set("bankName", e.target.value)}
-                />
-              </Field>
-              <Field label="Bank branch" hint={`${MAX.bankBranch} chars`}>
-                <Input
-                  value={form.bankBranch}
-                  maxLength={MAX.bankBranch}
-                  onChange={(e) => set("bankBranch", e.target.value)}
-                />
-              </Field>
               <Field label="Card number" hint={`${MAX.cardNumber} chars`}>
                 <Input
                   value={form.cardNumber}

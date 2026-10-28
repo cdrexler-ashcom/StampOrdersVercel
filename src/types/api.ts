@@ -44,14 +44,6 @@ export const PAYMENT_TYPES = [
 
 export type PaymentType = (typeof PAYMENT_TYPES)[number];
 
-/** Mirrors PaymentType.CapturesChequeDetails. */
-export const capturesChequeDetails = (type?: string | null): boolean =>
-  type === "Cheque" || type === "Maz Cheque";
-
-/** Mirrors PaymentType.CapturesCardDetails. */
-export const capturesCardDetails = (type?: string | null): boolean =>
-  type === "Credit Card";
-
 // ---------------------------------------------------------------------------------------
 // Entities
 // ---------------------------------------------------------------------------------------
@@ -194,9 +186,6 @@ export interface Customer {
   webFreightApplies: boolean;
   webDeliveryDocket: boolean;
   webRunNo: string | null;
-  drawerName: string | null;
-  bankName: string | null;
-  bankBranch: string | null;
   cardNumber: string | null;
   expiryDate: string | null;
   paidDefault: boolean;
@@ -583,11 +572,6 @@ export interface RecordReceiptRequest {
   transDate?: string | null;
   description?: string | null;
   paymentType?: string | null;
-  drawer?: string | null;
-  bank?: string | null;
-  branch?: string | null;
-  cardNo?: string | null;
-  expiryDate?: string | null;
   allocations?: ReceiptAllocationRequest[];
 }
 
@@ -746,9 +730,6 @@ export interface CustomerRequest {
   webFreightApplies: boolean;
   webDeliveryDocket: boolean;
   webRunNo: string | null;
-  drawerName: string | null;
-  bankName: string | null;
-  bankBranch: string | null;
   cardNumber: string | null;
   expiryDate: string | null;
   paidDefault: boolean;

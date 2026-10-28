@@ -98,7 +98,7 @@ function ReportViewer() {
     <div>
       <PageHeader
         title={meta?.title ?? name}
-        description={meta?.description ?? "Report preview."}
+        description={meta?.simple ? undefined : (meta?.description ?? "Report preview.")}
         actions={
           <Link href="/reports">
             <Button variant="ghost" size="sm">
@@ -130,6 +130,7 @@ function ReportViewer() {
           onOpenChange={setPanelOpen}
           sortOptions={meta?.sortOptions}
           detailToggleLabel={meta?.detailToggleLabel}
+          simple={meta?.simple}
         />
 
         <div className="min-w-0 flex-1 space-y-4">
@@ -152,6 +153,7 @@ function ReportViewer() {
               view={applied.view}
               params={queryParams}
               title={meta?.title ?? name}
+              simple={meta?.simple}
             />
           )}
         </div>

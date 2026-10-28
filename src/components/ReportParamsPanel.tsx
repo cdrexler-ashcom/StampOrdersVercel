@@ -60,6 +60,7 @@ export function ReportParamsPanel({
   onOpenChange,
   sortOptions,
   detailToggleLabel,
+  simple = false,
 }: {
   filters: ReportFilters;
   value: ReportParamsValue;
@@ -72,6 +73,8 @@ export function ReportParamsPanel({
   sortOptions?: ReportSortOption[];
   /** Offers a "Show detail" checkbox when set — see ReportMeta.detailToggleLabel. */
   detailToggleLabel?: string;
+  /** Hides the date presets and the Layout only and Clear buttons — see ReportMeta.simple. */
+  simple?: boolean;
 }) {
   const hasAnyFilter = Boolean(
     filters.dates ||
@@ -144,6 +147,7 @@ export function ReportParamsPanel({
           <DateRangeField
             value={{ from: value.from, to: value.to }}
             onChange={(range: DateRange) => onChange({ ...value, ...range })}
+            showPresets={!simple}
           />
         </Field>
       )}
@@ -212,7 +216,7 @@ export function ReportParamsPanel({
 
       <div className="space-y-2 border-t border-slate-100 pt-3">
         <div className="flex flex-col gap-2">
-          {bound && (
+          {bound && !simple && (
             <Button size="sm" onClick={() => onGenerate("layout")}>
               Layout only
             </Button>
@@ -226,9 +230,11 @@ export function ReportParamsPanel({
             {bound ? "Generate" : "Generate preview"}
           </Button>
         </div>
-        <Button size="sm" onClick={clearAll} disabled={active === 0} className="w-full">
-          Clear
-        </Button>
+        {!simple && (
+          <Button size="sm" onClick={clearAll} disabled={active === 0} className="w-full">
+            Clear
+          </Button>
+        )}
       </div>
     </div>
   );

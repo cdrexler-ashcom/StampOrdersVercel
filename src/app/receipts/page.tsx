@@ -24,15 +24,14 @@ import {
   Th,
 } from "@/components/ui";
 import { receipts } from "@/lib/endpoints";
-import {
-  PAYMENT_TYPES,
-  capturesCardDetails,
-  capturesChequeDetails,
-} from "@/types/api";
+import { PAYMENT_TYPES } from "@/types/api";
 import { date, money, roundCents, text, todayInput } from "@/lib/format";
 import { useFilterableTable } from "@/lib/useFilterableTable";
 import { useSortableTable } from "@/lib/useSortableTable";
 import type { Customer, OpenItem, RecordReceiptRequest } from "@/types/api";
+
+/** Most receipts are direct deposits, so that is what the payment type starts as. */
+const DEFAULT_PAYMENT_TYPE = "Direct Deposit";
 
 /**
  * Receipt entry and allocation.
@@ -50,15 +49,12 @@ export default function ReceiptsPage() {
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [amount, setAmount] = useState("");
   const [discount, setDiscount] = useState("");
-  const [receiptNo, setReceiptNo] = useState("");
   const [transDate, setTransDate] = useState("");
-  const [description, setDescription] = useState("");
-  const [paymentType, setPaymentType] = useState<string>(PAYMENT_TYPES[0]);
-  const [drawer, setDrawer] = useState("");
-  const [bank, setBank] = useState("");
-  const [branch, setBranch] = useState("");
-  const [cardNo, setCardNo] = useState("");
-  const [expiryDate, setExpiryDate] = useState("");
+  const [paymentType, setPaymentType] = useState<string>(DEFAULT_PAYMENT_TYPE);
+  // The description follows the payment type ("Direct Deposit", "Credit Card") until the
+  // operator types their own. null means "not edited, use the payment type".
+  const [descriptionOverride, setDescriptionOverride] = useState<string | null>(null);
+  const description = descriptionOverride ?? paymentType;
   const [allocations, setAllocations] = useState<Record<number, string>>({});
 
   // Seeded on the client: the server and browser evaluate "today" at different moments,
@@ -104,13 +100,6 @@ export default function ReceiptsPage() {
   const pickCustomer = (next: Customer | null) => {
     setCustomer(next);
     setAllocations({});
-    // The customer record remembers payment details; the legacy receipt screen wrote
-    // them back on save and read them on load.
-    setDrawer(next?.drawerName?.trim() ?? "");
-    setBank(next?.bankName?.trim() ?? "");
-    setBranch(next?.bankBranch?.trim() ?? "");
-    setCardNo(next?.cardNumber?.trim() ?? "");
-    setExpiryDate(next?.expiryDate?.trim() ?? "");
   };
 
   const allocatedTotal = useMemo(
@@ -158,8 +147,7 @@ export default function ReceiptsPage() {
       queryClient.invalidateQueries({ queryKey: ["credit-check"] });
       setAmount("");
       setDiscount("");
-      setReceiptNo("");
-      setDescription("");
+      setDescriptionOverride(null);
       setAllocations({});
     },
   });
@@ -194,15 +182,9 @@ export default function ReceiptsPage() {
       customerAccountNo: customer.accountNo.trim(),
       amount: receiptAmount,
       discount: discountAmount,
-      receiptNo: receiptNo.trim() ? Number(receiptNo) : null,
       transDate: transDate ? new Date(transDate).toISOString() : null,
       description: description.trim() || null,
       paymentType,
-      drawer: capturesChequeDetails(paymentType) ? drawer.trim() || null : null,
-      bank: capturesChequeDetails(paymentType) ? bank.trim() || null : null,
-      branch: capturesChequeDetails(paymentType) ? branch.trim() || null : null,
-      cardNo: capturesCardDetails(paymentType) ? cardNo.trim() || null : null,
-      expiryDate: capturesCardDetails(paymentType) ? expiryDate.trim() || null : null,
       allocations: allocationRows,
     });
   };
@@ -369,6 +351,8 @@ export default function ReceiptsPage() {
                 />
               </Field>
 
+              {/* Settlement discount, Date and Description are skipped when tabbing: the
+                  operator goes Amount, Payment type, then Record receipt. */}
               <Field
                 label="Settlement discount"
                 hint="Counts toward debt reduction alongside the amount."
@@ -376,6 +360,7 @@ export default function ReceiptsPage() {
                 <Input
                   type="number"
                   step="0.01"
+                  tabIndex={-1}
                   value={discount}
                   onChange={(e) => setDiscount(e.target.value)}
                 />
@@ -394,64 +379,23 @@ export default function ReceiptsPage() {
                 </Select>
               </Field>
 
-              <div className="grid grid-cols-2 gap-3">
-                <Field label="Receipt number">
-                  <Input
-                    type="number"
-                    value={receiptNo}
-                    onChange={(e) => setReceiptNo(e.target.value)}
-                  />
-                </Field>
-                <Field label="Date">
-                  <Input
-                    type="date"
-                    value={transDate}
-                    onChange={(e) => setTransDate(e.target.value)}
-                  />
-                </Field>
-              </div>
+              <Field label="Date">
+                <Input
+                  type="date"
+                  tabIndex={-1}
+                  value={transDate}
+                  onChange={(e) => setTransDate(e.target.value)}
+                />
+              </Field>
 
               <Field label="Description">
                 <Input
                   value={description}
                   maxLength={30}
-                  onChange={(e) => setDescription(e.target.value)}
+                  tabIndex={-1}
+                  onChange={(e) => setDescriptionOverride(e.target.value)}
                 />
               </Field>
-
-              {capturesChequeDetails(paymentType) && (
-                <>
-                  <Field label="Drawer">
-                    <Input value={drawer} onChange={(e) => setDrawer(e.target.value)} />
-                  </Field>
-                  <div className="grid grid-cols-2 gap-3">
-                    <Field label="Bank">
-                      <Input value={bank} onChange={(e) => setBank(e.target.value)} />
-                    </Field>
-                    <Field label="Branch">
-                      <Input
-                        value={branch}
-                        onChange={(e) => setBranch(e.target.value)}
-                      />
-                    </Field>
-                  </div>
-                </>
-              )}
-
-              {capturesCardDetails(paymentType) && (
-                <div className="grid grid-cols-2 gap-3">
-                  <Field label="Card number">
-                    <Input value={cardNo} onChange={(e) => setCardNo(e.target.value)} />
-                  </Field>
-                  <Field label="Expiry">
-                    <Input
-                      value={expiryDate}
-                      placeholder="MM/YY"
-                      onChange={(e) => setExpiryDate(e.target.value)}
-                    />
-                  </Field>
-                </div>
-              )}
             </CardBody>
           </Card>
 

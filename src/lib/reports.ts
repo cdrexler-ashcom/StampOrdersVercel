@@ -66,9 +66,17 @@ export interface ReportMeta {
    * Runtime sort order, offered as a "Sort by" dropdown in the params panel. Opt-in per report:
    * `invreg` is the only one the API currently accepts a `sortBy` override for (see
    * ReportEndpoints.cs) — it replaces the now-retired invregdate/invreginvc, which differed from
-   * invreg only in a fixed sort order baked into their own XML.
+   * invreg only in a fixed sort order baked into their own XML. Its screen no longer offers the
+   * dropdown (see `simple`), so it keeps the XML's date, then invoice number, order.
    */
   sortOptions?: ReportSortOption[];
+  /**
+   * A stripped-down screen, as the customer asked for the Invoice Register (July 2026 upgrade):
+   * no description line under the title, no date-range preset dropdown (the From and To dates
+   * stay), no "Layout only" or "Clear" buttons, and a viewer toolbar with just a Print button
+   * (no Refresh, Open in new tab or Save as PDF).
+   */
+  simple?: boolean;
   /**
    * Label for a "Show detail" checkbox in the params panel, sent as `detail`. Opt-in per report:
    * `rechist` is the only one the API currently accepts it for — it reproduces rechist.Frm's
@@ -118,11 +126,8 @@ export const REPORTS: ReportMeta[] = [
       "which differed from this one only in fixed sort order.",
     category: "Invoice register",
     bound: true,
-    filters: { dates: true, custId: true, invoiceNo: true },
-    sortOptions: [
-      { value: "date", label: "Date" },
-      { value: "invoiceNo", label: "Invoice no." },
-    ],
+    filters: { dates: true, custId: true },
+    simple: true,
   },
 
   // --- Sales analysis (ArchHeader / ArchLine) ---

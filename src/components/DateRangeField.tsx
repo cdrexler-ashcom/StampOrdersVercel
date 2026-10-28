@@ -93,9 +93,12 @@ export function thisMonthRange(today: Date = new Date()): DateRange {
 export function DateRangeField({
   value,
   onChange,
+  showPresets = true,
 }: {
   value: DateRange;
   onChange: (value: DateRange) => void;
+  /** False shows just the From and To dates, without the preset dropdown. */
+  showPresets?: boolean;
 }) {
   const today = useMemo(() => new Date(), []);
 
@@ -115,21 +118,23 @@ export function DateRangeField({
 
   return (
     <div className="space-y-2">
-      <Select
-        value={matchedPreset?.key ?? "custom"}
-        onChange={(e) => {
-          if (e.target.value === "custom") return;
-          const preset = presets.find((p) => p.key === e.target.value);
-          if (preset) onChange(preset.range);
-        }}
-      >
-        <option value="custom">Custom range</option>
-        {presets.map((preset) => (
-          <option key={preset.key} value={preset.key}>
-            {preset.label}
-          </option>
-        ))}
-      </Select>
+      {showPresets && (
+        <Select
+          value={matchedPreset?.key ?? "custom"}
+          onChange={(e) => {
+            if (e.target.value === "custom") return;
+            const preset = presets.find((p) => p.key === e.target.value);
+            if (preset) onChange(preset.range);
+          }}
+        >
+          <option value="custom">Custom range</option>
+          {presets.map((preset) => (
+            <option key={preset.key} value={preset.key}>
+              {preset.label}
+            </option>
+          ))}
+        </Select>
+      )}
 
       {/* Stacked rather than side-by-side: a native date input needs more width than half of
           a narrow panel (like ReportParamsPanel) leaves it, or its last digit gets clipped. */}
