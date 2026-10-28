@@ -258,7 +258,9 @@ function toRequest(form: FormState): CustomerRequest {
     creditMsg: orNull(form.creditMsg),
     emailInvoice: form.emailInvoice,
     accountsEmail: orNull(form.accountsEmail),
-    deliveryDocket: form.deliveryDocket,
+    // Always on: the customer no longer wants this to be a choice (July 2026 upgrade), so the
+    // checkbox is gone and every save sends true.
+    deliveryDocket: true,
     invoiceComp: orNull(form.invoiceComp),
     orderNote: orNull(form.orderNote),
     dealerReturnAddress: form.dealerReturnAddress,
@@ -677,11 +679,6 @@ export function CustomerForm({
                 label="Email invoices"
                 checked={form.emailInvoice}
                 onChange={(e) => set("emailInvoice", e.target.checked)}
-              />
-              <Checkbox
-                label="Delivery docket"
-                checked={form.deliveryDocket}
-                onChange={(e) => set("deliveryDocket", e.target.checked)}
               />
               <Checkbox
                 label="Dealer return address"

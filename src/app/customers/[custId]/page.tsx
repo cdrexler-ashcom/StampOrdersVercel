@@ -341,9 +341,6 @@ export default function CustomerDetailPage() {
                     <DetailRow label="Contact email">
                       {text(customer.email)}
                     </DetailRow>
-                    <DetailRow label="Delivery docket">
-                      {customer.deliveryDocket ? "Yes" : "No"}
-                    </DetailRow>
                     <DetailRow label="Company">
                       {text(customer.invoiceComp)}
                     </DetailRow>

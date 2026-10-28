@@ -692,6 +692,8 @@ export interface ControlSettings {
   smtpUserName: string | null;
   emailFrom: string | null;
   emailBcc: string | null;
+  /** Credit card payment page link added to emailed invoices; absolute http(s) address. */
+  paymentLinkUrl: string | null;
   // Directories
   sosetDir: string | null;
   stampImageDir: string | null;

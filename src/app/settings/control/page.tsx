@@ -61,6 +61,7 @@ const FIELD_KEYS = [
   "smtpUserName",
   "emailFrom",
   "emailBcc",
+  "paymentLinkUrl",
   "sosetDir",
   "stampImageDir",
   "proofDir",
@@ -181,6 +182,12 @@ const GROUPS: Group[] = [
       { key: "smtpUserName", label: "SMTP username", wide: true },
       { key: "emailFrom", label: "From address", wide: true },
       { key: "emailBcc", label: "BCC address", wide: true },
+      {
+        key: "paymentLinkUrl",
+        label: "Credit card payment link",
+        wide: true,
+        hint: "Added to emailed invoices. Must start with http:// or https://. Leave blank for no link.",
+      },
     ],
   },
   {
