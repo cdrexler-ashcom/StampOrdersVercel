@@ -1,9 +1,10 @@
-# Azure Pipeline: mirror AshcomDev -> GitHub (main)
+# Azure Pipeline: mirror master -> GitHub (main)
 #
-# Trigger: any push to the AshcomDev branch.
-# Action:  force-push the contents of AshcomDev to the `main` branch of:
+# Trigger: any push to the master branch (and only master - see the job conditions below).
+# Action:  force-push the contents of master to the `main` branch of:
 #            1. https://github.com/Ashcom-Business-Systems/SteadBrothersStampOrders
 #            2. https://github.com/cdrexler-ashcom/StampOrdersVercel
+# Each target is its own job, so a bad token for one does not stop the other.
 #
 # Setup required before this pipeline will work:
 #   1. Create a GitHub Personal Access Token (classic OR fine-grained) that has,
@@ -23,7 +24,12 @@
 trigger:
   branches:
     include:
-      - AshcomDev
+      - master
+
+# PR validation for Azure Repos is a branch policy, not YAML, so `pr:` is ignored there. The
+# jobs below are guarded on Build.SourceBranch, so a PR or feature-branch run does nothing
+# rather than force-pushing unmerged code to the mirrors.
+pr: none
 
 pool:
   vmImage: 'ubuntu-latest'
@@ -32,110 +38,137 @@ variables:
   targetBranch: 'main'
   GitHubUser: 'x-access-token'
 
-steps:
-  - checkout: self
-    persistCredentials: true
-    fetchDepth: 0
-
+jobs:
   # ---------------------------------------------------------------------------
   # Target 1: Ashcom-Business-Systems/SteadBrothersStampOrders  (organization)
   # ---------------------------------------------------------------------------
-  - script: |
-      set -euo pipefail
+  - job: MirrorOrg
+    displayName: 'Mirror master -> SteadBrothersStampOrders'
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/master'))
+    steps:
+      - checkout: self
+        persistCredentials: true
+        fetchDepth: 0
 
-      TARGET_REPO='github.com/Ashcom-Business-Systems/SteadBrothersStampOrders.git'
+      - script: |
+          set -euo pipefail
 
-      if [ -z "${GITHUB_TOKEN:-}" ]; then
-        echo "##vso[task.logissue type=error]GitHubPAT secret variable is not set. Add it under Pipeline > Variables (as a secret)."
-        exit 1
-      fi
+          # Belt and braces: the job condition already limits this to master. This is a force-push to
+          # the production mirror, so refuse anything else even if the condition is ever edited away.
+          if [ "${BUILD_SOURCEBRANCH:-}" != "refs/heads/master" ]; then
+            echo "##vso[task.logissue type=error]Refusing to mirror ${BUILD_SOURCEBRANCH:-<unknown>}: only refs/heads/master is mirrored."
+            exit 1
+          fi
 
-      git config --global user.email "azure-pipelines@ashcom.com.au"
-      git config --global user.name  "Azure Pipelines"
+          TARGET_REPO='github.com/Ashcom-Business-Systems/SteadBrothersStampOrders.git'
 
-      # --- Preflight (non-fatal): who is this token, and does it report write access? ---
-      echo "----- Preflight: SteadBrothersStampOrders -----"
-      LOGIN=$(curl -s -H "Authorization: Bearer ${GITHUB_TOKEN}" https://api.github.com/user \
-                | grep '"login"' | head -n1 | sed -E 's/.*"login": *"([^"]+)".*/\1/' || true)
-      echo "Token authenticates as: ${LOGIN:-<unknown / fine-grained token>}"
-      PERMS=$(curl -s -H "Authorization: Bearer ${GITHUB_TOKEN}" \
-                https://api.github.com/repos/Ashcom-Business-Systems/SteadBrothersStampOrders \
-                | grep -A5 '"permissions"' || true)
-      echo "Reported repo permissions: ${PERMS:-<none returned>}"
-      echo "-----------------------------------------------"
+          if [ -z "${GITHUB_TOKEN:-}" ]; then
+            echo "##vso[task.logissue type=error]GitHubPAT secret variable is not set. Add it under Pipeline > Variables (as a secret)."
+            exit 1
+          fi
 
-      # --- Push AshcomDev checkout to `main` on the target repo ---
-      git push "https://${GITHUB_USER}:${GITHUB_TOKEN}@${TARGET_REPO}" "HEAD:${TARGET_BRANCH}" --force
-      echo "Pushed to Ashcom-Business-Systems/SteadBrothersStampOrders:${TARGET_BRANCH}"
-    displayName: 'Push AshcomDev -> SteadBrothersStampOrders (main)'
-    env:
-      GITHUB_TOKEN:  $(GitHubPAT)
-      GITHUB_USER:   $(GitHubUser)
-      TARGET_BRANCH: $(targetBranch)
+          git config --global user.email "azure-pipelines@ashcom.com.au"
+          git config --global user.name  "Azure Pipelines"
+
+          # --- Preflight (non-fatal): who is this token, and does it report write access? ---
+          echo "----- Preflight: SteadBrothersStampOrders -----"
+          LOGIN=$(curl -s -H "Authorization: Bearer ${GITHUB_TOKEN}" https://api.github.com/user \
+                    | grep '"login"' | head -n1 | sed -E 's/.*"login": *"([^"]+)".*/\1/' || true)
+          echo "Token authenticates as: ${LOGIN:-<unknown / fine-grained token>}"
+          PERMS=$(curl -s -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+                    https://api.github.com/repos/Ashcom-Business-Systems/SteadBrothersStampOrders \
+                    | grep -A5 '"permissions"' || true)
+          echo "Reported repo permissions: ${PERMS:-<none returned>}"
+          echo "-----------------------------------------------"
+
+          # --- Push the master checkout to `main` on the target repo ---
+          git push "https://${GITHUB_USER}:${GITHUB_TOKEN}@${TARGET_REPO}" "HEAD:${TARGET_BRANCH}" --force
+          echo "Pushed to Ashcom-Business-Systems/SteadBrothersStampOrders:${TARGET_BRANCH}"
+        displayName: 'Push master -> SteadBrothersStampOrders (main)'
+        env:
+          GITHUB_TOKEN:  $(GitHubPAT)
+          GITHUB_USER:   $(GitHubUser)
+          TARGET_BRANCH: $(targetBranch)
 
   # ---------------------------------------------------------------------------
   # Target 2: cdrexler-ashcom/StampOrdersVercel  (personal, public repo)
+  # A separate job, so a bad token for one target does not block the other.
   # ---------------------------------------------------------------------------
-  - script: |
-      set -euo pipefail
+  - job: MirrorVercel
+    displayName: 'Mirror master -> StampOrdersVercel'
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/master'))
+    steps:
+      - checkout: self
+        persistCredentials: true
+        fetchDepth: 0
 
-      TARGET_REPO='github.com/cdrexler-ashcom/StampOrdersVercel.git'
+      - script: |
+          set -euo pipefail
 
-      # --- 1. Trim any stray whitespace / newline that may have been pasted in ---
-      GITHUB_TOKEN="$(printf '%s' "${GITHUB_TOKEN:-}" | tr -d '[:space:]')"
+          # Belt and braces: the job condition already limits this to master. This is a force-push to
+          # the production mirror, so refuse anything else even if the condition is ever edited away.
+          if [ "${BUILD_SOURCEBRANCH:-}" != "refs/heads/master" ]; then
+            echo "##vso[task.logissue type=error]Refusing to mirror ${BUILD_SOURCEBRANCH:-<unknown>}: only refs/heads/master is mirrored."
+            exit 1
+          fi
 
-      # --- 2. Guard: empty? ---
-      if [ -z "${GITHUB_TOKEN}" ]; then
-        echo "##vso[task.logissue type=error]GitHubCoenPAT is empty. Define it as a SECRET variable on THIS pipeline (or a linked variable group)."
-        exit 1
-      fi
+          TARGET_REPO='github.com/cdrexler-ashcom/StampOrdersVercel.git'
 
-      # --- 3. Guard: did the Azure macro fail to expand? (variable missing / misnamed / wrong scope) ---
-      case "${GITHUB_TOKEN}" in
-        *'$('*|*'GitHubCoenPAT'*)
-          echo "##vso[task.logissue type=error]GitHubCoenPAT did not expand - the pipeline is passing the literal macro, not a token. The secret variable is missing, misnamed, or defined in an unlinked variable group."
-          exit 1 ;;
-      esac
+          # --- 1. Trim any stray whitespace / newline that may have been pasted in ---
+          GITHUB_TOKEN="$(printf '%s' "${GITHUB_TOKEN:-}" | tr -d '[:space:]')"
 
-      # --- 4. Sanity check the shape without revealing the value ---
-      #     Valid GitHub tokens start with: github_pat_ (fine-grained), ghp_ (classic), gho_/ghs_ etc.
-      TOKEN_LEN=${#GITHUB_TOKEN}
-      case "${GITHUB_TOKEN}" in
-        github_pat_*) TOKEN_KIND="fine-grained (github_pat_)" ;;
-        ghp_*)        TOKEN_KIND="classic (ghp_)" ;;
-        gh[ous]_*)    TOKEN_KIND="other GitHub token" ;;
-        *)            TOKEN_KIND="UNRECOGNIZED PREFIX - probably not a GitHub token" ;;
-      esac
-      echo "----- Preflight: StampOrdersVercel -----"
-      echo "Token length: ${TOKEN_LEN}   Kind: ${TOKEN_KIND}"
+          # --- 2. Guard: empty? ---
+          if [ -z "${GITHUB_TOKEN}" ]; then
+            echo "##vso[task.logissue type=error]GitHubCoenPAT is empty. Define it as a SECRET variable on THIS pipeline (or a linked variable group)."
+            exit 1
+          fi
 
-      # --- 5. Verify the credential against the API BEFORE pushing (fail fast, clear message) ---
-      HTTP_CODE=$(curl -s -o /dev/null -w '%{http_code}' \
-                    -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+          # --- 3. Guard: did the Azure macro fail to expand? (variable missing / misnamed / wrong scope) ---
+          case "${GITHUB_TOKEN}" in
+            *'$('*|*'GitHubCoenPAT'*)
+              echo "##vso[task.logissue type=error]GitHubCoenPAT did not expand - the pipeline is passing the literal macro, not a token. The secret variable is missing, misnamed, or defined in an unlinked variable group."
+              exit 1 ;;
+          esac
+
+          # --- 4. Sanity check the shape without revealing the value ---
+          #     Valid GitHub tokens start with: github_pat_ (fine-grained), ghp_ (classic), gho_/ghs_ etc.
+          TOKEN_LEN=${#GITHUB_TOKEN}
+          case "${GITHUB_TOKEN}" in
+            github_pat_*) TOKEN_KIND="fine-grained (github_pat_)" ;;
+            ghp_*)        TOKEN_KIND="classic (ghp_)" ;;
+            gh[ous]_*)    TOKEN_KIND="other GitHub token" ;;
+            *)            TOKEN_KIND="UNRECOGNIZED PREFIX - probably not a GitHub token" ;;
+          esac
+          echo "----- Preflight: StampOrdersVercel -----"
+          echo "Token length: ${TOKEN_LEN}   Kind: ${TOKEN_KIND}"
+
+          # --- 5. Verify the credential against the API BEFORE pushing (fail fast, clear message) ---
+          HTTP_CODE=$(curl -s -o /dev/null -w '%{http_code}' \
+                        -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+                        -H "X-GitHub-Api-Version: 2022-11-28" \
+                        https://api.github.com/user)
+          echo "GitHub /user auth check returned HTTP ${HTTP_CODE}"
+          if [ "${HTTP_CODE}" = "401" ]; then
+            echo "##vso[task.logissue type=error]GitHub returned 401 Unauthorized - the token value is invalid, revoked, expired, or stale (regenerated after being stored). Regenerate the PAT and update the GitHubCoenPAT secret."
+            exit 1
+          fi
+
+          # Optional: show the repo permissions the token actually has (helps catch a future 403).
+          PERMS=$(curl -s -H "Authorization: Bearer ${GITHUB_TOKEN}" \
                     -H "X-GitHub-Api-Version: 2022-11-28" \
-                    https://api.github.com/user)
-      echo "GitHub /user auth check returned HTTP ${HTTP_CODE}"
-      if [ "${HTTP_CODE}" = "401" ]; then
-        echo "##vso[task.logissue type=error]GitHub returned 401 Unauthorized - the token value is invalid, revoked, expired, or stale (regenerated after being stored). Regenerate the PAT and update the GitHubCoenPAT secret."
-        exit 1
-      fi
+                    https://api.github.com/repos/cdrexler-ashcom/StampOrdersVercel \
+                    | grep -A5 '"permissions"' || true)
+          echo "Reported repo permissions: ${PERMS:-<none returned>}"
+          echo "----------------------------------------"
 
-      # Optional: show the repo permissions the token actually has (helps catch a future 403).
-      PERMS=$(curl -s -H "Authorization: Bearer ${GITHUB_TOKEN}" \
-                -H "X-GitHub-Api-Version: 2022-11-28" \
-                https://api.github.com/repos/cdrexler-ashcom/StampOrdersVercel \
-                | grep -A5 '"permissions"' || true)
-      echo "Reported repo permissions: ${PERMS:-<none returned>}"
-      echo "----------------------------------------"
+          git config --global user.email "azure-pipelines@ashcom.com.au"
+          git config --global user.name  "Azure Pipelines"
 
-      git config --global user.email "azure-pipelines@ashcom.com.au"
-      git config --global user.name  "Azure Pipelines"
-
-      # --- 6. Push AshcomDev checkout to `main`. Use x-access-token:<PAT> form. ---
-      git push "https://${GITHUB_USER}:${GITHUB_TOKEN}@${TARGET_REPO}" "HEAD:${TARGET_BRANCH}" --force
-      echo "Pushed to cdrexler-ashcom/StampOrdersVercel:${TARGET_BRANCH}"
-    displayName: 'Push AshcomDev -> StampOrdersVercel (main)'
-    env:
-      GITHUB_TOKEN:  $(GitHubCoenPAT)
-      GITHUB_USER:   $(GitHubUser)
-      TARGET_BRANCH: $(targetBranch)
+          # --- 6. Push the master checkout to `main`. Use x-access-token:<PAT> form. ---
+          git push "https://${GITHUB_USER}:${GITHUB_TOKEN}@${TARGET_REPO}" "HEAD:${TARGET_BRANCH}" --force
+          echo "Pushed to cdrexler-ashcom/StampOrdersVercel:${TARGET_BRANCH}"
+        displayName: 'Push master -> StampOrdersVercel (main)'
+        env:
+          GITHUB_TOKEN:  $(GitHubCoenPAT)
+          GITHUB_USER:   $(GitHubUser)
+          TARGET_BRANCH: $(targetBranch)
