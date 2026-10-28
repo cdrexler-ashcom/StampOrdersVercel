@@ -31,12 +31,30 @@ type SortKey =
   | "invoiceNo"
   | "custTitle"
   | "custCode"
+  | "recipient"
   | "invoiceDate"
   | "orderId"
   | "runNo"
   | "email"
   | "phoneNo";
 type SortDirection = "asc" | "desc";
+
+/**
+ * The job numbers or customer order numbers on one invoice. An invoice has a line per stamp
+ * job, so this can be long: the first few are shown, the rest behind "+N more", and the full
+ * list is on hover.
+ */
+function NumberList({ values, max = 3 }: { values?: string[] | null; max?: number }) {
+  if (!values || values.length === 0) return <span className="text-slate-400">—</span>;
+  const shown = values.slice(0, max);
+  const extra = values.length - shown.length;
+  return (
+    <span title={values.join(", ")}>
+      {shown.join(", ")}
+      {extra > 0 && <span className="ml-1 text-xs text-slate-500">+{extra} more</span>}
+    </span>
+  );
+}
 
 /**
  * Invoice history.
@@ -55,6 +73,10 @@ export default function InvoiceHistoryPage() {
   // and reverts to its defaults.
   const [customer, setCustomer] = useGridState<Customer | null>("invoices:customer", null);
   const [invoiceNo, setInvoiceNo] = useGridState("invoices:invoiceNo", "");
+  // Job and customer order numbers are on the invoice lines, so they are searched with their own
+  // exact-match boxes (like the invoice number) rather than column filters.
+  const [jobNo, setJobNo] = useGridState("invoices:jobNo", "");
+  const [custOrderNo, setCustOrderNo] = useGridState("invoices:custOrderNo", "");
 
   // Sorting is server-side: starts unsorted (the API's own default — newest first, per
   // the page description) until a header is clicked.
@@ -71,8 +93,8 @@ export default function InvoiceHistoryPage() {
     );
   };
 
-  // Column filter selections, covering all nine filterable columns even though only
-  // custTitle/custCode/runNo/invoiceNo(→invoiceNos)/orderId/email/phoneNo get forwarded to
+  // Column filter selections, covering all ten filterable columns even though only
+  // custTitle/custCode/recipient/runNo/invoiceNo(→invoiceNos)/orderId/email/phoneNo get forwarded to
   // the API below — see the note on the useFilterableTable call for why invoiceDate/tracking
   // stay client-side. Every one of these needs to either be forwarded or documented as not
   // being forwarded: a filter that's silently client-side-only will look correct until a
@@ -84,6 +106,7 @@ export default function InvoiceHistoryPage() {
         | "invoiceNo"
         | "custTitle"
         | "custCode"
+        | "recipient"
         | "invoiceDate"
         | "orderId"
         | "runNo"
@@ -99,10 +122,11 @@ export default function InvoiceHistoryPage() {
     queryKey: [
       "invoices",
       "history",
-      { custId: customer?.uniqueId, invoiceNo },
+      { custId: customer?.uniqueId, invoiceNo, jobNo, custOrderNo },
       sort,
       filterSelected.custTitle,
       filterSelected.custCode,
+      filterSelected.recipient,
       filterSelected.runNo,
       filterSelected.invoiceNo,
       filterSelected.orderId,
@@ -113,10 +137,13 @@ export default function InvoiceHistoryPage() {
       invoices.history({
         custId: customer?.uniqueId,
         invoiceNo: invoiceNo.trim() || undefined,
+        jobNo: jobNo.trim() || undefined,
+        custOrderNo: custOrderNo.trim() || undefined,
         sortBy: sort?.key,
         sortDir: sort?.direction,
         custTitle: filterSelected.custTitle,
         custCode: filterSelected.custCode,
+        recipient: filterSelected.recipient,
         runNo: filterSelected.runNo,
         invoiceNos: filterSelected.invoiceNo,
         orderId: filterSelected.orderId,
@@ -130,7 +157,7 @@ export default function InvoiceHistoryPage() {
     sortDirection: sort?.key === key ? sort.direction : null,
   });
 
-  // custTitle/custCode/runNo/invoiceNo/orderId/email/phoneNo all filter server-side now (see
+  // custTitle/custCode/recipient/runNo/invoiceNo/orderId/email/phoneNo all filter server-side now (see
   // InvoiceEndpoints.cs), applied before Take(200) — a filter narrows the full matching set
   // correctly, not just the loaded page. custCode is Customer.AccountNo joined on by CustId.
   // Two stay client-side, both for the same reason: their filter popup
@@ -150,6 +177,7 @@ export default function InvoiceHistoryPage() {
       invoiceNo: (i: ArchiveHeader) => i.invoiceNo?.trim() ?? "",
       custTitle: (i: ArchiveHeader) => i.custTitle?.trim() ?? "",
       custCode: (i: ArchiveHeader) => i.custAccountNo?.trim() ?? "",
+      recipient: (i: ArchiveHeader) => i.delName?.trim() ?? "",
       invoiceDate: (i: ArchiveHeader) => (i.invoiceDate ? date(i.invoiceDate) : ""),
       orderId: (i: ArchiveHeader) => i.orderId.toString(),
       runNo: (i: ArchiveHeader) => i.runNo?.trim() ?? "",
@@ -173,7 +201,7 @@ export default function InvoiceHistoryPage() {
       />
 
       <Card className="mb-4">
-        <CardBody className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_12rem_auto] sm:items-end">
+        <CardBody className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_10rem_10rem_10rem_auto] sm:items-end">
           <Field label="Customer">
             <CustomerPicker value={customer} onChange={setCustomer} />
           </Field>
@@ -186,10 +214,28 @@ export default function InvoiceHistoryPage() {
             />
           </Field>
 
+          <Field label="Job number">
+            <Input
+              value={jobNo}
+              placeholder="Exact match"
+              onChange={(event) => setJobNo(event.target.value)}
+            />
+          </Field>
+
+          <Field label="Customer order no.">
+            <Input
+              value={custOrderNo}
+              placeholder="Exact match"
+              onChange={(event) => setCustOrderNo(event.target.value)}
+            />
+          </Field>
+
           <Button
             onClick={() => {
               setCustomer(null);
               setInvoiceNo("");
+              setJobNo("");
+              setCustOrderNo("");
             }}
           >
             Clear
@@ -210,29 +256,32 @@ export default function InvoiceHistoryPage() {
         ) : (query.data?.length ?? 0) === 0 ? (
           <EmptyState
             title="No invoices found"
-            description="Adjust the customer or invoice number and try again."
+            description="Adjust the customer, invoice, job or order number and try again."
           />
         ) : (
           <Table>
             <thead>
               <tr>
                 <Th {...th("custCode")} filter={colFilter("custCode")}>Customer No.</Th>
-                <Th {...th("custTitle")} filter={colFilter("custTitle")}>Customer</Th>
+                <Th {...th("custTitle")} filter={colFilter("custTitle")}>Customer name</Th>
+                <Th {...th("recipient")} filter={colFilter("recipient")}>Recipient</Th>
                 <Th {...th("invoiceDate")} filter={colFilter("invoiceDate")}>Date</Th>
-                <Th {...th("invoiceNo")} filter={colFilter("invoiceNo")}>Invoice</Th>
+                <Th {...th("invoiceNo")} filter={colFilter("invoiceNo")}>Invoice no.</Th>
+                <Th>Job no.</Th>
+                <Th>Cust order no.</Th>
                 <Th {...th("orderId")} filter={colFilter("orderId")}>Order</Th>
                 <Th {...th("runNo")} filter={colFilter("runNo")}>
                   Run
                 </Th>
-                <Th {...th("email")} filter={colFilter("email")}>Email</Th>
-                <Th {...th("phoneNo")} filter={colFilter("phoneNo")}>Phone</Th>
+                <Th {...th("email")} filter={colFilter("email")}>Email (invoice)</Th>
+                <Th {...th("phoneNo")} filter={colFilter("phoneNo")}>Phone (invoice)</Th>
                 <Th filter={colFilter("tracking")}>Tracking</Th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {(filtered?.length ?? 0) === 0 ? (
                 <tr>
-                  <td colSpan={9} className="px-4 py-8">
+                  <td colSpan={12} className="px-4 py-8">
                     <EmptyState
                       title="No invoices match the selected filters"
                       action={
@@ -248,6 +297,7 @@ export default function InvoiceHistoryPage() {
                   <tr key={invoice.id} {...(invoice.invoiceNo ? rowLink(`/invoices/${encodeURIComponent(invoice.invoiceNo)}`) : {})}>
                     <Td>{text(invoice.custAccountNo)}</Td>
                     <Td>{text(invoice.custTitle)}</Td>
+                    <Td>{text(invoice.delName)}</Td>
                     <Td>{date(invoice.invoiceDate)}</Td>
                     <Td>
                       <span className="font-medium text-slate-900">
@@ -258,6 +308,12 @@ export default function InvoiceHistoryPage() {
                           Credit
                         </Badge>
                       )}
+                    </Td>
+                    <Td>
+                      <NumberList values={invoice.jobNos} />
+                    </Td>
+                    <Td>
+                      <NumberList values={invoice.custOrderNos} />
                     </Td>
                     <Td>{invoice.orderId}</Td>
                     <Td>{text(invoice.runNo)}</Td>

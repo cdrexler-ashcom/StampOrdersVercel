@@ -153,6 +153,9 @@ export const invoices = {
       orderId?: string[];
       email?: string[];
       phoneNo?: string[];
+      recipient?: string[];
+      jobNo?: string;
+      custOrderNo?: string;
     } = {},
   ) => api.get<ArchiveHeader[]>("/api/invoices/history", params),
 

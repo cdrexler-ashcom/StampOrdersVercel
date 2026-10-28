@@ -219,6 +219,13 @@ export interface ArchiveHeader {
    * GET /api/invoices/history joins it on from Customer for the list; null elsewhere.
    */
   custAccountNo: string | null;
+  /**
+   * Job numbers on this invoice's lines, distinct and in line order. Like custAccountNo, only
+   * GET /api/invoices/history fills it in; null elsewhere.
+   */
+  jobNos?: string[] | null;
+  /** Customer order numbers on this invoice's lines. Populated and null in the same places as jobNos. */
+  custOrderNos?: string[] | null;
   date: string | null;
   invoiceDate: string | null;
   invoiceNo: string | null;
