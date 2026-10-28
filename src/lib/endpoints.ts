@@ -154,6 +154,8 @@ export const invoices = {
       email?: string[];
       phoneNo?: string[];
       recipient?: string[];
+      /** Part of the recipient's name (the search box), as opposed to `recipient`'s exact names. */
+      recipientName?: string;
       jobNo?: string;
       custOrderNo?: string;
     } = {},

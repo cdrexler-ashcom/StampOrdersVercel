@@ -34,7 +34,6 @@ type SortKey =
   | "recipient"
   | "invoiceDate"
   | "orderId"
-  | "runNo"
   | "email"
   | "phoneNo";
 type SortDirection = "asc" | "desc";
@@ -57,7 +56,7 @@ function NumberList({ values, max = 3 }: { values?: string[] | null; max?: numbe
 }
 
 /**
- * Invoice history.
+ * History (the invoice history list).
  *
  * Replaces InvoiceHistory.frm, InvoiceHistoryList.frm and Reprint.Frm. Searching and
  * reprinting were three separate screens in the legacy application; here the search
@@ -73,6 +72,8 @@ export default function InvoiceHistoryPage() {
   // and reverts to its defaults.
   const [customer, setCustomer] = useGridState<Customer | null>("invoices:customer", null);
   const [invoiceNo, setInvoiceNo] = useGridState("invoices:invoiceNo", "");
+  // Part of the recipient's name; the Recipient column filter below picks exact names instead.
+  const [recipientName, setRecipientName] = useGridState("invoices:recipientName", "");
   // Job and customer order numbers are on the invoice lines, so they are searched with their own
   // exact-match boxes (like the invoice number) rather than column filters.
   const [jobNo, setJobNo] = useGridState("invoices:jobNo", "");
@@ -93,8 +94,8 @@ export default function InvoiceHistoryPage() {
     );
   };
 
-  // Column filter selections, covering all ten filterable columns even though only
-  // custTitle/custCode/recipient/runNo/invoiceNo(→invoiceNos)/orderId/email/phoneNo get forwarded to
+  // Column filter selections, covering all nine filterable columns even though only
+  // custTitle/custCode/recipient/invoiceNo(→invoiceNos)/orderId/email/phoneNo get forwarded to
   // the API below — see the note on the useFilterableTable call for why invoiceDate/tracking
   // stay client-side. Every one of these needs to either be forwarded or documented as not
   // being forwarded: a filter that's silently client-side-only will look correct until a
@@ -109,7 +110,6 @@ export default function InvoiceHistoryPage() {
         | "recipient"
         | "invoiceDate"
         | "orderId"
-        | "runNo"
         | "email"
         | "phoneNo"
         | "tracking",
@@ -122,12 +122,11 @@ export default function InvoiceHistoryPage() {
     queryKey: [
       "invoices",
       "history",
-      { custId: customer?.uniqueId, invoiceNo, jobNo, custOrderNo },
+      { custId: customer?.uniqueId, invoiceNo, recipientName, jobNo, custOrderNo },
       sort,
       filterSelected.custTitle,
       filterSelected.custCode,
       filterSelected.recipient,
-      filterSelected.runNo,
       filterSelected.invoiceNo,
       filterSelected.orderId,
       filterSelected.email,
@@ -137,6 +136,7 @@ export default function InvoiceHistoryPage() {
       invoices.history({
         custId: customer?.uniqueId,
         invoiceNo: invoiceNo.trim() || undefined,
+        recipientName: recipientName.trim() || undefined,
         jobNo: jobNo.trim() || undefined,
         custOrderNo: custOrderNo.trim() || undefined,
         sortBy: sort?.key,
@@ -144,7 +144,6 @@ export default function InvoiceHistoryPage() {
         custTitle: filterSelected.custTitle,
         custCode: filterSelected.custCode,
         recipient: filterSelected.recipient,
-        runNo: filterSelected.runNo,
         invoiceNos: filterSelected.invoiceNo,
         orderId: filterSelected.orderId,
         email: filterSelected.email,
@@ -157,7 +156,7 @@ export default function InvoiceHistoryPage() {
     sortDirection: sort?.key === key ? sort.direction : null,
   });
 
-  // custTitle/custCode/recipient/runNo/invoiceNo/orderId/email/phoneNo all filter server-side now (see
+  // custTitle/custCode/recipient/invoiceNo/orderId/email/phoneNo all filter server-side now (see
   // InvoiceEndpoints.cs), applied before Take(200) — a filter narrows the full matching set
   // correctly, not just the loaded page. custCode is Customer.AccountNo joined on by CustId.
   // Two stay client-side, both for the same reason: their filter popup
@@ -180,7 +179,6 @@ export default function InvoiceHistoryPage() {
       recipient: (i: ArchiveHeader) => i.delName?.trim() ?? "",
       invoiceDate: (i: ArchiveHeader) => (i.invoiceDate ? date(i.invoiceDate) : ""),
       orderId: (i: ArchiveHeader) => i.orderId.toString(),
-      runNo: (i: ArchiveHeader) => i.runNo?.trim() ?? "",
       email: (i: ArchiveHeader) => i.email?.trim() ?? "",
       phoneNo: (i: ArchiveHeader) => i.phoneNo?.trim() ?? "",
       tracking: (i: ArchiveHeader) =>
@@ -196,14 +194,22 @@ export default function InvoiceHistoryPage() {
   return (
     <>
       <PageHeader
-        title="Invoice history"
+        title="History"
         description="Issued invoices and credits, newest first."
       />
 
       <Card className="mb-4">
-        <CardBody className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_10rem_10rem_10rem_auto] sm:items-end">
+        <CardBody className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_10rem_10rem_10rem_auto] sm:items-end">
           <Field label="Customer">
             <CustomerPicker value={customer} onChange={setCustomer} />
+          </Field>
+
+          <Field label="Recipient">
+            <Input
+              value={recipientName}
+              placeholder="Search for Recipient"
+              onChange={(event) => setRecipientName(event.target.value)}
+            />
           </Field>
 
           <Field label="Invoice number">
@@ -233,6 +239,7 @@ export default function InvoiceHistoryPage() {
           <Button
             onClick={() => {
               setCustomer(null);
+              setRecipientName("");
               setInvoiceNo("");
               setJobNo("");
               setCustOrderNo("");
@@ -256,7 +263,7 @@ export default function InvoiceHistoryPage() {
         ) : (query.data?.length ?? 0) === 0 ? (
           <EmptyState
             title="No invoices found"
-            description="Adjust the customer, invoice, job or order number and try again."
+            description="Adjust the customer, recipient, invoice, job or order number and try again."
           />
         ) : (
           <Table>
@@ -270,9 +277,6 @@ export default function InvoiceHistoryPage() {
                 <Th>Job no.</Th>
                 <Th>Cust order no.</Th>
                 <Th {...th("orderId")} filter={colFilter("orderId")}>Order</Th>
-                <Th {...th("runNo")} filter={colFilter("runNo")}>
-                  Run
-                </Th>
                 <Th {...th("email")} filter={colFilter("email")}>Email (invoice)</Th>
                 <Th {...th("phoneNo")} filter={colFilter("phoneNo")}>Phone (invoice)</Th>
                 <Th filter={colFilter("tracking")}>Tracking</Th>
@@ -281,7 +285,7 @@ export default function InvoiceHistoryPage() {
             <tbody className="divide-y divide-slate-100">
               {(filtered?.length ?? 0) === 0 ? (
                 <tr>
-                  <td colSpan={12} className="px-4 py-8">
+                  <td colSpan={11} className="px-4 py-8">
                     <EmptyState
                       title="No invoices match the selected filters"
                       action={
@@ -316,7 +320,6 @@ export default function InvoiceHistoryPage() {
                       <NumberList values={invoice.custOrderNos} />
                     </Td>
                     <Td>{invoice.orderId}</Td>
-                    <Td>{text(invoice.runNo)}</Td>
                     <Td>{text(invoice.email)}</Td>
                     <Td>{text(invoice.phoneNo)}</Td>
                     <Td>

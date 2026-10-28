@@ -63,7 +63,7 @@ const navigation = [
     heading: "Reports",
     items: [
       { href: "/reports", label: "Reports", icon: FileBarChart2 },
-      { href: "/invoices", label: "Invoice history", icon: FileText },
+      { href: "/invoices", label: "History", icon: FileText },
     ],
   },
   {

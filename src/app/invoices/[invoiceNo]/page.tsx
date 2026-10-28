@@ -101,7 +101,7 @@ export default function InvoiceDocumentPage() {
           className="inline-flex items-center gap-1 text-sm text-slate-600 hover:text-slate-900"
         >
           <ArrowLeft className="size-4" />
-          Invoice history
+          History
         </Link>
 
         <div className="flex flex-wrap items-center gap-2">
