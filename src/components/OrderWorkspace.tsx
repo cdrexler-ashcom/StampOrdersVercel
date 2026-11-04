@@ -92,6 +92,7 @@ export function OrderWorkspace({ initialOrderId }: { initialOrderId?: number }) 
   const [newDelCode, setNewDelCode] = useState("");
   const [newEmail, setNewEmail] = useState("");
   const [newIsCredit, setNewIsCredit] = useState(false);
+  const [newDealerReturn, setNewDealerReturn] = useState(false);
   const [newInvoiceApplied, setNewInvoiceApplied] = useState("Open");
   const [newDelName, setNewDelName] = useState("");
   const [newDelAdr0, setNewDelAdr0] = useState("");
@@ -108,6 +109,7 @@ export function OrderWorkspace({ initialOrderId }: { initialOrderId?: number }) 
     setNewRunNo(next?.runNo?.trim() ?? "");
     setNewDelCode(next?.defDelCode?.trim() ?? "");
     setNewEmail(next?.accountsEmail?.trim() ?? "");
+    setNewDealerReturn(next?.dealerReturnAddress ?? false);
   };
 
   // ----- dialog / interaction state ---------------------------------------------------
@@ -222,6 +224,7 @@ export function OrderWorkspace({ initialOrderId }: { initialOrderId?: number }) 
       delCode: newDelCode.trim() || null,
       email: newEmail.trim() || null,
       isCredit: newIsCredit,
+      dealerReturnAddress: newDealerReturn,
       invoiceApplied: newIsCredit ? newInvoiceApplied.trim() || "Open" : null,
       delName: newDelName.trim() || null,
       delAdr0: newDelAdr0.trim() || null,
@@ -579,6 +582,18 @@ export function OrderWorkspace({ initialOrderId }: { initialOrderId?: number }) 
                 />
               )}
             </Field>
+
+            <div className="sm:col-span-2">
+              <Checkbox
+                label="Dealer return address"
+                checked={isCreate ? newDealerReturn : order!.directDelivery}
+                onChange={(e) =>
+                  isCreate
+                    ? setNewDealerReturn(e.target.checked)
+                    : savePatch({ dealerReturnAddress: e.target.checked })
+                }
+              />
+            </div>
 
             <div className="sm:col-span-2">
               <Checkbox
@@ -1009,6 +1024,7 @@ function fullUpdate(o: OrderHeader): UpdateOrderRequest {
     invAdr3: o.invAdr3,
     invPostCode: o.invPostCode,
     direct: o.direct,
+    dealerReturnAddress: o.directDelivery,
     freightApplies: o.freightApplies,
     freight: o.freight,
     priceCode: o.priceCode,

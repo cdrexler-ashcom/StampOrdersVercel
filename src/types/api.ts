@@ -113,6 +113,8 @@ export interface OrderHeader {
   delAdr3: string | null;
   delCode: string | null;
   direct: boolean;
+  /** Dealer return address (OrdHeader.DirectDelivery). Not the delivery docket flag (direct). */
+  directDelivery: boolean;
   freight: number | null;
   freightApplies: boolean;
   credit: boolean;
@@ -492,6 +494,8 @@ export interface CreateOrderRequest {
   delAdr3?: string | null;
   isCredit?: boolean;
   invoiceApplied?: string | null;
+  /** Omitted = default from the customer's dealerReturnAddress. */
+  dealerReturnAddress?: boolean;
 }
 
 export interface AddOrderLineRequest {
@@ -528,6 +532,8 @@ export interface UpdateOrderRequest {
   invAdr3?: string | null;
   invPostCode?: string | null;
   direct: boolean;
+  /** Omitted = leave unchanged. */
+  dealerReturnAddress?: boolean;
   freightApplies: boolean;
   freight?: number | null;
   priceCode?: number | null;
