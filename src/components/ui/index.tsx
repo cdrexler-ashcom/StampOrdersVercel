@@ -289,49 +289,16 @@ export function Th({
   /** Adds a funnel icon that opens a checkbox popup of the column's distinct values. */
   filter?: ThFilter;
 }) {
-  const filterMenu = filter && (
-    <ColumnFilterMenu
-      label={typeof children === "string" ? children : "column"}
-      options={filter.options}
-      selected={filter.selected}
-      onChange={filter.onChange}
-    />
-  );
-
-  if (!onSort) {
-    return (
-      <th
-        scope="col"
-        className={clsx(
-          "whitespace-nowrap px-3 py-2 text-xs font-semibold text-slate-600",
-          align === "right" && "text-right",
-          align === "center" && "text-center",
-          align === "left" && "text-left",
-          className,
-        )}
-      >
-        <span
-          className={clsx(
-            "inline-flex items-center gap-1",
-            align === "right" && "flex-row-reverse",
-          )}
-        >
-          {children}
-          {filterMenu}
-        </span>
-      </th>
-    );
-  }
-
-  const Icon =
-    sortDirection === "asc" ? ChevronUp : sortDirection === "desc" ? ChevronDown : ChevronsUpDown;
+  // Column sorting and filtering are switched off for every grid for now: `onSort`,
+  // `sortDirection` and `filter` are still accepted (so call sites and the
+  // useSortableTable / useFilterableTable / ColumnFilterMenu code keep compiling) but ignored.
+  void onSort;
+  void sortDirection;
+  void filter;
 
   return (
     <th
       scope="col"
-      aria-sort={
-        sortDirection === "asc" ? "ascending" : sortDirection === "desc" ? "descending" : "none"
-      }
       className={clsx(
         "whitespace-nowrap px-3 py-2 text-xs font-semibold text-slate-600",
         align === "right" && "text-right",
@@ -340,24 +307,7 @@ export function Th({
         className,
       )}
     >
-      <span
-        className={clsx("inline-flex items-center gap-1", align === "right" && "flex-row-reverse")}
-      >
-        <button
-          type="button"
-          onClick={onSort}
-          className={clsx(
-            "inline-flex items-center gap-1 hover:text-slate-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-400",
-            align === "right" && "flex-row-reverse",
-          )}
-        >
-          {children}
-          <Icon
-            className={clsx("size-3.5", sortDirection ? "text-slate-700" : "text-slate-400")}
-          />
-        </button>
-        {filterMenu}
-      </span>
+      {children}
     </th>
   );
 }
