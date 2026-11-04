@@ -239,7 +239,10 @@ export function OrderWorkspace({ initialOrderId }: { initialOrderId?: number }) 
   const saveMutation = useMutation({
     mutationFn: (body: UpdateOrderRequest) => orders.update(orderId!, body),
     onSuccess: (updated) => {
-      queryClient.setQueryData(["order", orderId], updated);
+      // The PUT returns the header only (no lines), so keep the cached lines.
+      queryClient.setQueryData<OrderHeader>(["order", orderId], (prev) =>
+        prev ? { ...updated, lines: prev.lines } : updated,
+      );
       queryClient.invalidateQueries({ queryKey: ["order-totals", orderId] });
       queryClient.invalidateQueries({ queryKey: ["orders"] });
       setSavedAt(Date.now());
