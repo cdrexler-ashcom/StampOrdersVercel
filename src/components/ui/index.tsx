@@ -173,10 +173,13 @@ export function Input({
 export function Select({
   className,
   children,
+  ref,
   ...props
-}: React.SelectHTMLAttributes<HTMLSelectElement>) {
+}: React.SelectHTMLAttributes<HTMLSelectElement> & {
+  ref?: React.Ref<HTMLSelectElement>;
+}) {
   return (
-    <select {...props} className={clsx(controlClass, "pr-8", className)}>
+    <select {...props} ref={ref} className={clsx(controlClass, "pr-8", className)}>
       {children}
     </select>
   );

@@ -170,6 +170,28 @@ export function OrderWorkspace({ initialOrderId }: { initialOrderId?: number }) 
 
   const order = orderQuery.data;
 
+  // Alt+L opens the new line dialog, unless another dialog is already up.
+  const anyDialogOpen =
+    addLineOpen ||
+    jobCardOpen ||
+    confirmDelete ||
+    editOrderOpen ||
+    editLine !== null ||
+    deleteLine !== null ||
+    proofJobNo !== null;
+  const canAddLine = !isCreate && !!order && !anyDialogOpen;
+  useEffect(() => {
+    if (!canAddLine) return;
+    const handler = (event: KeyboardEvent) => {
+      if (!event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+      if (event.key.toLowerCase() !== "l") return;
+      event.preventDefault();
+      setAddLineOpen(true);
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [canAddLine]);
+
   const customerQuery = useQuery({
     queryKey: ["customer", order?.custId],
     queryFn: () => customers.get(order!.custId!),
@@ -803,7 +825,16 @@ export function OrderWorkspace({ initialOrderId }: { initialOrderId?: number }) 
             </thead>
             <tbody className="divide-y divide-slate-100">
               {lines.map((line) => (
-                <tr key={`${line.orderId}-${line.jobNo}`} className="hover:bg-slate-50">
+                <tr
+                  key={`${line.orderId}-${line.jobNo}`}
+                  title="Double-click to edit"
+                  onDoubleClick={(e) => {
+                    // Leave the row's own buttons (proof, edit, delete) to their handlers.
+                    if ((e.target as HTMLElement).closest("button, a")) return;
+                    setEditLine(line);
+                  }}
+                  className="hover:bg-slate-50"
+                >
                   <Td>
                     <span className="font-medium text-slate-900">{line.jobNo}</span>
                     {line.custOrderNo?.trim() && (

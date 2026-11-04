@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { orders, reference } from "@/lib/endpoints";
 import {
@@ -22,6 +22,8 @@ import {
   Notice,
   Select,
 } from "./ui";
+
+const selectAll = (e: React.FocusEvent<HTMLInputElement>) => e.target.select();
 
 /**
  * Replaces addLine.frm and UpdLine.Frm, which carried identical field sets.
@@ -49,6 +51,8 @@ export function AddLineDialog({
   defaultDiscountPct: number;
 }) {
   const queryClient = useQueryClient();
+  const jobNoRef = useRef<HTMLInputElement>(null);
+  const colourRef = useRef<HTMLSelectElement>(null);
 
   const [jobNo, setJobNo] = useState("");
   const [product, setProduct] = useState<SosetProduct | null>(null);
@@ -189,15 +193,25 @@ export function AddLineDialog({
           <Checkbox
             label="Keep open for the next line"
             checked={keepOpen}
+            tabIndex={-1}
             onChange={(e) => setKeepOpen(e.target.checked)}
             className="mr-auto text-xs"
           />
-          <Button onClick={onClose}>Cancel</Button>
           <Button
             variant="primary"
             onClick={submit}
+            onKeyDown={(e) => {
+              // Accept is the last tab stop; Tab loops back to Job number.
+              if (e.key === "Tab" && !e.shiftKey) {
+                e.preventDefault();
+                jobNoRef.current?.focus();
+              }
+            }}
             loading={mutation.isPending}
-            disabled={!canSubmit}
+            // Not `disabled`: a disabled button can't take focus, which would drop it
+            // from the tab order whenever the form is incomplete. submit() re-validates.
+            aria-disabled={!canSubmit}
+            className={canSubmit ? undefined : "cursor-not-allowed opacity-60"}
           >
             Add line
           </Button>
@@ -235,6 +249,7 @@ export function AddLineDialog({
               value={jobNo}
               maxLength={6}
               autoFocus
+              ref={jobNoRef}
               onChange={(e) => setJobNo(e.target.value)}
             />
           </Field>
@@ -243,26 +258,34 @@ export function AddLineDialog({
             <Input
               value={custOrderNo}
               maxLength={20}
+              onFocus={selectAll}
               onChange={(e) => setCustOrderNo(e.target.value)}
             />
           </Field>
         </div>
 
         <Field label="Product" required>
-          <ProductPicker value={product} onChange={setProduct} />
+          <ProductPicker
+            value={product}
+            onChange={setProduct}
+            onSelected={() => colourRef.current?.focus()}
+            onF2WhenSelected={() => {
+              // F2 with a product chosen opens the colour list; with none, the picker
+              // handles it by opening the product search.
+              const select = colourRef.current;
+              select?.focus();
+              try {
+                select?.showPicker();
+              } catch {
+                // showPicker can throw if the browser doesn't consider it a user gesture.
+              }
+            }}
+          />
         </Field>
 
         <div className="grid gap-3 sm:grid-cols-2">
-          <Field label="Details" required>
-            <Input
-              value={details}
-              maxLength={30}
-              onChange={(e) => setDetails(e.target.value)}
-            />
-          </Field>
-
           <Field label="Colour" required>
-            <Select value={colour} onChange={(e) => setColour(e.target.value)}>
+            <Select ref={colourRef} value={colour} onChange={(e) => setColour(e.target.value)}>
               <option value="">Select a colour…</option>
               {colours?.map((c) => (
                 <option key={c.colourId} value={c.colourId}>
@@ -270,6 +293,16 @@ export function AddLineDialog({
                 </option>
               ))}
             </Select>
+          </Field>
+
+          {/* Details is skipped in the tab order (legacy TabStop = False). */}
+          <Field label="Details" required>
+            <Input
+              value={details}
+              maxLength={30}
+              tabIndex={-1}
+              onChange={(e) => setDetails(e.target.value)}
+            />
           </Field>
         </div>
 
@@ -280,6 +313,7 @@ export function AddLineDialog({
               min="0"
               step="1"
               value={qty}
+              onFocus={selectAll}
               onChange={(e) => setQty(e.target.value)}
             />
           </Field>
@@ -290,6 +324,7 @@ export function AddLineDialog({
               min="0"
               step="0.01"
               value={price}
+              onFocus={selectAll}
               onChange={(e) => {
                 setPrice(e.target.value);
                 setPriceNote(null);
@@ -303,6 +338,7 @@ export function AddLineDialog({
               min="0"
               step="0.01"
               value={discPct}
+              onFocus={selectAll}
               onChange={(e) => setDiscPct(e.target.value)}
             />
           </Field>
@@ -312,6 +348,7 @@ export function AddLineDialog({
           <Checkbox
             label="Price includes GST"
             checked={priceIncGst}
+            tabIndex={-1}
             onChange={(e) => setPriceIncGst(e.target.checked)}
           />
           <Checkbox

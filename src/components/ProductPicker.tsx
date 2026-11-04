@@ -20,9 +20,15 @@ export function ProductPicker({
   onChange,
   autoFocus,
   disableF2,
+  onSelected,
+  onF2WhenSelected,
 }: {
+  /** Replaces the default F2 behaviour (clear and re-search) while a product is selected. */
+  onF2WhenSelected?: () => void;
   value: SosetProduct | null;
   onChange: (product: SosetProduct | null) => void;
+  /** Called after the user picks a result (Enter or click), e.g. to focus the next field. */
+  onSelected?: () => void;
   autoFocus?: boolean;
   /**
    * Suppresses the window-level F2 shortcut. Set this where more than one picker is on
@@ -71,6 +77,7 @@ export function ProductPicker({
     onChange(product);
     setQuery("");
     setOpen(false);
+    onSelected?.();
   };
 
   /**
@@ -83,6 +90,10 @@ export function ProductPicker({
     const handler = (event: KeyboardEvent) => {
       if (event.key !== "F2") return;
       event.preventDefault();
+      if (value && onF2WhenSelected) {
+        onF2WhenSelected();
+        return;
+      }
       if (value) {
         onChange(null);
         setFocusPending(true);
@@ -93,13 +104,13 @@ export function ProductPicker({
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [value, onChange, disableF2]);
+  }, [value, onChange, disableF2, onF2WhenSelected]);
 
   if (value) {
     return (
       <div
         title="Press F2 to search for a different product"
-        className="rounded-md bg-white px-2.5 py-1.5 ring-1 ring-inset ring-slate-300"
+        className="rounded-mdbg-white px-2.5 py-1.5 ring-1 ring-inset ring-slate-300"
       >
         <div className="flex items-center justify-between gap-2 text-sm">
           <span className="min-w-0 truncate">
@@ -108,6 +119,7 @@ export function ProductPicker({
           </span>
           <button
             type="button"
+            tabIndex={-1}
             onClick={() => onChange(null)}
             className="shrink-0 text-xs font-medium text-sky-700 hover:text-sky-900"
           >
@@ -137,7 +149,10 @@ export function ProductPicker({
             setQuery(event.target.value);
             setOpen(true);
           }}
-          onFocus={() => setOpen(true)}
+          onFocus={(event) => {
+            event.target.select();
+            setOpen(true);
+          }}
           onKeyDown={(event) => {
             if (event.key === "ArrowDown") {
               event.preventDefault();
