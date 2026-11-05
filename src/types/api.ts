@@ -586,6 +586,20 @@ export interface PostDepositRequest {
   depositDate?: string | null;
 }
 
+/** GET /api/tracking/labels/{invoiceNo}. Lines are in print order, blank lines already dropped. */
+export interface DespatchLabel {
+  lines: string[];
+}
+
+export interface DespatchLabels {
+  invoiceNo: string | null;
+  custTitle: string | null;
+  /** The order's Dealer Return Address flag: true = customer is the sender, false = invoice company. */
+  dealerReturnAddress: boolean;
+  returnLabel: DespatchLabel;
+  deliveryLabel: DespatchLabel;
+}
+
 export interface AddTrackingRequest {
   invoiceNo: string;
   trackingNo: string;

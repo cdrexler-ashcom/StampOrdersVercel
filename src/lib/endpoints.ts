@@ -13,6 +13,7 @@ import type {
   Customer,
   DepositResult,
   DepositSummary,
+  DespatchLabels,
   InvoiceHeader,
   InvoiceRunRequest,
   InvoiceRunResult,
@@ -210,6 +211,10 @@ export const tracking = {
 
   /** POST /api/tracking */
   add: (body: AddTrackingRequest) => api.post<void>("/api/tracking/", body),
+
+  /** GET /api/tracking/labels/{invoiceNo} — return and delivery label lines */
+  labels: (invoiceNo: string) =>
+    api.get<DespatchLabels>(`/api/tracking/labels/${encodeURIComponent(invoiceNo)}`),
 
   /** POST /api/tracking/advance */
   advance: () => api.post<{ updated: number }>("/api/tracking/advance"),

@@ -10,6 +10,7 @@ import {
   Card,
   CardBody,
   CardHeader,
+  Checkbox,
   EmptyState,
   ErrorState,
   Field,
@@ -21,10 +22,11 @@ import {
   Td,
   Th,
 } from "@/components/ui";
+import { DespatchLabelPrint } from "@/components/DespatchLabelPrint";
 import { tracking } from "@/lib/endpoints";
 import { date, dateTime, text, trackingStatusLabel } from "@/lib/format";
 import { useSortableTable } from "@/lib/useSortableTable";
-import type { AddTrackingRequest } from "@/types/api";
+import type { AddTrackingRequest, DespatchLabels } from "@/types/api";
 
 /**
  * Despatch.
@@ -45,6 +47,8 @@ export default function DespatchPage() {
   const [invoiceNo, setInvoiceNo] = useState("");
   const [trackingNo, setTrackingNo] = useState("");
   const [lastCaptured, setLastCaptured] = useState<string | null>(null);
+  const [printLabels, setPrintLabels] = useState(true);
+  const [labelsToPrint, setLabelsToPrint] = useState<DespatchLabels | null>(null);
 
   const invoiceRef = useRef<HTMLInputElement>(null);
   const trackingRef = useRef<HTMLInputElement>(null);
@@ -93,8 +97,22 @@ export default function DespatchPage() {
   );
 
   const addMutation = useMutation({
-    mutationFn: (body: AddTrackingRequest) => tracking.add(body),
-    onSuccess: (_data, variables) => {
+    // Like the legacy Accept button: fetch the labels, record the consignment, then print.
+    // A label lookup failure must not stop the capture itself.
+    mutationFn: async (body: AddTrackingRequest) => {
+      let labels: DespatchLabels | null = null;
+      if (printLabels) {
+        try {
+          labels = await tracking.labels(body.invoiceNo);
+        } catch {
+          labels = null;
+        }
+      }
+      await tracking.add(body);
+      return labels;
+    },
+    onSuccess: (labels, variables) => {
+      setLabelsToPrint(labels);
       setLastCaptured(variables.invoiceNo);
       setInvoiceNo("");
       setTrackingNo("");
@@ -165,6 +183,7 @@ export default function DespatchPage() {
 
   return (
     <>
+      <DespatchLabelPrint labels={labelsToPrint} onDone={() => setLabelsToPrint(null)} />
       <PageHeader
         title="Despatch"
         description="Capture consignment numbers and send despatch notifications."
@@ -224,6 +243,12 @@ export default function DespatchPage() {
                   }}
                 />
               </Field>
+
+              <Checkbox
+                label="Print return and delivery labels"
+                checked={printLabels}
+                onChange={(event) => setPrintLabels(event.target.checked)}
+              />
 
               {addMutation.isError && (
                 <Notice tone="red" title="Not captured">
