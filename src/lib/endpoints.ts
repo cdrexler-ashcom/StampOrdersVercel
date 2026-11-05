@@ -216,6 +216,10 @@ export const tracking = {
   labels: (invoiceNo: string) =>
     api.get<DespatchLabels>(`/api/tracking/labels/${encodeURIComponent(invoiceNo)}`),
 
+  /** PUT /api/tracking/{archiveId}/tracking-no — free-text edit, pending invoices only */
+  setTrackingNo: (archiveId: number, trackingNo: string) =>
+    api.put<void>(`/api/tracking/${archiveId}/tracking-no`, { trackingNo }),
+
   /** PUT /api/tracking/{archiveId}/required — pending invoices only */
   setRequired: (archiveId: number, required: boolean) =>
     api.put<void>(`/api/tracking/${archiveId}/required`, { required }),

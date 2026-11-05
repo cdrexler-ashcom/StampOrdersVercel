@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ScanLine, Send } from "lucide-react";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import {
   Badge,
@@ -124,6 +124,13 @@ export default function DespatchPage() {
     },
   });
 
+  // The legacy grid's editable Tracking Number(s) column: free text, saved when you leave the cell.
+  const trackingNoMutation = useMutation({
+    mutationFn: (vars: { id: number; trackingNo: string }) =>
+      tracking.setTrackingNo(vars.id, vars.trackingNo),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["tracking"] }),
+  });
+
   // The legacy grid's Required column: whether a pending invoice needs a consignment number.
   const requiredMutation = useMutation({
     mutationFn: (vars: { id: number; required: boolean }) =>
@@ -206,6 +213,14 @@ export default function DespatchPage() {
           </Button>
         }
       />
+
+      {trackingNoMutation.isError && (
+        <div className="mb-4">
+          <Notice tone="red" title="Tracking number not saved">
+            {(trackingNoMutation.error as Error).message}
+          </Notice>
+        </div>
+      )}
 
       {requiredMutation.isError && (
         <div className="mb-4">
@@ -357,7 +372,16 @@ export default function DespatchPage() {
                         </span>
                       </Td>
                       <Td>
-                        <span className="text-xs">{text(invoice.trackingNo?.trim())}</span>
+                        <TrackingNoCell
+                          value={invoice.trackingNo?.trim() ?? ""}
+                          saving={
+                            trackingNoMutation.isPending &&
+                            trackingNoMutation.variables?.id === invoice.id
+                          }
+                          onSave={(trackingNo) =>
+                            trackingNoMutation.mutate({ id: invoice.id, trackingNo })
+                          }
+                        />
                       </Td>
                       <Td>
                         <Badge tone="amber">
@@ -496,5 +520,55 @@ export default function DespatchPage() {
         </div>
       </div>
     </>
+  );
+}
+
+/**
+ * The Tracking Number(s) cell in the pending list. Editable free text like the old grid column
+ * (TrackingEntry.frm): type to change it, and it is saved when you leave the cell or press Enter.
+ * Escape puts back the saved value. Clearing it saves a blank.
+ */
+function TrackingNoCell({
+  value,
+  saving,
+  onSave,
+}: {
+  value: string;
+  saving: boolean;
+  onSave: (trackingNo: string) => void;
+}) {
+  const [draft, setDraft] = useState(value);
+
+  // Pick up the saved value when the list refetches (or a scan appends to it).
+  useEffect(() => setDraft(value), [value]);
+
+  const commit = () => {
+    const next = draft.trim();
+    if (next === value) {
+      setDraft(value);
+      return;
+    }
+    onSave(next);
+  };
+
+  return (
+    <Input
+      className="w-56 text-xs"
+      value={draft}
+      maxLength={150}
+      disabled={saving}
+      aria-label="Tracking number(s)"
+      onChange={(event) => setDraft(event.target.value)}
+      onBlur={commit}
+      onKeyDown={(event) => {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          event.currentTarget.blur();
+        } else if (event.key === "Escape") {
+          setDraft(value);
+          event.currentTarget.blur();
+        }
+      }}
+    />
   );
 }
