@@ -15,6 +15,7 @@ import {
   ErrorState,
   Field,
   Input,
+  Modal,
   Notice,
   PageHeader,
   Spinner,
@@ -48,6 +49,7 @@ export default function DespatchPage() {
   const [trackingNo, setTrackingNo] = useState("");
   const [lastCaptured, setLastCaptured] = useState<string | null>(null);
   const [printLabels, setPrintLabels] = useState(true);
+  const [confirmProcess, setConfirmProcess] = useState(false);
   const [labelsToPrint, setLabelsToPrint] = useState<DespatchLabels | null>(null);
 
   const invoiceRef = useRef<HTMLInputElement>(null);
@@ -207,12 +209,38 @@ export default function DespatchPage() {
         actions={
           <Button
             loading={advanceMutation.isPending}
-            onClick={() => advanceMutation.mutate()}
+            onClick={() => setConfirmProcess(true)}
           >
             Process
           </Button>
         }
       />
+
+      <Modal
+        open={confirmProcess}
+        onClose={() => setConfirmProcess(false)}
+        title="Process Tracking"
+        footer={
+          <>
+            <Button onClick={() => setConfirmProcess(false)}>Cancel</Button>
+            <Button
+              variant="primary"
+              onClick={() => {
+                setConfirmProcess(false);
+                advanceMutation.mutate();
+              }}
+            >
+              OK
+            </Button>
+          </>
+        }
+      >
+        <p className="text-sm text-slate-700">
+          This will update all invoices with tracking details to tracked and ready for emailing. It
+          will also update all invoices set as not requiring tracking to complete. Do you wish to
+          continue?
+        </p>
+      </Modal>
 
       {trackingNoMutation.isError && (
         <div className="mb-4">
