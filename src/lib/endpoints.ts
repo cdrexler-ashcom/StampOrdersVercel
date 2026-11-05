@@ -212,6 +212,10 @@ export const tracking = {
   /** POST /api/tracking */
   add: (body: AddTrackingRequest) => api.post<void>("/api/tracking/", body),
 
+  /** GET /api/tracking/parse-barcode — the consignment number inside a scanned carrier barcode */
+  parseBarcode: (barcode: string) =>
+    api.get<{ trackingNo: string }>("/api/tracking/parse-barcode", { barcode }),
+
   /** GET /api/tracking/labels/{invoiceNo} — return and delivery label lines */
   labels: (invoiceNo: string) =>
     api.get<DespatchLabels>(`/api/tracking/labels/${encodeURIComponent(invoiceNo)}`),

@@ -594,6 +594,8 @@ export interface DespatchLabel {
 export interface DespatchLabels {
   invoiceNo: string | null;
   custTitle: string | null;
+  /** The customer's invoice company (shown in the scan dialog). */
+  invoiceComp: string | null;
   /** The order's Dealer Return Address flag: true = customer is the sender, false = invoice company. */
   dealerReturnAddress: boolean;
   returnLabel: DespatchLabel;
