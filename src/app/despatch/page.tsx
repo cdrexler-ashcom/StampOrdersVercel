@@ -71,10 +71,12 @@ export default function DespatchPage() {
   const pendingSort = useSortableTable(
     pending.data,
     {
+      orderId: (i) => i.orderId,
       invoiceNo: (i) => i.invoiceNo,
       custTitle: (i) => i.custTitle,
       invoiceDate: (i) => (i.invoiceDate ? new Date(i.invoiceDate).getTime() : null),
       deliverTo: (i) => i.delName ?? i.delAdr2,
+      trackingNo: (i) => i.trackingNo?.trim() || null,
       status: (i) => trackingStatusLabel[i.trackingStatus] ?? i.trackingStatus,
       required: (i) => i.trackingRequired,
     },
@@ -321,10 +323,12 @@ export default function DespatchPage() {
               <Table>
                 <thead>
                   <tr>
+                    <Th {...pendingSort.th("orderId")}>Order</Th>
                     <Th {...pendingSort.th("invoiceNo")}>Invoice</Th>
                     <Th {...pendingSort.th("custTitle")}>Customer</Th>
                     <Th {...pendingSort.th("invoiceDate")}>Invoice date</Th>
                     <Th {...pendingSort.th("deliverTo")}>Deliver to</Th>
+                    <Th {...pendingSort.th("trackingNo")}>Tracking number(s)</Th>
                     <Th {...pendingSort.th("status")}>Status</Th>
                     <Th {...pendingSort.th("required")}>Tracking required</Th>
                   </tr>
@@ -332,6 +336,7 @@ export default function DespatchPage() {
                 <tbody className="divide-y divide-slate-100">
                   {pendingSort.sorted?.map((invoice) => (
                     <tr key={invoice.id} {...(invoice.invoiceNo ? rowLink(`/invoices/${encodeURIComponent(invoice.invoiceNo)}`) : {})}>
+                      <Td>{invoice.orderId}</Td>
                       <Td>
                         <button
                           type="button"
@@ -350,6 +355,9 @@ export default function DespatchPage() {
                         <span className="block max-w-40 truncate">
                           {text(invoice.delName ?? invoice.delAdr2)}
                         </span>
+                      </Td>
+                      <Td>
+                        <span className="text-xs">{text(invoice.trackingNo?.trim())}</span>
                       </Td>
                       <Td>
                         <Badge tone="amber">
