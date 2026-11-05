@@ -76,6 +76,7 @@ export default function DespatchPage() {
       invoiceDate: (i) => (i.invoiceDate ? new Date(i.invoiceDate).getTime() : null),
       deliverTo: (i) => i.delName ?? i.delAdr2,
       status: (i) => trackingStatusLabel[i.trackingStatus] ?? i.trackingStatus,
+      required: (i) => i.trackingRequired,
     },
     undefined,
     "asc",
@@ -119,6 +120,13 @@ export default function DespatchPage() {
       invoiceRef.current?.focus();
       queryClient.invalidateQueries({ queryKey: ["tracking"] });
     },
+  });
+
+  // The legacy grid's Required column: whether a pending invoice needs a consignment number.
+  const requiredMutation = useMutation({
+    mutationFn: (vars: { id: number; required: boolean }) =>
+      tracking.setRequired(vars.id, vars.required),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["tracking"] }),
   });
 
   const advanceMutation = useMutation({
@@ -196,6 +204,14 @@ export default function DespatchPage() {
           </Button>
         }
       />
+
+      {requiredMutation.isError && (
+        <div className="mb-4">
+          <Notice tone="red" title="Not changed">
+            {(requiredMutation.error as Error).message}
+          </Notice>
+        </div>
+      )}
 
       {advanceMutation.isSuccess && advanceMutation.data && (
         <div className="mb-4">
@@ -310,6 +326,7 @@ export default function DespatchPage() {
                     <Th {...pendingSort.th("invoiceDate")}>Invoice date</Th>
                     <Th {...pendingSort.th("deliverTo")}>Deliver to</Th>
                     <Th {...pendingSort.th("status")}>Status</Th>
+                    <Th {...pendingSort.th("required")}>Tracking required</Th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -339,6 +356,24 @@ export default function DespatchPage() {
                           {trackingStatusLabel[invoice.trackingStatus] ??
                             invoice.trackingStatus}
                         </Badge>
+                      </Td>
+                      <Td>
+                        <Button
+                          size="sm"
+                          variant={invoice.trackingRequired ? "secondary" : "ghost"}
+                          loading={
+                            requiredMutation.isPending &&
+                            requiredMutation.variables?.id === invoice.id
+                          }
+                          onClick={() =>
+                            requiredMutation.mutate({
+                              id: invoice.id,
+                              required: !invoice.trackingRequired,
+                            })
+                          }
+                        >
+                          {invoice.trackingRequired ? "Yes" : "No"}
+                        </Button>
                       </Td>
                     </tr>
                   ))}
