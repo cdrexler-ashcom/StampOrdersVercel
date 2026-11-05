@@ -209,7 +209,7 @@ export default function DespatchPage() {
             loading={advanceMutation.isPending}
             onClick={() => advanceMutation.mutate()}
           >
-            Advance tracking status
+            Process
           </Button>
         }
       />
@@ -232,7 +232,7 @@ export default function DespatchPage() {
 
       {advanceMutation.isSuccess && advanceMutation.data && (
         <div className="mb-4">
-          <Notice tone="green" title="Tracking advanced">
+          <Notice tone="green" title="Tracking processed">
             {advanceMutation.data.updated} invoice(s) moved forward.
           </Notice>
         </div>
