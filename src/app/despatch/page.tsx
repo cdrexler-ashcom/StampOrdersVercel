@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ScanLine, Send } from "lucide-react";
+import { ScanLine } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import {
@@ -25,7 +25,7 @@ import {
 } from "@/components/ui";
 import { DespatchLabelPrint } from "@/components/DespatchLabelPrint";
 import { tracking } from "@/lib/endpoints";
-import { date, dateTime, text, trackingStatusLabel } from "@/lib/format";
+import { date, text, trackingStatusLabel } from "@/lib/format";
 import { useSortableTable } from "@/lib/useSortableTable";
 import type { AddTrackingRequest, DespatchLabels } from "@/types/api";
 
@@ -60,16 +60,9 @@ export default function DespatchPage() {
     queryFn: () => tracking.pending(),
   });
 
-  const awaiting = useQuery({
-    queryKey: ["tracking", "awaiting-notification"],
-    queryFn: () => tracking.awaitingNotification(),
-  });
-
-  // Sorted client-side: neither /api/tracking/pending nor /api/tracking/awaiting-notification
-  // has a cap — each is already scoped to a specific tracking-status queue (pending, or
-  // ready-to-email), so it's an inherently bounded working set rather than an open-ended
-  // archive. No full-dataset-vs-capped-page correctness issue to work around here. The two
-  // tables sort independently.
+  // Sorted client-side: /api/tracking/pending has no cap — it is already scoped to a specific
+  // tracking-status queue, so it's an inherently bounded working set rather than an open-ended
+  // archive. No full-dataset-vs-capped-page correctness issue to work around here.
   const pendingSort = useSortableTable(
     pending.data,
     {
@@ -85,20 +78,6 @@ export default function DespatchPage() {
     undefined,
     "asc",
     "despatch:pending-sort",
-  );
-
-  const awaitingSort = useSortableTable(
-    awaiting.data,
-    {
-      invoiceNo: (i) => i.invoiceNo,
-      custTitle: (i) => i.custTitle,
-      trackingNo: (i) => i.trackingNo,
-      email: (i) => i.email,
-      emailSent: (i) => (i.emailSent ? new Date(i.emailSent).getTime() : null),
-    },
-    undefined,
-    "asc",
-    "despatch:awaiting-sort",
   );
 
   const addMutation = useMutation({
@@ -145,53 +124,6 @@ export default function DespatchPage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["tracking"] }),
   });
 
-  const notifyMutation = useMutation({
-    mutationFn: (archiveId: number) => tracking.markNotified(archiveId),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["tracking"] }),
-  });
-
-  // Real SMTP send of a single despatch notification (E1). On success the API stamps EmailSent,
-  // so the row drops out of the awaiting list when the query refetches.
-  const sendMutation = useMutation({
-    mutationFn: (archiveId: number) => tracking.sendNotification(archiveId),
-    onSuccess: (result) => {
-      queryClient.invalidateQueries({ queryKey: ["tracking"] });
-      setSendResult(
-        result.sent
-          ? { tone: "green", text: `Despatch notification sent to ${result.recipient}.` }
-          : { tone: "amber", text: result.message ?? "The notification was not sent." },
-      );
-    },
-    onError: (error) =>
-      setSendResult({
-        tone: "red",
-        text: error instanceof Error ? error.message : "The notification could not be sent.",
-      }),
-  });
-
-  // Send every awaiting notification in one go (E1). Reports how many succeeded/failed.
-  const sendAllMutation = useMutation({
-    mutationFn: () => tracking.sendAllNotifications(),
-    onSuccess: (result) => {
-      queryClient.invalidateQueries({ queryKey: ["tracking"] });
-      setSendResult({
-        tone: result.failed > 0 ? "amber" : "green",
-        text:
-          result.total === 0
-            ? "There were no notifications to send."
-            : `Sent ${result.sent} of ${result.total} notification(s)` +
-              (result.failed > 0 ? `, ${result.failed} failed.` : "."),
-      });
-    },
-    onError: (error) =>
-      setSendResult({
-        tone: "red",
-        text: error instanceof Error ? error.message : "The notifications could not be sent.",
-      }),
-  });
-
-  const [sendResult, setSendResult] = useState<{ tone: "green" | "amber" | "red"; text: string } | null>(null);
-
   const capture = () => {
     if (!invoiceNo.trim() || !trackingNo.trim()) return;
     addMutation.mutate({
@@ -205,7 +137,7 @@ export default function DespatchPage() {
       <DespatchLabelPrint labels={labelsToPrint} onDone={() => setLabelsToPrint(null)} />
       <PageHeader
         title="Despatch"
-        description="Capture consignment numbers and send despatch notifications."
+        description="Capture consignment numbers and process tracking."
         actions={
           <Button
             loading={advanceMutation.isPending}
@@ -434,110 +366,6 @@ export default function DespatchPage() {
                         >
                           {invoice.trackingRequired ? "Yes" : "No"}
                         </Button>
-                      </Td>
-                    </tr>
-                  ))}
-                </tbody>
-              </Table>
-            )}
-          </Card>
-
-          <Card>
-            <CardHeader
-              title="Ready to notify"
-              description="Invoices with a consignment number, awaiting a despatch notification."
-              actions={
-                <div className="flex items-center gap-2">
-                  {awaitingSort.isSorted && (
-                    <Button size="sm" variant="ghost" onClick={awaitingSort.clear}>
-                      Clear sorting
-                    </Button>
-                  )}
-                  <Button
-                    size="sm"
-                    variant="primary"
-                    disabled={(awaiting.data?.length ?? 0) === 0}
-                    loading={sendAllMutation.isPending}
-                    onClick={() => sendAllMutation.mutate()}
-                  >
-                    <Send className="size-3" />
-                    Send all awaiting
-                  </Button>
-                </div>
-              }
-            />
-
-            {sendResult && (
-              <div className="px-4 pt-3">
-                <Notice tone={sendResult.tone} title="Despatch email">
-                  {sendResult.text}
-                </Notice>
-              </div>
-            )}
-
-            {awaiting.isLoading ? (
-              <Spinner />
-            ) : (awaiting.data?.length ?? 0) === 0 ? (
-              <EmptyState title="No notifications outstanding" />
-            ) : (
-              <Table>
-                <thead>
-                  <tr>
-                    <Th {...awaitingSort.th("invoiceNo")}>Invoice</Th>
-                    <Th {...awaitingSort.th("custTitle")}>Customer</Th>
-                    <Th {...awaitingSort.th("trackingNo")}>Consignment</Th>
-                    <Th {...awaitingSort.th("email")}>Email</Th>
-                    <Th {...awaitingSort.th("emailSent")}>Notified</Th>
-                    <Th />
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {awaitingSort.sorted?.map((invoice) => (
-                    <tr key={invoice.id} {...(invoice.invoiceNo ? rowLink(`/invoices/${encodeURIComponent(invoice.invoiceNo)}`) : {})}>
-                      <Td>
-                        <span className="font-medium text-slate-900">
-                          {text(invoice.invoiceNo)}
-                        </span>
-                      </Td>
-                      <Td>{text(invoice.custTitle)}</Td>
-                      <Td>
-                        <span className="text-xs">{text(invoice.trackingNo)}</span>
-                      </Td>
-                      <Td>
-                        <span className="block max-w-40 truncate text-xs">
-                          {text(invoice.email)}
-                        </span>
-                      </Td>
-                      <Td>
-                        {invoice.emailSent ? dateTime(invoice.emailSent) : "—"}
-                      </Td>
-                      <Td align="right">
-                        <div className="flex justify-end gap-1.5">
-                          {invoice.email?.trim() && (
-                            <Button
-                              size="sm"
-                              loading={
-                                sendMutation.isPending &&
-                                sendMutation.variables === invoice.id
-                              }
-                              onClick={() => sendMutation.mutate(invoice.id)}
-                            >
-                              <Send className="size-3" />
-                              Send email
-                            </Button>
-                          )}
-                          <Button
-                            size="sm"
-                            variant="primary"
-                            loading={
-                              notifyMutation.isPending &&
-                              notifyMutation.variables === invoice.id
-                            }
-                            onClick={() => notifyMutation.mutate(invoice.id)}
-                          >
-                            Mark notified
-                          </Button>
-                        </div>
                       </Td>
                     </tr>
                   ))}
