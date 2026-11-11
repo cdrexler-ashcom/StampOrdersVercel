@@ -13,6 +13,7 @@ import type {
   Customer,
   DepositResult,
   DepositSummary,
+  DespatchLabels,
   InvoiceHeader,
   InvoiceRunRequest,
   InvoiceRunResult,
@@ -210,6 +211,22 @@ export const tracking = {
 
   /** POST /api/tracking */
   add: (body: AddTrackingRequest) => api.post<void>("/api/tracking/", body),
+
+  /** GET /api/tracking/parse-barcode — the consignment number inside a scanned carrier barcode */
+  parseBarcode: (barcode: string) =>
+    api.get<{ trackingNo: string }>("/api/tracking/parse-barcode", { barcode }),
+
+  /** GET /api/tracking/labels/{invoiceNo} — return and delivery label lines */
+  labels: (invoiceNo: string) =>
+    api.get<DespatchLabels>(`/api/tracking/labels/${encodeURIComponent(invoiceNo)}`),
+
+  /** PUT /api/tracking/{archiveId}/tracking-no — free-text edit, pending invoices only */
+  setTrackingNo: (archiveId: number, trackingNo: string) =>
+    api.put<void>(`/api/tracking/${archiveId}/tracking-no`, { trackingNo }),
+
+  /** PUT /api/tracking/{archiveId}/required — pending invoices only */
+  setRequired: (archiveId: number, required: boolean) =>
+    api.put<void>(`/api/tracking/${archiveId}/required`, { required }),
 
   /** POST /api/tracking/advance */
   advance: () => api.post<{ updated: number }>("/api/tracking/advance"),

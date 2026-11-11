@@ -113,6 +113,8 @@ export interface OrderHeader {
   delAdr3: string | null;
   delCode: string | null;
   direct: boolean;
+  /** Dealer return address (OrdHeader.DirectDelivery). Not the delivery docket flag (direct). */
+  directDelivery: boolean;
   freight: number | null;
   freightApplies: boolean;
   credit: boolean;
@@ -492,6 +494,8 @@ export interface CreateOrderRequest {
   delAdr3?: string | null;
   isCredit?: boolean;
   invoiceApplied?: string | null;
+  /** Omitted = default from the customer's dealerReturnAddress. */
+  dealerReturnAddress?: boolean;
 }
 
 export interface AddOrderLineRequest {
@@ -528,6 +532,8 @@ export interface UpdateOrderRequest {
   invAdr3?: string | null;
   invPostCode?: string | null;
   direct: boolean;
+  /** Omitted = leave unchanged. */
+  dealerReturnAddress?: boolean;
   freightApplies: boolean;
   freight?: number | null;
   priceCode?: number | null;
@@ -578,6 +584,22 @@ export interface RecordReceiptRequest {
 export interface PostDepositRequest {
   receiptHistoryIds: number[];
   depositDate?: string | null;
+}
+
+/** GET /api/tracking/labels/{invoiceNo}. Lines are in print order, blank lines already dropped. */
+export interface DespatchLabel {
+  lines: string[];
+}
+
+export interface DespatchLabels {
+  invoiceNo: string | null;
+  custTitle: string | null;
+  /** The customer's invoice company (shown in the scan dialog). */
+  invoiceComp: string | null;
+  /** The order's Dealer Return Address flag: true = customer is the sender, false = invoice company. */
+  dealerReturnAddress: boolean;
+  returnLabel: DespatchLabel;
+  deliveryLabel: DespatchLabel;
 }
 
 export interface AddTrackingRequest {
