@@ -12,6 +12,7 @@ import {
   FileSearch,
   FileText,
   LayoutDashboard,
+  Printer,
   Receipt,
   Settings,
   SlidersHorizontal,
@@ -47,6 +48,7 @@ const navigation = [
     items: [
       { href: "/orders", label: "Orders", icon: ClipboardList },
       { href: "/invoicing", label: "Invoice run", icon: FileText },
+      { href: "/job-cards", label: "Job cards", icon: Printer },
       { href: "/despatch", label: "Despatch", icon: Truck },
       { href: "/imports", label: "Import web orders", icon: Upload },
       { href: "/proofs", label: "Proofs", icon: FileSearch },

@@ -94,6 +94,15 @@ export interface JobCard {
   holdMemo: string | null;
 }
 
+/** GET /api/job-cards — the job cards of every live order in a run range, for batch printing. */
+export interface JobCardRunResult {
+  startRun: number | null;
+  endRun: number | null;
+  /** How many live orders the range matched. Some may have no stamp job, so no card. */
+  orderCount: number;
+  cards: JobCard[];
+}
+
 export interface OrderHeader {
   orderId: number;
   custId: number | null;

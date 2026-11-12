@@ -18,6 +18,7 @@ import type {
   InvoiceRunRequest,
   InvoiceRunResult,
   JobCard,
+  JobCardRunResult,
   OpenItem,
   OrderHeader,
   OrderLine,
@@ -125,6 +126,17 @@ export const orders = {
   /** GET /api/orders/{orderId}/job-card */
   jobCard: (orderId: number) =>
     api.get<JobCard[]>(`/api/orders/${orderId}/job-card`),
+};
+
+// --- Job cards --------------------------------------------------------------------------
+
+export const jobCards = {
+  /**
+   * GET /api/job-cards — every live order's job cards in a run range (both ends inclusive).
+   * RunNo is text on the API, which compares it as a number, so "10" falls after "2".
+   */
+  forRuns: (startRun: number, endRun: number) =>
+    api.get<JobCardRunResult>("/api/job-cards", { startRun, endRun }),
 };
 
 // --- Invoicing --------------------------------------------------------------------------
