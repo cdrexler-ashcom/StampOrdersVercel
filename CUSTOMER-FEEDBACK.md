@@ -61,13 +61,13 @@ Status as at 11 Nov 2026.
 | 9 | Add Dealer Return Address to the order header. Circled on the VB6 order form, with "Order ✓" beside it. | P2 p1 | Branch | `feat/order-dealer-return-address`, also included in `feat/despatch-labels`. A checkbox on new and existing orders and in `EditOrderDialog`; it defaults from the customer. It is stored as `OrdHeader.DirectDelivery` (`directDelivery` on `OrderHeader`); `direct` is the separate delivery docket flag. Needs the API to accept `dealerReturnAddress` on create and update. |
 | 10 | "How to update here", written on both the order screen and the Edit order dialog. | P2 p2–3 | Question | Header fields already edit in place and save when you leave a field, and the header already shows "Saving… / Saved / Not saved". So the problem is probably not a missing save control. The Edit order dialog says "Customer, bin and the credit flag are fixed once an order is created", so they may want to change the customer or bin on an existing order. Ask them what they were trying to change. |
 | 11 | Double-click a line to edit it. | P2 p3 ✓ | Done | PR 317. |
-| 12 | Question marks over More fields, Invoice run and Job card. | P2 p7 | To do | They do not know what these buttons do. Clearer labels or tooltips. |
+| 12 | Question marks over More fields, Invoice run and Job card. | P2 p7 | Branch | Renamed to Edit order, Go to invoice run and Print job card, each with a tooltip. |
 
 ## 3. Invoice detail (Part 2, page 5)
 
 | # | Request | Source | Status | Notes |
 | --- | --- | --- | --- | --- |
-| 13 | Email invoice: ask for confirmation and show the recipient address, which they can change. | P2 p5 | To do | Today the button sends straight away (`app/invoices/[invoiceNo]/page.tsx`). The endpoint already accepts `toOverride` (`invoices.email`), so the UI only needs a confirm dialog with an editable address. |
+| 13 | Email invoice: ask for confirmation and show the recipient address, which they can change. | P2 p5 | Branch | Email invoice now opens a confirm dialog with the recipient, editable. A changed address is sent as `toOverride`, for that send only. Also available when the invoice has no stored address. Not yet tried against a running API. |
 
 ## 4. Reports — Invoice Register (Part 2, page 4)
 
@@ -83,8 +83,8 @@ Status as at 11 Nov 2026.
 | 16 | Allow account codes up to 8 characters. | P3 p1 | To do | `CustomerForm` currently allows 16 (`MAX.accountNo`). Check the database column and the API validation, then set the limit to 8. |
 | 17 | Rename State Invoice to "Company". | P3 p1 | Done | PR 271 / PR 303. |
 | 18 | Copy button from the invoice address to the delivery address. | P3 p1 | Done | `copyInvoiceAddress` in `CustomerForm`. |
-| 19 | Remove Bank, Branch, Drawer name, Fax, GST exempt, Currency code and Use All Price. | P3 p1, p6 | Partial | All are gone except **GST exempt**, which is still on the form. |
-| 20 | Paid default is crossed out with an X. | P3 p1 | To do | Probably means remove it. Still on the form ("Paid by default"); confirm before removing. |
+| 19 | Remove Bank, Branch, Drawer name, Fax, GST exempt, Currency code and Use All Price. | P3 p1, p6 | Branch | GST exempt checkbox removed from the customer form. The stored value is still loaded and sent back on save, so existing exempt customers stay exempt. The read-only customer page still shows it. |
+| 20 | Paid default is crossed out with an X. | P3 p1 | Branch | Checkbox removed, stored value kept on save, as for GST exempt. Confirm with the customer that "removed" is what the X meant. |
 | 21 | Add a "CSV" field next to the credit card number and expiry. | P3 p1 | Push back | Almost certainly the CVV (card security code). PCI-DSS does not allow storing it after authorisation, so we should not add it. Explain why. The meeting also says card details are to be retained (M30), so review how the card number and expiry are stored today. |
 | 22 | Delivery Docket should "always" be ticked. | P3 p6 | Done | The customer form always sends `deliveryDocket: true` and the checkbox is gone (July 2026 upgrade). Only the separate Web order defaults checkbox remains. |
 | 23 | Discount %: handwritten note, read as "Nil". | P3 p6 | Question | Possibly default to 0. The note is hard to read, so confirm. |
@@ -110,7 +110,7 @@ Status as at 11 Nov 2026.
 | # | Request | Source | Status | Notes |
 | --- | --- | --- | --- | --- |
 | 30 | Remove the Fax field and the Fax/Email output choice. | P3 p5 | Done | `ProofDialog` has no fax output. |
-| 31 | Put the cursor in the Email field first ("1st Tab"). | P3 p5 | To do | Focus Email when the proof dialog opens. |
+| 31 | Put the cursor in the Email field first ("1st Tab"). | P3 p5 | Branch | The proof dialog now opens with the cursor in Email. |
 
 ## 9. New feature — product price maintenance (Part 3, page 4)
 
@@ -273,9 +273,9 @@ Compared with the web app on the hub branch, the API and the legacy repo (status
 | Status | Items |
 | --- | --- |
 | Done | 7, 11, 14, 15, 17, 18, 22, 27, 29, 30 |
-| Branch (on the hub branch, not yet on `master`) | 1 (sidebar print button still to do), 3 (partial), 9 |
-| Partial | 8, 19, 28 |
-| To do | 2, 5, 6, 12, 13, 16, 20, 24, 31, 32 (approach changed; see M31–M34) |
+| Branch (on the hub branch, not yet on `master`) | 1 (sidebar print button still to do), 3 (partial), 9, 12, 13, 19, 20, 31 |
+| Partial | 8, 28 |
+| To do | 2, 5, 6, 16, 24, 32 (approach changed; see M31–M34) |
 | Question | 4, 10, 23, 25, 26, 33 |
 | Push back | 21 |
 
