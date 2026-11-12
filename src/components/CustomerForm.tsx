@@ -690,7 +690,7 @@ export function CustomerForm({
         <Card>
           <CardHeader
             title="Proofs"
-            description="Per-customer overrides used when a stamp proof is emailed."
+            description="A proof's letterhead and sender come from the customer's company."
           />
           <CardBody className="space-y-3">
             <Checkbox
@@ -698,30 +698,10 @@ export function CustomerForm({
               checked={form.noProofHeader}
               onChange={(e) => set("noProofHeader", e.target.checked)}
             />
-            <div className="grid gap-3 sm:grid-cols-2">
-              <Field
-                label="Letterhead image"
-                hint="Path to this customer's own letterhead, overriding the company's."
-                className="sm:col-span-2"
-              >
-                <Input
-                  value={form.proofHeader}
-                  maxLength={MAX.proofHeader}
-                  onChange={(e) => set("proofHeader", e.target.value)}
-                />
-              </Field>
-              <Field
-                label="Proof email “from”"
-                hint="Overrides the default sender address for this customer's proof emails."
-              >
-                <Input
-                  type="email"
-                  value={form.sendFromEmail}
-                  maxLength={MAX.sendFromEmail}
-                  onChange={(e) => set("sendFromEmail", e.target.value)}
-                />
-              </Field>
-            </div>
+            {/* Letterhead image and Proof email "from" no longer have fields (customer feedback,
+                Nov 2026: "pick up from State Invoice"). Their stored values are still loaded into
+                `form` and sent back on save, so nothing already set is lost; the proof screen
+                still offers a stored letterhead as an explicit choice. */}
           </CardBody>
         </Card>
 

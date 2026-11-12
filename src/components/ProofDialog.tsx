@@ -86,7 +86,9 @@ export function ProofDialog({
   const [messageText, setMessageText] = useState("");
   const [extraText, setExtraText] = useState("");
   const [noProofHeader, setNoProofHeader] = useState(false);
-  const [useCustomerLetterHead, setUseCustomerLetterHead] = useState(true);
+  // Off by default: the proof's letterhead and sender come from the Company (customer feedback,
+  // Nov 2026). A customer's own stored letterhead is still offered, as an explicit opt-in.
+  const [useCustomerLetterHead, setUseCustomerLetterHead] = useState(false);
   const [deliveryIncluded, setDeliveryIncluded] = useState(false);
   const [deliveryAmt, setDeliveryAmt] = useState("0.00");
 
@@ -116,7 +118,7 @@ export function ProofDialog({
     setMessageText(job.messageText);
     setExtraText("");
     setNoProofHeader(job.noProofHeader);
-    setUseCustomerLetterHead(Boolean(job.proofHeader));
+    setUseCustomerLetterHead(false);
     setDeliveryIncluded(false);
     setDeliveryAmt(job.deliveryAmt.toFixed(2));
     setPreviewHtml(null);
@@ -450,7 +452,7 @@ export function ProofDialog({
                 />
                 {job.proofHeader && (
                   <Checkbox
-                    label={`Use customer's letterhead (${job.proofHeader})`}
+                    label={`Use this customer's own letterhead instead of the company's (${job.proofHeader})`}
                     checked={useCustomerLetterHead}
                     onChange={(e) => setUseCustomerLetterHead(e.target.checked)}
                   />
