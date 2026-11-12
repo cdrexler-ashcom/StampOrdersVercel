@@ -370,23 +370,28 @@ export function OrderWorkspace({ initialOrderId }: { initialOrderId?: number }) 
                   )}
                 </div>
               )}
+              {/* Labels say what each button does (customer feedback, Nov 2026: they didn't know
+                  what "More fields", "Invoice run" and "Job card" did). */}
               <Button
                 onClick={() => setEditOrderOpen(true)}
-                title="Freight, price code, company and flags"
+                title="Edit freight, price code, company, delivery docket and paid for this order"
               >
                 <Pencil className="size-3.5" />
-                More fields
+                Edit order
               </Button>
               <Button variant="danger" onClick={() => setConfirmDelete(true)}>
                 <Trash2 className="size-3.5" />
                 Delete
               </Button>
-              <Link href="/invoicing">
-                <Button>Invoice run</Button>
+              <Link href="/invoicing" title="Open the Invoice run screen, which invoices whole runs, not just this order">
+                <Button>Go to invoice run</Button>
               </Link>
-              <Button onClick={() => setJobCardOpen(true)}>
+              <Button
+                onClick={() => setJobCardOpen(true)}
+                title="View and print the job card for this order"
+              >
                 <FileText className="size-3.5" />
-                Job card
+                Print job card
                 <JobCardIndicator orderId={order!.orderId} />
               </Button>
               <Button variant="primary" onClick={() => setAddLineOpen(true)}>
