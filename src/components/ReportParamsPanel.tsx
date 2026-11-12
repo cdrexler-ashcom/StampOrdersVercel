@@ -22,6 +22,9 @@ export interface ReportParamsValue {
   from: string;
   to: string;
   customer: Customer | null;
+  /** Customer account-number range; only meaningful when filters.custRange is set. */
+  custFrom: string;
+  custTo: string;
   invoiceNo: string;
   /** Empty string means "report's default order" — only meaningful when sortOptions is set. */
   sortBy: string;
@@ -35,6 +38,8 @@ export const EMPTY_REPORT_PARAMS: ReportParamsValue = {
   from: "",
   to: "",
   customer: null,
+  custFrom: "",
+  custTo: "",
   invoiceNo: "",
   sortBy: "",
   detail: false,
@@ -45,6 +50,7 @@ function activeCount(value: ReportParamsValue): number {
   let n = 0;
   if (value.from || value.to) n += 1;
   if (value.customer) n += 1;
+  if (value.custFrom.trim() || value.custTo.trim()) n += 1;
   if (value.invoiceNo.trim()) n += 1;
   if (value.jobNo.trim()) n += 1;
   return n;
@@ -80,6 +86,7 @@ export function ReportParamsPanel({
     filters.dates ||
       filters.asAtDate ||
       filters.custId ||
+      filters.custRange ||
       filters.invoiceNo ||
       filters.jobNo ||
       (sortOptions && sortOptions.length > 0) ||
@@ -91,6 +98,14 @@ export function ReportParamsPanel({
   const active = activeCount(value);
 
   const clearAll = () => onChange(EMPTY_REPORT_PARAMS);
+
+  // Enter in a customer-range box generates the report, so the range can be typed and run from the
+  // keyboard without reaching for the button.
+  const generateOnEnter = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key !== "Enter") return;
+    event.preventDefault();
+    if (!missingRequired) onGenerate(bound ? "html" : "layout");
+  };
 
   // A report with no filters at all (rare — most bound reports take at least a date range)
   // has nothing for this panel to offer, so it doesn't render itself in that case.
@@ -169,6 +184,30 @@ export function ReportParamsPanel({
             onChange={(customer) => onChange({ ...value, customer })}
           />
         </Field>
+      )}
+
+      {filters.custRange && (
+        <div className="space-y-3">
+          <Field label="Customer from" hint="A customer code. Leave blank for the start.">
+            <Input
+              value={value.custFrom}
+              onChange={(e) => onChange({ ...value, custFrom: e.target.value })}
+              onKeyDown={generateOnEnter}
+              placeholder="e.g. ADM"
+            />
+          </Field>
+          <Field
+            label="Customer to"
+            hint="Includes every code starting with this, so ADM to ADM is all ADM accounts. Leave both blank for all customers."
+          >
+            <Input
+              value={value.custTo}
+              onChange={(e) => onChange({ ...value, custTo: e.target.value })}
+              onKeyDown={generateOnEnter}
+              placeholder="e.g. ADM"
+            />
+          </Field>
+        </div>
       )}
 
       {filters.invoiceNo && (
