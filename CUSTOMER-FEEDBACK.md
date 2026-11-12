@@ -270,7 +270,7 @@ Compared with the web app on the hub branch, the API and the legacy repo (status
 
 ## 12. API work for this round
 
-Committed on the API repo's `feat/customer-feedback-nov-2026` branch (base: `master` with `feat/despatch-labels` merged in). Tests: 452 pass; the same 5 database integration tests fail as before this work (the test database lacks the `PaymentLinkUrl` column, so they fail on a schema gap rather than on any change here).
+Committed on the API repo's `feat/customer-feedback-nov-2026` branch (base: `master` with `feat/despatch-labels` merged in). Tests: 475 pass; 4 database integration tests fail, which need a real database and were failing before this work (earlier the test database also lacked the `PaymentLinkUrl` column).
 
 | API change | Endpoint or area | For | UI to do |
 | --- | --- | --- | --- |
@@ -281,7 +281,7 @@ Committed on the API repo's `feat/customer-feedback-nov-2026` branch (base: `mas
 | Customer account-number range on the archived-invoice reports | `GET /api/reports/{name}/html`: `custFrom`, `custTo` | M24 | Done (Customer from/to on the Invoice Register) |
 | Company letterhead as the delivery docket heading | `DelDocket` report | 2 | None, unless "heading" means text (Q13) |
 
-Not done on the API: pro forma (M15; `DelDocket.xml` and `STINVOICE.xml` already declare a `Proforma` parameter that nothing sets), batch despatch email action (M17; the batch send exists), customer range on the invoice register (M24), automatic deposits (M29), and pricing in SQL (M31–M33).
+Not done on the API: emailing a pro forma (the pro forma itself needs no API work: the UI builds it from the order, M15), batch despatch email action (M17; the batch send exists), automatic deposits (M29), and pricing in SQL (M31–M33).
 
 Open question added: **Q13** (for the customer): by "heading" on the packing slip do they mean the company logo/letterhead (what the API now prints), or the company name and address as text?
 
