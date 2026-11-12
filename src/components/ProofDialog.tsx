@@ -387,7 +387,9 @@ export function ProofDialog({
 
               <div className="grid gap-3 sm:grid-cols-2">
                 <Field label="Email">
-                  <Input value={email} onChange={(e) => setEmail(e.target.value)} />
+                  {/* First tab stop: the customer feedback asks for the cursor to start here.
+                      The fields above it are read-only or already filled from the job. */}
+                  <Input autoFocus value={email} onChange={(e) => setEmail(e.target.value)} />
                 </Field>
                 <Field label="Email from" hint="Follows Company — editable.">
                   <Input
