@@ -51,7 +51,7 @@ Status as at 11 Nov 2026.
 | 2 | Put a heading on the packing slip. It is blank now; it should come from the dealer or the invoice. | P1 | Branch (API) | API: the delivery docket report now prints the invoice company's letterhead as its heading, top right like the invoice. The UI invoice page's docket view hard-codes "Stead Brothers" and is unchanged. **Confirm with the customer that "heading" means the company logo/letterhead and not text** (Q13). The tax invoice report has the same blank slot (no data binding) and was not changed. |
 | 3 | Where do we find the Express Post numbers, to see whether we missed any? | P1 | Branch (partial) | `feat/despatch-labels` adds Order, an editable Tracking number(s) column and a Required toggle to the pending despatch list, so invoices still missing a number are visible. There is no list of numbers already used. Confirm with the customer that this is enough. |
 | 4 | What CSV format do we need to import from Mr Stamps? ("CSV type?") | P1 ✓ | Question | Send them the import file spec for `/imports` (`POST /api/imports/web-orders`). The meeting reports a newly acquired company's CSV being rejected; see M21. |
-| 5 | Print job cards for a whole run. | P1 ✓ | Branch (API) | API: `GET /api/job-cards?startRun=&endRun=` returns the cards of every live order in a run range. **UI still to do**: a batch print screen, with the single-order reprint kept. See M14. |
+| 5 | Print job cards for a whole run. | P1 ✓ | Branch (UI + API) | API: `GET /api/job-cards?startRun=&endRun=`. UI: new **Job cards** page (Order to invoice): first and last run, a list of what will print with orders that have no stamp job flagged, one Print for the batch, and a Reprint by order number. The order screen's Print job card still covers one order. Not yet tried against a running API. See M14. |
 | 6 | Email proofs from every company on the proof screen. | P1 ✓ | To do | Check that the company list on `ProofDialog` offers every company and that each one sends. The meeting says emailing fails for non-Stead companies; see M19–M20. API: proof defaults now follow the order's company (see item 24). Not reproduced against a real job. |
 | 7 | F2 keys. | P1 ✓ | Done | PR 317: F2 opens Colour in the add line dialog. Pickers already open by typing. |
 | 8 | Make it usable without a mouse. | P1 ✓ | Partial | PR 317: tab order, shortcuts and Alt+L on the order screen. Continue across the other screens. |
@@ -90,7 +90,7 @@ Status as at 11 Nov 2026.
 | 21 | Add a "CSV" field next to the credit card number and expiry. | P3 p1 | Push back | Almost certainly the CVV (card security code). PCI-DSS does not allow storing it after authorisation, so we should not add it. Explain why. The meeting also says card details are to be retained (M30), so review how the card number and expiry are stored today. |
 | 22 | Delivery Docket should "always" be ticked. | P3 p6 | Done | The customer form always sends `deliveryDocket: true` and the checkbox is gone (July 2026 upgrade). Only the separate Web order defaults checkbox remains. |
 | 23 | Discount %: handwritten note, read as "Nil". | P3 p6 | Question | Possibly default to 0. The note is hard to read, so confirm. |
-| 24 | Proof header and proof "from" email should come from the company ("Pick up from State Invoice"), not be set per customer. | P3 p6 | Branch (API) | Companies already have a letterhead and a From address, and the proof dialog's "Email from" follows Company. What remains is removing the per-customer proof fields from `CustomerForm` and the proof defaults (`GET /api/proofs/{jobNo}`). API: the proof defaults now take the Company from the order (then the customer), the Company's From address before the customer's, and the Company's letterhead as the default. **UI still to do**: untick "Use customer's letterhead" by default in `ProofDialog`, and remove the two proof fields from `CustomerForm` (keep the stored values on save, as for GST exempt). Same work as M19–M20. |
+| 24 | Proof header and proof "from" email should come from the company ("Pick up from State Invoice"), not be set per customer. | P3 p6 | Branch (UI + API) | Companies already have a letterhead and a From address, and the proof dialog's "Email from" follows Company. What remains is removing the per-customer proof fields from `CustomerForm` and the proof defaults (`GET /api/proofs/{jobNo}`). API: the proof defaults now take the Company from the order (then the customer), the Company's From address before the customer's, and the Company's letterhead as the default. UI: `ProofDialog` no longer defaults to the customer's own letterhead (still offered as a tick box), and the Letterhead image and Proof email "from" fields are gone from `CustomerForm` (stored values kept on save, as for GST exempt). Same work as M19–M20. |
 | 25 | Dealer Return Address: "?". | P3 p1 | Question | Explain what it does. It is now used on the order (#9) and by the despatch return label (#1). |
 | 26 | Web order defaults: "Do we need this?". | P3 p1 | Question | Used by the web order import (#4). Explain, or remove it if they do not import web orders. |
 
@@ -99,7 +99,7 @@ Status as at 11 Nov 2026.
 | # | Request | Source | Status | Notes |
 | --- | --- | --- | --- | --- |
 | 27 | Show these columns together: Customer No., Customer name, Recipient, Date, Invoice No., Job No., Cust order No., Email (invoice), Phone (invoice) and Tracking. | P3 p2 | Done | All on `/invoices`, plus Order (PRs 307 and 314). |
-| 28 | Search by phone and by email (taken from the invoice). | P3 p2 ✓ | Branch (API) | PR 314 added a Recipient search. API: `GET /api/invoices/history` now also takes `emailSearch`, `phoneSearch` (ignores spaces, hyphens and brackets) and `dateFrom`/`dateTo`. **UI still to do**: the search boxes and a date range on `/invoices` (the endpoint wrapper `invoices.history` needs the new parameters). See also M23. |
+| 28 | Search by phone and by email (taken from the invoice). | P3 p2 ✓ | Branch (UI + API) | PR 314 added a Recipient search. API: `GET /api/invoices/history` now also takes `emailSearch`, `phoneSearch` (ignores spaces, hyphens and brackets) and `dateFrom`/`dateTo`. UI: Email (invoice), Phone (invoice) and Invoice date from/to boxes on `/invoices`. Not yet tried against a running API. See also M23. |
 
 ## 7. Receipts (Part 3, page 3)
 
@@ -160,7 +160,7 @@ Compared with the web app on the hub branch, the API and the legacy repo (status
 | --- | --- | --- | --- | --- |
 | M12 | Orders carry a run number; run 1 means ready to invoice, other runs hold orders | Run number on each order; `/invoicing` filters by start and end run | Default the invoice run to run 1 (Q9) | Partial |
 | M13 | Select a run and print directly, with no intermediate list of orders | `/invoicing` runs select, stage, review, post. The API stages and posts separately, and the delivery-docket report reads the staging data. | Chain stage, dockets and post in one action in the UI, keeping the "did the dockets print?" check | Partial |
-| M14 | One job-card workflow: print the batch by run, plus reprint for one-off jobs | Per-order only (`GET /api/orders/{id}/job-card`) | API done (`GET /api/job-cards`). UI: a batch print screen, defaulting to batch, keeping the single-order reprint (also paper item 5) | Branch (API) |
+| M14 | One job-card workflow: print the batch by run, plus reprint for one-off jobs | Per-order only (`GET /api/orders/{id}/job-card`) | Done on both: `GET /api/job-cards` and the Job cards page, with a single-order reprint (also paper item 5). Open: which status triggers printing (Q2) | Branch |
 | M15 | Pro forma invoice, printed by order ID, using the invoice template | **Does not exist** in either repo. The design notes say it was folded into document actions, but there is no such action. | New order action: the invoice template titled pro forma, with no invoice number | To do |
 
 ### Dispatch
@@ -175,7 +175,7 @@ Compared with the web app on the hub branch, the API and the legacy repo (status
 
 | # | Request | Today | Change needed | Status |
 | --- | --- | --- | --- | --- |
-| M19 | Proof header, logo and sender chosen from the order's company | The proof dialog has a Company field, and companies already have a letterhead and a From address | API done: proof defaults follow the order's company. UI: remove the per-customer proof fields and stop defaulting to the customer's letterhead (paper item 24) | Branch (API) |
+| M19 | Proof header, logo and sender chosen from the order's company | The proof dialog has a Company field, and companies already have a letterhead and a From address | Done on both: proof defaults follow the order's company, the customer's letterhead is opt-in and the customer proof fields are gone (paper item 24) | Branch |
 | M20 | Proofs can't be emailed reliably for companies other than Stead Brothers | An email endpoint exists. A likely cause is the API rule that the proof header must match the customer's stored one. | The company/sender precedence is fixed in the API (see M19). Reproduce with a real Adams or Supreme job to see whether anything else (for example the SMTP server refusing a different From address) is involved (paper items 6, 24) | Verify |
 
 ### Imports
@@ -189,7 +189,7 @@ Compared with the web app on the hub branch, the API and the legacy repo (status
 
 | # | Request | Today | Change needed | Status |
 | --- | --- | --- | --- | --- |
-| M23 | History: type what you know, then press Search. No automatic load. Search by name, phone, email, invoice no., job no. or approximate date. | The grid loads when the page opens. Recipient, job, order and invoice no. search exist. No date, phone or email search. | API done: `emailSearch`, `phoneSearch`, `dateFrom`/`dateTo`. UI: Search button, empty start, and the new boxes (paper item 28) | Branch (API) |
+| M23 | History: type what you know, then press Search. No automatic load. Search by name, phone, email, invoice no., job no. or approximate date. | The grid loads when the page opens. Recipient, job, order and invoice no. search exist. No date, phone or email search. | Email, phone and date-range boxes done on both (paper item 28). **Still to do:** the explicit Search button and an empty start | Partial |
 | M24 | Invoice register by date range and a customer range that covers company prefixes | Date range and a single customer picker | Add customer from/to (API and UI) | To do |
 | M25 | Reports print directly, not saved as PDF | Browser print dialog (`lib/print.ts`) | Depends on the cloud printing decision (M35–M36) | Design needed |
 
@@ -275,9 +275,9 @@ Committed on the API repo's `feat/customer-feedback-nov-2026` branch (base: `mas
 | API change | Endpoint or area | For | UI to do |
 | --- | --- | --- | --- |
 | Despatch labels, tracking Required toggle, barcode parsing, order dealer return address (Jackson Beecher, merged in) | `/api/tracking/...`, order create/update | 1, 3, 9; M7–M9, M16 | Already on the UI hub branch |
-| History search by email, phone and invoice date range | `GET /api/invoices/history`: `emailSearch`, `phoneSearch`, `dateFrom`, `dateTo` | 28; M23 | Search boxes, date range, Search button |
-| Job cards for a whole run | `GET /api/job-cards?startRun=&endRun=` | 5; M14 | Batch print screen |
-| Proof defaults follow the order's company | `GET /api/proofs/{jobNo}` | 24, 6; M19, M20 | Default the customer letterhead off; remove the customer proof fields |
+| History search by email, phone and invoice date range | `GET /api/invoices/history`: `emailSearch`, `phoneSearch`, `dateFrom`, `dateTo` | 28; M23 | Done (boxes and date range). The explicit Search button (M23) is not |
+| Job cards for a whole run | `GET /api/job-cards?startRun=&endRun=` | 5; M14 | Done (Job cards page) |
+| Proof defaults follow the order's company | `GET /api/proofs/{jobNo}` | 24, 6; M19, M20 | Done (customer letterhead off by default; customer proof fields removed) |
 | Company letterhead as the delivery docket heading | `DelDocket` report | 2 | None, unless "heading" means text (Q13) |
 
 Not done on the API: pro forma (M15; `DelDocket.xml` and `STINVOICE.xml` already declare a `Proforma` parameter that nothing sets), batch despatch email action (M17; the batch send exists), customer range on the invoice register (M24), automatic deposits (M29), and pricing in SQL (M31–M33).
@@ -294,7 +294,8 @@ Open question added: **Q13** (for the customer): by "heading" on the packing sli
 | --- | --- |
 | Done | 7, 11, 14, 15, 17, 18, 22, 27, 29, 30 |
 | Branch (on the hub branch, not yet on `master`) | 1 (sidebar print button still to do), 3 (partial), 9, 12, 13, 19, 20, 31 |
-| Branch (API done; UI still to do) | 2, 5, 6, 24, 28 |
+| Branch (UI + API) | 5, 6, 24, 28 |
+| Branch (API only; docket heading) | 2 |
 | Partial | 8 |
 | To do | 16, 32 (approach changed; see M31–M34) |
 | Question | 4, 10, 23, 25, 26, 33 |
@@ -306,8 +307,8 @@ Open question added: **Q13** (for the customer): by "heading" on the packing sli
 | --- | --- |
 | Done | M1, M3, M28 |
 | Branch | M7, M8, M9, M16, M18 |
-| Branch (API done; UI still to do) | M14, M19, M23 |
-| Partial | M2, M4, M5, M6, M11, M12, M13, M27 |
+| Branch (UI + API) | M14, M19 |
+| Partial | M2, M4, M5, M6, M11, M12, M13, M23, M27 |
 | To do | M15, M17, M24, M26, M29, M32 |
 | Verify | M10, M20, M21, M36, M40 |
 | Design needed | M25, M31, M35, M37, M38 |
