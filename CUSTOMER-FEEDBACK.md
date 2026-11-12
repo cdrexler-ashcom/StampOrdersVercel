@@ -161,7 +161,7 @@ Compared with the web app on the hub branch, the API and the legacy repo (status
 | M12 | Orders carry a run number; run 1 means ready to invoice, other runs hold orders | Run number on each order; `/invoicing` filters by start and end run | Default the invoice run to run 1 (Q9) | Partial |
 | M13 | Select a run and print directly, with no intermediate list of orders | `/invoicing` runs select, stage, review, post. The API stages and posts separately, and the delivery-docket report reads the staging data. | Chain stage, dockets and post in one action in the UI, keeping the "did the dockets print?" check | Partial |
 | M14 | One job-card workflow: print the batch by run, plus reprint for one-off jobs | Per-order only (`GET /api/orders/{id}/job-card`) | Done on both: `GET /api/job-cards` and the Job cards page, with a single-order reprint (also paper item 5). Open: which status triggers printing (Q2) | Branch |
-| M15 | Pro forma invoice, printed by order ID, using the invoice template | **Does not exist** in either repo. The design notes say it was folded into document actions, but there is no such action. | New order action: the invoice template titled pro forma, with no invoice number | To do |
+| M15 | Pro forma invoice, printed by order ID, using the invoice template | **Does not exist** in either repo. The design notes say it was folded into document actions, but there is no such action. | Done in the UI only: a **Pro forma** button on the order screen opens `/orders/{id}/pro-forma`, the same document as the posted invoice (now a shared `InvoiceDocument`) built from the order's lines and totals. Titled "Pro forma invoice", with the order number instead of an invoice number and the day it is printed, the company's name and address, and its bank details (or the Control record's) so the customer can pay. Print only: ProForma.Frm could also email it, and the API has no endpoint for emailing an order. The footer says "This is a pro forma invoice for payment in advance. It is not a tax invoice.", which is my wording and needs the customer's OK (Q1). The API report definitions (`STINVOICE`, `DelDocket`) still carry an unused `Proforma` parameter | Branch |
 
 ### Dispatch
 
@@ -307,10 +307,10 @@ Open question added: **Q13** (for the customer): by "heading" on the packing sli
 | Status | Items |
 | --- | --- |
 | Done | M1, M3, M28 |
-| Branch | M2, M4, M7, M8, M9, M16, M18 |
+| Branch | M2, M4, M7, M8, M9, M15, M16, M18 |
 | Branch (UI + API) | M14, M19, M23, M24 |
 | Partial | M5, M6, M11, M12, M13, M27 |
-| To do | M15, M17, M26, M29, M32 |
+| To do | M17, M26, M29, M32 |
 | Verify | M10, M20, M21, M36, M40 |
 | Design needed | M25, M31, M35, M37, M38 |
 | Question | M22, M30, M33, M39 |
