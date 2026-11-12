@@ -15,6 +15,9 @@ import {
   DetailRow,
   EmptyState,
   ErrorState,
+  Field,
+  Input,
+  Modal,
   Notice,
   Spinner,
 } from "@/components/ui";
@@ -59,9 +62,19 @@ export default function InvoiceDocumentPage() {
     queryFn: () => invoices.historyDetail(invoiceNo),
   });
 
-  // Real SMTP send of the invoice to the customer (E1). Uses the invoice's stored address.
+  // Email invoice asks first and shows the recipient, which can be changed (customer feedback,
+  // Nov 2026): the button no longer sends on the first click.
+  const [emailOpen, setEmailOpen] = useState(false);
+  const [emailTo, setEmailTo] = useState("");
+
+  // Real SMTP send of the invoice to the customer (E1). The invoice's stored address is used
+  // unless the operator typed a different one, which is sent as the API's toOverride.
   const emailMutation = useMutation({
-    mutationFn: () => invoices.email(invoiceNo),
+    mutationFn: (to: string) => {
+      const stored = query.data?.invoice.email?.trim() ?? "";
+      return invoices.email(invoiceNo, to !== stored ? to : undefined);
+    },
+    onSettled: () => setEmailOpen(false),
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["invoice", invoiceNo] });
       setEmailResult(
@@ -92,6 +105,16 @@ export default function InvoiceDocumentPage() {
   const { net, gst, gross } = documentTotals(lines);
 
   const hasEmail = Boolean(invoice.email?.trim());
+  const emailTarget = emailTo.trim();
+  const emailChanged = emailTarget !== (invoice.email?.trim() ?? "");
+  const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailTarget);
+  const documentName = invoice.credit ? "credit note" : "invoice";
+
+  const openEmail = () => {
+    setEmailTo(invoice.email?.trim() ?? "");
+    setEmailResult(null);
+    setEmailOpen(true);
+  };
 
   return (
     <>
@@ -126,15 +149,10 @@ export default function InvoiceDocumentPage() {
             </button>
           </div>
 
-          {hasEmail && (
-            <Button
-              loading={emailMutation.isPending}
-              onClick={() => emailMutation.mutate()}
-            >
-              <Mail className="size-3.5" />
-              Email invoice
-            </Button>
-          )}
+          <Button loading={emailMutation.isPending} onClick={openEmail}>
+            <Mail className="size-3.5" />
+            Email invoice
+          </Button>
 
           <Button variant="primary" onClick={() => window.print()}>
             <Printer className="size-3.5" />
@@ -340,12 +358,60 @@ export default function InvoiceDocumentPage() {
           ) : (
             <Notice tone="slate" title="Emailing">
               {hasEmail
-                ? "Email invoice sends a summary to the customer's stored address via the server."
-                : "This invoice has no email address, so it can't be emailed."}
+                ? "Email invoice asks you to confirm, and lets you change the address first. The server sends it."
+                : "This invoice has no stored email address. Enter one when you email it."}
             </Notice>
           )}
         </aside>
       </div>
+
+      <Modal
+        open={emailOpen}
+        onClose={() => setEmailOpen(false)}
+        title={`Email ${documentName}`}
+        description={`${invoice.credit ? "Credit note" : "Invoice"} ${invoiceNo}`}
+        bodyOverflow="visible"
+        footer={
+          <>
+            <Button onClick={() => setEmailOpen(false)}>Cancel</Button>
+            <Button
+              variant="primary"
+              loading={emailMutation.isPending}
+              disabled={!emailValid}
+              onClick={() => emailMutation.mutate(emailTarget)}
+            >
+              <Mail className="size-3.5" />
+              Send
+            </Button>
+          </>
+        }
+      >
+        <Field
+          label="Send to"
+          error={emailTarget && !emailValid ? "Enter a valid email address." : undefined}
+          hint={
+            emailChanged && emailValid
+              ? hasEmail
+                ? `Differs from the address on the invoice (${invoice.email?.trim()}). This send only; the invoice keeps its address.`
+                : "The invoice has no stored address. This send only."
+              : "The address stored on the invoice. Change it to send somewhere else."
+          }
+        >
+          <Input
+            type="email"
+            autoFocus
+            value={emailTo}
+            onChange={(e) => setEmailTo(e.target.value)}
+            onFocus={(e) => e.target.select()}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && emailValid && !emailMutation.isPending) {
+                e.preventDefault();
+                emailMutation.mutate(emailTarget);
+              }
+            }}
+          />
+        </Field>
+      </Modal>
     </>
   );
 }
