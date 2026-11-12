@@ -82,7 +82,7 @@ Status as at 11 Nov 2026.
 
 | # | Request | Source | Status | Notes |
 | --- | --- | --- | --- | --- |
-| 16 | Allow account codes up to 8 characters. | P3 p1 | To do | `CustomerForm` currently allows 16 (`MAX.accountNo`). Check the database column and the API validation, then set the limit to 8. |
+| 16 | Allow account codes up to 8 characters. | P3 p1 | Done | **No change needed.** The customer already answered this on 29 Oct 2026 (API repo `docs/CUSTOMER-REQUIREMENTS.md`, item 15): "16 would be great", recorded as "Done, no change". The form and the API allow 16 (`MAX.accountNo`; `Customer.ACCOUNTNO` is `nvarchar(16)`). The legacy form allowed 10. This note on the scan is the same request, so reducing the limit would go against what they said. |
 | 17 | Rename State Invoice to "Company". | P3 p1 | Done | PR 271 / PR 303. |
 | 18 | Copy button from the invoice address to the delivery address. | P3 p1 | Done | `copyInvoiceAddress` in `CustomerForm`. |
 | 19 | Remove Bank, Branch, Drawer name, Fax, GST exempt, Currency code and Use All Price. | P3 p1, p6 | Branch | GST exempt checkbox removed from the customer form. The stored value is still loaded and sent back on save, so existing exempt customers stay exempt. The read-only customer page still shows it. |
@@ -200,15 +200,15 @@ Compared with the web app on the hub branch, the API and the legacy repo (status
 | M26 | Compact customer screen: too many fields, too much scrolling | Eleven stacked cards (Identity, Invoice address, Delivery address, Contact, Pricing & GST, Freight & delivery, Credit, Invoicing & documents, Proofs, Web order defaults, Remembered payment details) | Rework as tabs and remove rarely used fields | To do |
 | M27 | Separate fields that were combined; rename State to Company; remove cheque and fax options; keep delivery and return address | Company rename done; cheque and fax mostly gone (paper item 19) | Ask which combined fields they mean (Q3) | Partial |
 | M28 | Receipts: pick customer, review outstanding items, enter amount, auto-allocate; keep settlement discount | Done | None | Done |
-| M29 | Bank deposits happen automatically after a receipt; the Bank deposits screen may go | Deposits are a manual run over unbanked receipts (`DepositService`) | Business rules for when a deposit is created, then removal of the screen (Q4) | To do |
-| M30 | Retain credit-card details where required | "Remembered payment details" stores card number and expiry | Review how they are stored; see paper item 21 (CVV) | Question |
+| M29 | Bank deposits happen automatically after a receipt; the Bank deposits screen may go | Deposits are a manual run over unbanked receipts (`DepositService`) | **Earlier answer (29 Oct 2026, API repo `docs/CUSTOMER-REQUIREMENTS.md`): the Bank deposits screen is "probably not necessary" because banking is done in Xero; the last deposit recorded was 16 April 2026.** So this may simply be removing the screen rather than automating deposits. Confirm, then keep or drop the deposit history report (Q4) | To do |
+| M30 | Retain credit-card details where required | "Remembered payment details" stores card number and expiry | **Conflicts with earlier advice (29 Oct 2026): do not store card numbers either; 542 customers had a card number stored, and a purge plan is needed.** The customer was told to use a payment gateway (Stripe or Square); the emailed-invoice payment link (PR 309) is the start of that. Raise this before keeping the fields; see paper item 21 (CVV) | Question |
 
 ### Pricing
 
 | # | Request | Today | Change needed | Status |
 | --- | --- | --- | --- | --- |
 | M31 | Pricing stays in the Orders SQL database, alongside the product catalogue, not in the website database | The product catalogue and `unitPrice1`–`5` are read from Soset (`Product` is a Soset entity). SQL holds pricing rules only. | New SQL product and price tables, plus a migration. This contradicts "no new database fields" (M39). | Design needed |
-| M32 | Export prices, edit in Excel, import the revised file | None | Export and import endpoints and a screen. CSV underneath is fine; Excel in the user-facing flow (paper item 32). | To do |
+| M32 | Export prices, edit in Excel, import the revised file | None | Export and import endpoints and a screen. CSV underneath is fine; Excel in the user-facing flow (paper item 32). **Known shape of their sample sheet (API repo `docs/CUSTOMER-REQUIREMENTS.md`): about 961 rows of Prod ID, Product Description, nine price codes and COST, no formulas; most rows have only a Code 1 price. Price code names: 1 Web including delivery, 2 Web add delivery, 3 Dealers, 4 Govt High Volume, 5 Aust Post, 6 Phil Stead, 7 to 9 unnamed.** That is not the shape Soset supplies today (`UnitPrice1`–`5`, `Cat1`–`Cat5`), and does not match the Access screen on the scan (price codes 2 to 9, cost, retail). The sample used placeholder values. | To do, blocked on Q8 |
 | M33 | Where prices are resolved at order entry | The API resolves price from Soset `unitPrice` columns by price code | Switch to the SQL price source. Decide what happens to the catalogue and Soset's stamp jobs (T4). | Question |
 | M34 | Future stock control should be able to read the same data | n/a | Keep the structure open for it; not in scope | Info |
 
@@ -292,12 +292,12 @@ Open question added: **Q13** (for the customer): by "heading" on the packing sli
 
 | Status | Items |
 | --- | --- |
-| Done | 7, 11, 14, 15, 17, 18, 22, 27, 29, 30 |
+| Done | 7, 11, 14, 15, 16, 17, 18, 22, 27, 29, 30 |
 | Branch (on the hub branch, not yet on `master`) | 1 (sidebar print button still to do), 3 (partial), 9, 12, 13, 19, 20, 31 |
 | Branch (UI + API) | 5, 6, 24, 28 |
 | Branch (API only; docket heading) | 2 |
 | Partial | 8 |
-| To do | 16, 32 (approach changed; see M31–M34) |
+| To do | 32 (approach changed, and blocked on Q8; see M31–M34) |
 | Question | 4, 10, 23, 25, 26, 33 |
 | Push back | 21 |
 
