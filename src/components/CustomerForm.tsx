@@ -560,11 +560,9 @@ export function CustomerForm({
               />
             </Field>
             <div className="flex flex-wrap items-center gap-4 sm:col-span-2">
-              <Checkbox
-                label="GST exempt"
-                checked={form.gstExempt}
-                onChange={(e) => set("gstExempt", e.target.checked)}
-              />
+              {/* GST exempt has no checkbox any more (customer feedback, Nov 2026). The stored
+                  value is still loaded into `form` and sent back on save, so a customer who is
+                  already exempt stays exempt; new customers default to false. */}
               <Checkbox
                 label="Prices include GST"
                 checked={form.priceIncGst}
@@ -779,11 +777,8 @@ export function CustomerForm({
                 />
               </Field>
             </div>
-            <Checkbox
-              label="Paid by default"
-              checked={form.paidDefault}
-              onChange={(e) => set("paidDefault", e.target.checked)}
-            />
+            {/* Paid by default has no checkbox any more (customer feedback, Nov 2026). As with
+                GST exempt, the stored value is kept and sent back unchanged on save. */}
           </CardBody>
         </Card>
 
