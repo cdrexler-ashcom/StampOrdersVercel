@@ -412,6 +412,12 @@ export function OrderWorkspace({ initialOrderId }: { initialOrderId?: number }) 
               <Link href="/invoicing" title="Open the Invoice run screen, which invoices whole runs, not just this order">
                 <Button>Go to invoice run</Button>
               </Link>
+              <Link
+                href={`/orders/${order!.orderId}/pro-forma`}
+                title="Print a pro forma invoice for this order, for a customer who wants paperwork before paying"
+              >
+                <Button>Pro forma</Button>
+              </Link>
               <Button
                 onClick={() => setJobCardOpen(true)}
                 title="View and print the job card for this order"
