@@ -138,11 +138,11 @@ Compared with the web app on the hub branch, the API and the legacy repo (status
 | # | Request | Today | Change needed | Status |
 | --- | --- | --- | --- | --- |
 | M1 | Cursor lands in the customer field on the Orders screen | The customer picker takes focus on a new order (`OrderWorkspace.tsx`) | None | Done |
-| M2 | Enter accepts the customer; Enter again starts the order | First Enter selects. "Start order" is a button, and an existing-open-order dialog can appear in between. | Make Enter start the order | Partial |
+| M2 | Enter accepts the customer; Enter again starts the order | First Enter selects. "Start order" is a button, and an existing-open-order dialog can appear in between. | Done: after a customer is chosen and any open-order prompt is answered, Start order takes focus, so Enter, then Enter again. The prompt focuses "Yes, open the existing order" (Enter) and Escape starts a new order | Branch |
 | M3 | F2 to search for a different customer | `CustomerPicker` handles F2 | None | Done |
-| M4 | Enter job/order no., product, qty and colour without the mouse | PR 317: tab order, text selected on focus, F2 for Colour, Alt+L for a new line, double-click to edit | Check the edit-line dialog behaves the same | Partial |
+| M4 | Enter job/order no., product, qty and colour without the mouse | PR 317: tab order, text selected on focus, F2 for Colour, Alt+L for a new line, double-click to edit | Done: the edit-line dialog now has the same focus, select-on-focus, skipped Details and GST tick, and looping Save. F2 there still means change product | Branch |
 | M5 | Rarely changed fields out of the tab order or in an expandable section | Done in the add-line dialog. On the order, infrequent fields are in the "More fields" popup. | Decide whether "expandable" means in-page instead of a popup (Q12) | Partial |
-| M6 | Keyboard use across the whole app; replacements for F5/F6 | Key handlers only on Orders, the pickers, Despatch and Pricing. Previous/Next on the order are buttons only. | Add shortcuts for Previous/Next, then audit every other screen (also paper item 8) | Partial |
+| M6 | Keyboard use across the whole app; replacements for F5/F6 | Key handlers only on Orders, the pickers, Despatch and Pricing. Previous/Next on the order are buttons only. | **Done: Alt+P / Alt+N for Previous / Next order** (with Alt+L for a new line). **Still to do:** audit every other screen for mouse-only steps. Ask the customer which screens (paper item 8) | Partial |
 
 ### Order details, drop-ship labels, email
 
@@ -306,9 +306,9 @@ Open question added: **Q13** (for the customer): by "heading" on the packing sli
 | Status | Items |
 | --- | --- |
 | Done | M1, M3, M28 |
-| Branch | M7, M8, M9, M16, M18 |
+| Branch | M2, M4, M7, M8, M9, M16, M18 |
 | Branch (UI + API) | M14, M19, M23 |
-| Partial | M2, M4, M5, M6, M11, M12, M13, M27 |
+| Partial | M5, M6, M11, M12, M13, M27 |
 | To do | M15, M17, M24, M26, M29, M32 |
 | Verify | M10, M20, M21, M36, M40 |
 | Design needed | M25, M31, M35, M37, M38 |
