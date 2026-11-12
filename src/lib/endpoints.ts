@@ -157,6 +157,13 @@ export const invoices = {
       recipient?: string[];
       /** Part of the recipient's name (the search box), as opposed to `recipient`'s exact names. */
       recipientName?: string;
+      /** Part of the invoice email address (the search box), not the exact `email` column filter. */
+      emailSearch?: string;
+      /** Part of the invoice phone number; the API ignores spaces, hyphens and brackets. */
+      phoneSearch?: string;
+      /** Invoice date range, yyyy-MM-dd, both days included. */
+      dateFrom?: string;
+      dateTo?: string;
       jobNo?: string;
       custOrderNo?: string;
     } = {},

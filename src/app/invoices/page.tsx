@@ -74,6 +74,13 @@ export default function InvoiceHistoryPage() {
   const [invoiceNo, setInvoiceNo] = useGridState("invoices:invoiceNo", "");
   // Part of the recipient's name; the Recipient column filter below picks exact names instead.
   const [recipientName, setRecipientName] = useGridState("invoices:recipientName", "");
+  // Part of the invoice email address or phone number, and an invoice-date range for when only an
+  // approximate date is known (customer feedback, Nov 2026: find an old job from whatever the
+  // customer can tell you). Dates are yyyy-MM-dd, as a date input gives them.
+  const [emailSearch, setEmailSearch] = useGridState("invoices:emailSearch", "");
+  const [phoneSearch, setPhoneSearch] = useGridState("invoices:phoneSearch", "");
+  const [dateFrom, setDateFrom] = useGridState("invoices:dateFrom", "");
+  const [dateTo, setDateTo] = useGridState("invoices:dateTo", "");
   // Job and customer order numbers are on the invoice lines, so they are searched with their own
   // exact-match boxes (like the invoice number) rather than column filters.
   const [jobNo, setJobNo] = useGridState("invoices:jobNo", "");
@@ -122,7 +129,17 @@ export default function InvoiceHistoryPage() {
     queryKey: [
       "invoices",
       "history",
-      { custId: customer?.uniqueId, invoiceNo, recipientName, jobNo, custOrderNo },
+      {
+        custId: customer?.uniqueId,
+        invoiceNo,
+        recipientName,
+        emailSearch,
+        phoneSearch,
+        dateFrom,
+        dateTo,
+        jobNo,
+        custOrderNo,
+      },
       sort,
       filterSelected.custTitle,
       filterSelected.custCode,
@@ -137,6 +154,10 @@ export default function InvoiceHistoryPage() {
         custId: customer?.uniqueId,
         invoiceNo: invoiceNo.trim() || undefined,
         recipientName: recipientName.trim() || undefined,
+        emailSearch: emailSearch.trim() || undefined,
+        phoneSearch: phoneSearch.trim() || undefined,
+        dateFrom: dateFrom || undefined,
+        dateTo: dateTo || undefined,
         jobNo: jobNo.trim() || undefined,
         custOrderNo: custOrderNo.trim() || undefined,
         sortBy: sort?.key,
@@ -243,10 +264,52 @@ export default function InvoiceHistoryPage() {
               setInvoiceNo("");
               setJobNo("");
               setCustOrderNo("");
+              setEmailSearch("");
+              setPhoneSearch("");
+              setDateFrom("");
+              setDateTo("");
             }}
           >
             Clear
           </Button>
+        </CardBody>
+
+        <CardBody className="grid gap-3 border-t border-slate-100 sm:grid-cols-2 lg:grid-cols-4">
+          <Field label="Email (invoice)">
+            <Input
+              type="search"
+              value={emailSearch}
+              placeholder="Part of the address"
+              onChange={(event) => setEmailSearch(event.target.value)}
+            />
+          </Field>
+
+          <Field label="Phone (invoice)" hint="Spaces and punctuation are ignored.">
+            <Input
+              type="search"
+              value={phoneSearch}
+              placeholder="Part of the number"
+              onChange={(event) => setPhoneSearch(event.target.value)}
+            />
+          </Field>
+
+          <Field label="Invoice date from">
+            <Input
+              type="date"
+              value={dateFrom}
+              max={dateTo || undefined}
+              onChange={(event) => setDateFrom(event.target.value)}
+            />
+          </Field>
+
+          <Field label="Invoice date to">
+            <Input
+              type="date"
+              value={dateTo}
+              min={dateFrom || undefined}
+              onChange={(event) => setDateTo(event.target.value)}
+            />
+          </Field>
         </CardBody>
       </Card>
 
@@ -263,7 +326,7 @@ export default function InvoiceHistoryPage() {
         ) : (query.data?.length ?? 0) === 0 ? (
           <EmptyState
             title="No invoices found"
-            description="Adjust the customer, recipient, invoice, job or order number and try again."
+            description="Adjust the customer, recipient, email, phone, date, invoice, job or order number and try again."
           />
         ) : (
           <Table>
