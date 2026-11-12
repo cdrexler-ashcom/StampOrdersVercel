@@ -5,6 +5,13 @@ alongside marked-up screenshots of the legacy VB6 forms. The scans are in
 `C:\Projects\Stead Brothers - UI Feedback from Customer` (three CamScanner PDFs, Parts 1–3).
 This file turns them into one list of requests, with each item's status.
 
+The scans came with a **meeting summary** (`SteadBros Meeting Summary.docx`, an AI-generated
+summary of a meeting between the customer and the development team). It is covered in
+**section 11** (items M1–M41), compared against the current app, with the open questions at the
+end. Where the two overlap, the paper items link to the M items. Some words in the summary look
+mistranscribed: "SOC" is almost certainly Soset, "Supreme Rubber Snaps" is Supreme Rubber
+Stamps, and "corrected status" in the job-card section is unclear.
+
 Work on these items is collected on the **`feat/customer-feedback-nov-2026`** branch and
 merged to `master` once it is done.
 
@@ -23,6 +30,8 @@ merged to `master` once it is done.
 | Partial | Some of it is on `master`; the rest is still to do |
 | To do | Not started |
 | Question | Needs an answer or a decision, not code |
+| Verify | May already work; needs checking against the API or real data before any change |
+| Design needed | Needs an architecture decision before it can be built |
 | Push back | We should not do this as asked |
 
 A ✓ in the **Source** column means the customer ticked the item on the scan. On the Part 1
@@ -39,9 +48,9 @@ Status as at 11 Nov 2026.
 | 1 | How do we print the despatch labels? | P1 | Branch | **Still to do: a separate sidebar print button** (see the merged-branches table above). From `feat/despatch-labels`: capturing a consignment prints a return label and a delivery label (`DespatchLabelPrint.tsx`, `GET /api/tracking/labels/{invoiceNo}`). The Despatch page is rebuilt to work like the old Tracking Entry screen (Scan and Process buttons, `ScanTrackingDialog.tsx`). |
 | 2 | Put a heading on the packing slip. It is blank now; it should come from the dealer or the invoice. | P1 | To do | Packing slip / delivery docket heading. |
 | 3 | Where do we find the Express Post numbers, to see whether we missed any? | P1 | Branch (partial) | `feat/despatch-labels` adds Order, an editable Tracking number(s) column and a Required toggle to the pending despatch list, so invoices still missing a number are visible. There is no list of numbers already used. Confirm with the customer that this is enough. |
-| 4 | What CSV format do we need to import from Mr Stamps? ("CSV type?") | P1 ✓ | Question | Send them the import file spec for `/imports` (`POST /api/imports/web-orders`). |
-| 5 | Print job cards for a whole run. | P1 ✓ | To do | Today a job card can only be printed from a single order (`GET /api/orders/{id}/job-card`). |
-| 6 | Email proofs from every company on the proof screen. | P1 ✓ | To do | Check that the company list on `ProofDialog` offers every company and that each one sends. |
+| 4 | What CSV format do we need to import from Mr Stamps? ("CSV type?") | P1 ✓ | Question | Send them the import file spec for `/imports` (`POST /api/imports/web-orders`). The meeting reports a newly acquired company's CSV being rejected; see M21. |
+| 5 | Print job cards for a whole run. | P1 ✓ | To do | Today a job card can only be printed from a single order (`GET /api/orders/{id}/job-card`). Confirmed by the meeting; see M14. |
+| 6 | Email proofs from every company on the proof screen. | P1 ✓ | To do | Check that the company list on `ProofDialog` offers every company and that each one sends. The meeting says emailing fails for non-Stead companies; see M19–M20. |
 | 7 | F2 keys. | P1 ✓ | Done | PR 317: F2 opens Colour in the add line dialog. Pickers already open by typing. |
 | 8 | Make it usable without a mouse. | P1 ✓ | Partial | PR 317: tab order, shortcuts and Alt+L on the order screen. Continue across the other screens. |
 
@@ -50,7 +59,7 @@ Status as at 11 Nov 2026.
 | # | Request | Source | Status | Notes |
 | --- | --- | --- | --- | --- |
 | 9 | Add Dealer Return Address to the order header. Circled on the VB6 order form, with "Order ✓" beside it. | P2 p1 | Branch | `feat/order-dealer-return-address`, also included in `feat/despatch-labels`. A checkbox on new and existing orders and in `EditOrderDialog`; it defaults from the customer. It is stored as `OrdHeader.DirectDelivery` (`directDelivery` on `OrderHeader`); `direct` is the separate delivery docket flag. Needs the API to accept `dealerReturnAddress` on create and update. |
-| 10 | "How to update here", written on both the order screen and the Edit order dialog. | P2 p2–3 | Partial | Header fields already edit in place and save when you leave a field (`OrderWorkspace.tsx`, header auto-save). The customer could not tell, so make saving obvious: a visible saved state, hints, or simplify the More fields dialog. |
+| 10 | "How to update here", written on both the order screen and the Edit order dialog. | P2 p2–3 | Question | Header fields already edit in place and save when you leave a field, and the header already shows "Saving… / Saved / Not saved". So the problem is probably not a missing save control. The Edit order dialog says "Customer, bin and the credit flag are fixed once an order is created", so they may want to change the customer or bin on an existing order. Ask them what they were trying to change. |
 | 11 | Double-click a line to edit it. | P2 p3 ✓ | Done | PR 317. |
 | 12 | Question marks over More fields, Invoice run and Job card. | P2 p7 | To do | They do not know what these buttons do. Clearer labels or tooltips. |
 
@@ -64,8 +73,8 @@ Status as at 11 Nov 2026.
 
 | # | Request | Source | Status | Notes |
 | --- | --- | --- | --- | --- |
-| 14 | Remove the description text, the date-range preset dropdown, Invoice no., Sort by, Layout only, Clear, Refresh and Open in new tab. | P2 p4 | To do | That leaves From, To, Customer and Generate. Confirm whether this applies to every report screen or only the Invoice Register (`ReportParamsPanel`, `app/reports/[name]/page.tsx`). |
-| 15 | Rename "Save as PDF" to "Print". | P2 p4 | To do | The button already opens the browser print dialog (`lib/print.ts`). |
+| 14 | Remove the description text, the date-range preset dropdown, Invoice no., Sort by, Layout only, Clear, Refresh and Open in new tab. | P2 p4 | Done | PR 312 (28 Oct) added a per-report "simple" mode, used by the Invoice Register (`simple: true` in `lib/reports.ts`). The scan shows the older layout, so the customer was probably looking at an older deployed build. **Check what Vercel is serving**; PR 312 also says it needs the matching API change deployed first. Other reports are unchanged; confirm whether they should follow. |
+| 15 | Rename "Save as PDF" to "Print". | P2 p4 | Done | PR 312: the simple report toolbar has a single Print button (`ReportFrame`). |
 
 ## 5. Customer maintenance (Part 3, pages 1 and 6, marked up on the VB6 Customer Edit form)
 
@@ -76,10 +85,10 @@ Status as at 11 Nov 2026.
 | 18 | Copy button from the invoice address to the delivery address. | P3 p1 | Done | `copyInvoiceAddress` in `CustomerForm`. |
 | 19 | Remove Bank, Branch, Drawer name, Fax, GST exempt, Currency code and Use All Price. | P3 p1, p6 | Partial | All are gone except **GST exempt**, which is still on the form. |
 | 20 | Paid default is crossed out with an X. | P3 p1 | To do | Probably means remove it. Still on the form ("Paid by default"); confirm before removing. |
-| 21 | Add a "CSV" field next to the credit card number and expiry. | P3 p1 | Push back | Almost certainly the CVV (card security code). PCI-DSS does not allow storing it after authorisation, so we should not add it. Explain why. |
-| 22 | Delivery Docket should "always" be ticked. | P3 p6 | To do | Either default it to on or remove the option; confirm which. |
+| 21 | Add a "CSV" field next to the credit card number and expiry. | P3 p1 | Push back | Almost certainly the CVV (card security code). PCI-DSS does not allow storing it after authorisation, so we should not add it. Explain why. The meeting also says card details are to be retained (M30), so review how the card number and expiry are stored today. |
+| 22 | Delivery Docket should "always" be ticked. | P3 p6 | Done | The customer form always sends `deliveryDocket: true` and the checkbox is gone (July 2026 upgrade). Only the separate Web order defaults checkbox remains. |
 | 23 | Discount %: handwritten note, read as "Nil". | P3 p6 | Question | Possibly default to 0. The note is hard to read, so confirm. |
-| 24 | Proof header and proof "from" email should come from the company ("Pick up from State Invoice"), not be set per customer. | P3 p6 | To do | Affects `CustomerForm` (Letterhead image, Proof email "from") and the proof defaults (`GET /api/proofs/{jobNo}`). |
+| 24 | Proof header and proof "from" email should come from the company ("Pick up from State Invoice"), not be set per customer. | P3 p6 | To do | Companies already have a letterhead and a From address, and the proof dialog's "Email from" follows Company. What remains is removing the per-customer proof fields from `CustomerForm` and the proof defaults (`GET /api/proofs/{jobNo}`). The API rule "proofHeader must match the customer's stored header" may need to go. Same work as M19–M20. |
 | 25 | Dealer Return Address: "?". | P3 p1 | Question | Explain what it does. It is now used on the order (#9) and by the despatch return label (#1). |
 | 26 | Web order defaults: "Do we need this?". | P3 p1 | Question | Used by the web order import (#4). Explain, or remove it if they do not import web orders. |
 
@@ -88,7 +97,7 @@ Status as at 11 Nov 2026.
 | # | Request | Source | Status | Notes |
 | --- | --- | --- | --- | --- |
 | 27 | Show these columns together: Customer No., Customer name, Recipient, Date, Invoice No., Job No., Cust order No., Email (invoice), Phone (invoice) and Tracking. | P3 p2 | Done | All on `/invoices`, plus Order (PRs 307 and 314). |
-| 28 | Search by phone and by email (taken from the invoice). | P3 p2 ✓ | To do | The columns exist. Check that there are phone and email search boxes and add them if not (`invoices.history` already takes `email` / `phoneNo`). |
+| 28 | Search by phone and by email (taken from the invoice). | P3 p2 ✓ | Partial | PR 314 added a Recipient search. There are still no phone or email search boxes. `invoices.history` takes `email` / `phoneNo` only as exact-value lists (left over from the column filters), so free-text search needs a small API change like the one `recipientName` got. See also M23. |
 
 ## 7. Receipts (Part 3, page 3)
 
@@ -107,7 +116,7 @@ Status as at 11 Nov 2026.
 
 | # | Request | Source | Status | Notes |
 | --- | --- | --- | --- | --- |
-| 32 | "I want pricing to be linked from Excel. Do a page like my price increase Access program." | P3 p4 | To do | Modelled on their Access form "Change prices in Soset": it asks for a product ID, then shows product name, product ID, search code, weight, supplier code, cost, retail and price codes 2–9 (Aust Post; ENZ code 7; Adams/RSA/eStamps code 8, inc delivery and GST; Stamp World code 9; one N/A), plus the NoStamp flag and **Go to next record**. This needs a Soset product price **write** endpoint on the API, which does not exist yet. Excel import/export of prices is the other half of the request. The largest item on this list. |
+| 32 | "I want pricing to be linked from Excel. Do a page like my price increase Access program." | P3 p4 | To do, **approach changed** | Modelled on their Access form "Change prices in Soset": product ID, name, search code, weight, supplier code, cost, retail and price codes 2–9 (Aust Post; ENZ code 7; Adams/RSA/eStamps code 8, inc delivery and GST; Stamp World code 9), the NoStamp flag and **Go to next record**. **The meeting then agreed prices live in the Orders SQL database, maintained by Excel-compatible export and import** (see M31–M34), not by writing to Soset. Today the catalogue and `unitPrice1`–`5` are read from Soset only, so this needs new SQL product and price tables and a data migration. The largest item on this list. |
 
 ## 10. Unclear
 
@@ -117,13 +126,171 @@ Status as at 11 Nov 2026.
 
 ---
 
+## 11. Meeting summary (M1–M41)
+
+Compared with the web app on the hub branch, the API and the legacy repo (status as at 12 Nov
+2026). "Today" is what the code does now.
+
+### Keyboard-first order entry
+
+| # | Request | Today | Change needed | Status |
+| --- | --- | --- | --- | --- |
+| M1 | Cursor lands in the customer field on the Orders screen | The customer picker takes focus on a new order (`OrderWorkspace.tsx`) | None | Done |
+| M2 | Enter accepts the customer; Enter again starts the order | First Enter selects. "Start order" is a button, and an existing-open-order dialog can appear in between. | Make Enter start the order | Partial |
+| M3 | F2 to search for a different customer | `CustomerPicker` handles F2 | None | Done |
+| M4 | Enter job/order no., product, qty and colour without the mouse | PR 317: tab order, text selected on focus, F2 for Colour, Alt+L for a new line, double-click to edit | Check the edit-line dialog behaves the same | Partial |
+| M5 | Rarely changed fields out of the tab order or in an expandable section | Done in the add-line dialog. On the order, infrequent fields are in the "More fields" popup. | Decide whether "expandable" means in-page instead of a popup (Q12) | Partial |
+| M6 | Keyboard use across the whole app; replacements for F5/F6 | Key handlers only on Orders, the pickers, Despatch and Pricing. Previous/Next on the order are buttons only. | Add shortcuts for Previous/Next, then audit every other screen (also paper item 8) | Partial |
+
+### Order details, drop-ship labels, email
+
+| # | Request | Today | Change needed | Status |
+| --- | --- | --- | --- | --- |
+| M7 | Dealer return address on the order | On `feat/despatch-labels` (merged into the hub), including the customer default | The API must accept `dealerReturnAddress`. Confirm it is not shown as the customer-facing delivery address. | Branch |
+| M8 | Customer label and a separate return label, in different sizes | The branch prints a small return label then a large delivery label as two pages | Needs direct printing to two printers (M37) | Branch |
+| M9 | Scan invoice or job no., scan consignment note, accept, labels print; fast for large batches | Scan Tracking dialog on the branch. Printing goes through `window.print()`, which opens a dialog each time. | Direct printing (M37) before it is usable for 60–70 parcels | Branch |
+| M10 | Invoice email address editable per order | The order's Email is editable on the main screen and defaults from the customer. The API emails the address stored on the posted invoice. | Verify the order's email reaches the posted invoice. If it does, this is already met. | Verify |
+| M11 | Frequently changed order fields on the main screen, the rest expandable | Main screen has account, date, run, delivery code, phone, email, applied-to, invoice note, dealer return and credit. The dialog has price code, freight, company, docket and paid. | Largely done; see M5 | Partial |
+
+### Batch invoicing, job cards, pro forma
+
+| # | Request | Today | Change needed | Status |
+| --- | --- | --- | --- | --- |
+| M12 | Orders carry a run number; run 1 means ready to invoice, other runs hold orders | Run number on each order; `/invoicing` filters by start and end run | Default the invoice run to run 1 (Q9) | Partial |
+| M13 | Select a run and print directly, with no intermediate list of orders | `/invoicing` runs select, stage, review, post. The API stages and posts separately, and the delivery-docket report reads the staging data. | Chain stage, dockets and post in one action in the UI, keeping the "did the dockets print?" check | Partial |
+| M14 | One job-card workflow: print the batch by run, plus reprint for one-off jobs | Per-order only (`GET /api/orders/{id}/job-card`) | Run-level job-card endpoint and a batch print screen, defaulting to batch (also paper item 5) | To do |
+| M15 | Pro forma invoice, printed by order ID, using the invoice template | **Does not exist** in either repo. The design notes say it was folded into document actions, but there is no such action. | New order action: the invoice template titled pro forma, with no invoice number | To do |
+
+### Dispatch
+
+| # | Request | Today | Change needed | Status |
+| --- | --- | --- | --- | --- |
+| M16 | Verify each order has a consignment number, then confirm the batch as tracked | Branch: editable tracking column and a "Process" button with a confirm | None | Branch |
+| M17 | One batch action to email invoice and tracking to customers; orders can be held overnight | **Not built.** The Despatch page says emails will be "planned as their own tab", and the "Ready to notify" grid was removed. The API already has per-invoice and batch send. | Add the send action. Confirm the despatch email includes the invoice (Q7). | To do |
+| M18 | Simplified dispatch screen with one consolidated action | Mostly done on the branch | The sidebar print button is the developer's remaining part (paper item 1) | Branch |
+
+### Proofs and companies
+
+| # | Request | Today | Change needed | Status |
+| --- | --- | --- | --- | --- |
+| M19 | Proof header, logo and sender chosen from the order's company | The proof dialog has a Company field, and companies already have a letterhead and a From address | Remove the per-customer proof fields (paper item 24) | Partial |
+| M20 | Proofs can't be emailed reliably for companies other than Stead Brothers | An email endpoint exists. A likely cause is the API rule that the proof header must match the customer's stored one. | Reproduce with a real Adams or Supreme job (paper items 6, 24) | Verify |
+
+### Imports
+
+| # | Request | Today | Change needed | Status |
+| --- | --- | --- | --- | --- |
+| M21 | A CSV from a newly acquired company is rejected as an unrecognised format | The parser requires the first header to be `order_number` (`ImportWebOrdersService.cs`) and treats one file as one order | Get the failing file. Working examples are in the legacy folder (`IMPORT*.csv`, `stead-bros-order-*.csv`). A byte-order mark or a different export layout is my first guess. | Verify |
+| M22 | Remove the obsolete Adams import | **Nothing named Adams in the new UI or API.** Only "Import web orders" exists, and the stamp import was already dropped (July 2026). | Ask which control or setting they mean. `defImportCust` belongs to the web import, which they want to keep. | Question |
+
+### Reports and history
+
+| # | Request | Today | Change needed | Status |
+| --- | --- | --- | --- | --- |
+| M23 | History: type what you know, then press Search. No automatic load. Search by name, phone, email, invoice no., job no. or approximate date. | The grid loads when the page opens. Recipient, job, order and invoice no. search exist. No date, phone or email search. | Search button and empty start; add a date range, phone and email (paper item 28) | Partial |
+| M24 | Invoice register by date range and a customer range that covers company prefixes | Date range and a single customer picker | Add customer from/to (API and UI) | To do |
+| M25 | Reports print directly, not saved as PDF | Browser print dialog (`lib/print.ts`) | Depends on the cloud printing decision (M35–M36) | Design needed |
+
+### Customers, receipts, deposits
+
+| # | Request | Today | Change needed | Status |
+| --- | --- | --- | --- | --- |
+| M26 | Compact customer screen: too many fields, too much scrolling | Eleven stacked cards (Identity, Invoice address, Delivery address, Contact, Pricing & GST, Freight & delivery, Credit, Invoicing & documents, Proofs, Web order defaults, Remembered payment details) | Rework as tabs and remove rarely used fields | To do |
+| M27 | Separate fields that were combined; rename State to Company; remove cheque and fax options; keep delivery and return address | Company rename done; cheque and fax mostly gone (paper item 19) | Ask which combined fields they mean (Q3) | Partial |
+| M28 | Receipts: pick customer, review outstanding items, enter amount, auto-allocate; keep settlement discount | Done | None | Done |
+| M29 | Bank deposits happen automatically after a receipt; the Bank deposits screen may go | Deposits are a manual run over unbanked receipts (`DepositService`) | Business rules for when a deposit is created, then removal of the screen (Q4) | To do |
+| M30 | Retain credit-card details where required | "Remembered payment details" stores card number and expiry | Review how they are stored; see paper item 21 (CVV) | Question |
+
+### Pricing
+
+| # | Request | Today | Change needed | Status |
+| --- | --- | --- | --- | --- |
+| M31 | Pricing stays in the Orders SQL database, alongside the product catalogue, not in the website database | The product catalogue and `unitPrice1`–`5` are read from Soset (`Product` is a Soset entity). SQL holds pricing rules only. | New SQL product and price tables, plus a migration. This contradicts "no new database fields" (M39). | Design needed |
+| M32 | Export prices, edit in Excel, import the revised file | None | Export and import endpoints and a screen. CSV underneath is fine; Excel in the user-facing flow (paper item 32). | To do |
+| M33 | Where prices are resolved at order entry | The API resolves price from Soset `unitPrice` columns by price code | Switch to the SQL price source. Decide what happens to the catalogue and Soset's stamp jobs (T4). | Question |
+| M34 | Future stock control should be able to read the same data | n/a | Keep the structure open for it; not in scope | Info |
+
+### Printing from the cloud
+
+| # | Request | Today | Change needed | Status |
+| --- | --- | --- | --- | --- |
+| M35 | A cloud-hosted app must reach printers on the user's machine | All printing is `window.print()`; the browser cannot choose a printer | Decide: local print agent, print server or network printing (T1) | Design needed |
+| M36 | Ordinary reports and documents may use a print dialog, defaulting to the system printer | Works today | Verify in the target environment | Verify |
+| M37 | Dispatch labels print directly, with no dialog, to the right printer for each label size | The label page uses `window.print()`, so a dialog opens for every parcel | Needs M35's decision | Design needed |
+
+### Environment and scope
+
+| # | Request | Today | Change needed | Status |
+| --- | --- | --- | --- | --- |
+| M38 | An Ashcom Cloud environment connected to the related systems for end-to-end testing | UI on Vercel proxying to the API. The Soset worker is a 32-bit Windows process that needs access to the Soset data. | The host must give the API and the worker access to the Soset data (T2) | Design needed |
+| M39 | Use the existing SQL database; no new fields expected | n/a | Pricing needs new tables; run job cards, automatic deposits and an order email may need more | Question |
+| M40 | Old and new apps may run side by side during validation, on the shared database | n/a | Check that both can't allocate the same invoice, receipt or deposit number (T3) | Verify |
+| M41 | Immediate scope is feature parity with the existing app; no fixed cut-over date | n/a | Use `DESIGN-NOTES.md` §2 and §4 as the parity checklist. They are partly out of date. | Info |
+
+### Open questions
+
+**For the customer**
+
+| # | Question | Items |
+| --- | --- | --- |
+| Q1 | Pro forma: what should it show, and does it need a number? | M15 |
+| Q2 | Job cards: which status triggers printing ("corrected status" is unclear)? Print by run only, or also by date? | M14 |
+| Q3 | Which fields on the customer record should be separated? | M27 |
+| Q4 | Automatic banking: one deposit per day? Per payment type? Do they still need a deposit history report? | M29 |
+| Q5 | Which Adams control or setting should be removed? | M22 |
+| Q6 | Send the failing CSV and a working one. | M21 |
+| Q7 | Should the despatch email attach the invoice as well as the tracking number? | M17 |
+| Q8 | Pricing: which columns do they edit in Excel, who edits them, and can we have their Excel file and a demo of the Access tool? | M31–M32, paper item 32 |
+| Q9 | Should the invoice run default to run 1? | M12 |
+| Q10 | What does "How to update here" refer to (paper item 10)? | paper item 10 |
+| Q11 | Handwritten price list on Part 2 page 6: what is it? | paper item 33 |
+| Q12 | Should less common order fields be in-page and expandable, or stay in the popup? | M5, M11 |
+
+**For the team and Ashcom**
+
+| # | Question | Items |
+| --- | --- | --- |
+| T1 | Label printing: what printer models and language (ZPL?), what sizes, USB or network, how many workstations print? | M8, M9, M35, M37 |
+| T2 | Can the cloud host reach the Soset data and run the 32-bit worker? | M38 |
+| T3 | How do we stop number-allocation clashes while both apps run? | M40 |
+| T4 | Where do product prices live today, and which system wins at order entry after the move? Migrate the whole catalogue from Soset, or only prices? | M31, M33 |
+| T5 | Is the "no new database fields" position still intended, given pricing? | M39 |
+
+**To check in code or data**
+
+- The order's email reaches the posted invoice (M10).
+- Why proof emailing fails for other companies (M20).
+- The failing CSV against `ImportWebOrdersService` (M21).
+- Whether the Vercel deployment is behind `master`, since the scans show old report screens (paper items 14, 15).
+- How many customers have GST exempt or Paid default set before those checkboxes are hidden (paper items 19, 20).
+
+---
+
 ## Summary
+
+**Paper items (1–33)**
 
 | Status | Items |
 | --- | --- |
-| Done | 7, 11, 17, 18, 27, 29, 30 |
+| Done | 7, 11, 14, 15, 17, 18, 22, 27, 29, 30 |
 | Branch (on the hub branch, not yet on `master`) | 1 (sidebar print button still to do), 3 (partial), 9 |
-| Partial | 8, 10, 19 |
-| To do | 2, 5, 6, 12, 13, 14, 15, 16, 20, 22, 24, 28, 31, 32 |
-| Question | 4, 23, 25, 26, 33 |
+| Partial | 8, 19, 28 |
+| To do | 2, 5, 6, 12, 13, 16, 20, 24, 31, 32 (approach changed; see M31–M34) |
+| Question | 4, 10, 23, 25, 26, 33 |
 | Push back | 21 |
+
+**Meeting items (M1–M41)**
+
+| Status | Items |
+| --- | --- |
+| Done | M1, M3, M28 |
+| Branch | M7, M8, M9, M16, M18 |
+| Partial | M2, M4, M5, M6, M11, M12, M13, M19, M23, M27 |
+| To do | M14, M15, M17, M24, M26, M29, M32 |
+| Verify | M10, M20, M21, M36, M40 |
+| Design needed | M25, M31, M35, M37, M38 |
+| Question | M22, M30, M33, M39 |
+| Info | M34, M41 |
+
+**Biggest risks:** cloud and direct label printing (M35–M37), moving pricing into SQL (M31–M33),
+and running both apps on one database (M40).
