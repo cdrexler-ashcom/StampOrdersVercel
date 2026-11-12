@@ -40,6 +40,8 @@ export function Button({
   variant?: ButtonVariant;
   size?: ButtonSize;
   loading?: boolean;
+  /** Lets a screen move focus to a button, e.g. Start order once a customer is chosen. */
+  ref?: React.Ref<HTMLButtonElement>;
 }) {
   return (
     <button

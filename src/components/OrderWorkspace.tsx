@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 
 import { AddLineDialog } from "@/components/AddLineDialog";
 import { CreditCheckPanel } from "@/components/CreditCheckPanel";
@@ -80,6 +80,9 @@ import type {
  */
 export function OrderWorkspace({ initialOrderId }: { initialOrderId?: number }) {
   const router = useRouter();
+  // Start order takes focus once a customer is chosen and any open-order prompt is dealt with, so
+  // for a keyboard user it is: pick the customer (Enter), then Enter again to start the order.
+  const startOrderRef = useRef<HTMLButtonElement>(null);
   const queryClient = useQueryClient();
 
   const [orderId, setOrderId] = useState<number | null>(initialOrderId ?? null);
@@ -193,6 +196,28 @@ export function OrderWorkspace({ initialOrderId }: { initialOrderId?: number }) 
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, [canAddLine]);
+
+  // Alt+P / Alt+N step to the previous / next order in the list this one was opened from. They
+  // replace the legacy F5 / F6, which a browser uses for reload and the address bar. Not while a
+  // dialog is up, and only when there is a list to step through.
+  const canStepOrders = !isCreate && !anyDialogOpen && contextIndex >= 0;
+  useEffect(() => {
+    if (!canStepOrders) return;
+    const handler = (event: KeyboardEvent) => {
+      if (!event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+      const key = event.key.toLowerCase();
+      if (key !== "p" && key !== "n") return;
+      event.preventDefault();
+      const target = key === "p" ? prevOrderId : nextOrderId;
+      if (target == null) return;
+      // Header fields save when they lose focus. Clicking the Previous / Next link does that for
+      // a mouse user, so do it here too, or an edit still being typed would be left behind.
+      (document.activeElement as HTMLElement | null)?.blur();
+      router.push(`/orders/${target}`);
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [canStepOrders, prevOrderId, nextOrderId, router]);
 
   const customerQuery = useQuery({
     queryKey: ["customer", order?.custId],
@@ -326,6 +351,7 @@ export function OrderWorkspace({ initialOrderId }: { initialOrderId?: number }) 
               <Button
                 type="button"
                 variant="primary"
+                ref={startOrderRef}
                 loading={createMutation.isPending}
                 disabled={!customer}
                 onClick={startOrder}
@@ -339,7 +365,7 @@ export function OrderWorkspace({ initialOrderId }: { initialOrderId?: number }) 
                 <div className="mr-1 flex items-center gap-1 border-r border-slate-200 pr-3">
                   {prevOrderId ? (
                     <Link href={`/orders/${prevOrderId}`}>
-                      <Button variant="ghost" size="sm" title="Previous order in this list">
+                      <Button variant="ghost" size="sm" title="Previous order in this list (Alt+P)">
                         <ChevronLeft className="size-3.5" />
                         Previous
                       </Button>
@@ -357,7 +383,7 @@ export function OrderWorkspace({ initialOrderId }: { initialOrderId?: number }) 
 
                   {nextOrderId ? (
                     <Link href={`/orders/${nextOrderId}`}>
-                      <Button variant="ghost" size="sm" title="Next order in this list">
+                      <Button variant="ghost" size="sm" title="Next order in this list (Alt+N)">
                         Next
                         <ChevronRight className="size-3.5" />
                       </Button>
@@ -440,7 +466,10 @@ export function OrderWorkspace({ initialOrderId }: { initialOrderId?: number }) 
       {/* Create-only prompts, kept out of the cards so the card skeleton stays identical. */}
       {isCreate && customer && (
         <div className="mb-4 space-y-3">
-          <ExistingOpenOrderDialog custId={customer.uniqueId} />
+          <ExistingOpenOrderDialog
+            custId={customer.uniqueId}
+            onSettled={() => startOrderRef.current?.focus()}
+          />
           {customer.orderNote?.trim() && (
             <Notice tone="amber" title="Order note on this account">
               {customer.orderNote}
