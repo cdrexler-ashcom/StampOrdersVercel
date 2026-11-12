@@ -190,7 +190,7 @@ Compared with the web app on the hub branch, the API and the legacy repo (status
 | # | Request | Today | Change needed | Status |
 | --- | --- | --- | --- | --- |
 | M23 | History: type what you know, then press Search. No automatic load. Search by name, phone, email, invoice no., job no. or approximate date. | The grid loads when the page opens. Recipient, job, order and invoice no. search exist. No date, phone or email search. | Done on both: email, phone and date-range boxes (paper item 28), and an explicit Search button (or Enter) with an empty start, so nothing loads or re-queries until asked. Search needs at least one box filled. The search is remembered across Back | Branch (UI + API) |
-| M24 | Invoice register by date range and a customer range that covers company prefixes | Date range and a single customer picker | Add customer from/to (API and UI) | To do |
+| M24 | Invoice register by date range and a customer range that covers company prefixes | Date range and a single customer picker | Done on both: the register takes a customer code from/to; "to" includes every code starting with it, so ADM to ADM is all ADM accounts. The printed register names the customers covered. The API also accepts the range for Customer Sales and Product Sales, but only the register screen offers it. **Known problem: the report silently stops at 500 invoices (`ReportQuery.MaxInvoices`), newest dropped, with totals that leave them out. A company over a long date range could hit that.** Decide whether to raise it or to refuse with a message | Branch (UI + API) |
 | M25 | Reports print directly, not saved as PDF | Browser print dialog (`lib/print.ts`) | Depends on the cloud printing decision (M35–M36) | Design needed |
 
 ### Customers, receipts, deposits
@@ -278,6 +278,7 @@ Committed on the API repo's `feat/customer-feedback-nov-2026` branch (base: `mas
 | History search by email, phone and invoice date range | `GET /api/invoices/history`: `emailSearch`, `phoneSearch`, `dateFrom`, `dateTo` | 28; M23 | Done (boxes, date range and the explicit Search button) |
 | Job cards for a whole run | `GET /api/job-cards?startRun=&endRun=` | 5; M14 | Done (Job cards page) |
 | Proof defaults follow the order's company | `GET /api/proofs/{jobNo}` | 24, 6; M19, M20 | Done (customer letterhead off by default; customer proof fields removed) |
+| Customer account-number range on the archived-invoice reports | `GET /api/reports/{name}/html`: `custFrom`, `custTo` | M24 | Done (Customer from/to on the Invoice Register) |
 | Company letterhead as the delivery docket heading | `DelDocket` report | 2 | None, unless "heading" means text (Q13) |
 
 Not done on the API: pro forma (M15; `DelDocket.xml` and `STINVOICE.xml` already declare a `Proforma` parameter that nothing sets), batch despatch email action (M17; the batch send exists), customer range on the invoice register (M24), automatic deposits (M29), and pricing in SQL (M31–M33).
@@ -307,9 +308,9 @@ Open question added: **Q13** (for the customer): by "heading" on the packing sli
 | --- | --- |
 | Done | M1, M3, M28 |
 | Branch | M2, M4, M7, M8, M9, M16, M18 |
-| Branch (UI + API) | M14, M19, M23 |
+| Branch (UI + API) | M14, M19, M23, M24 |
 | Partial | M5, M6, M11, M12, M13, M27 |
-| To do | M15, M17, M24, M26, M29, M32 |
+| To do | M15, M17, M26, M29, M32 |
 | Verify | M10, M20, M21, M36, M40 |
 | Design needed | M25, M31, M35, M37, M38 |
 | Question | M22, M30, M33, M39 |
