@@ -226,7 +226,7 @@ Compared with the web app on the hub branch, the API and the legacy repo (status
 | --- | --- | --- | --- | --- |
 | M38 | An Ashcom Cloud environment connected to the related systems for end-to-end testing | UI on Vercel proxying to the API. The Soset worker is a 32-bit Windows process that needs access to the Soset data. | The host must give the API and the worker access to the Soset data (T2) | Design needed |
 | M39 | Use the existing SQL database; no new fields expected | n/a | Pricing needs new tables; run job cards, automatic deposits and an order email may need more | Question |
-| M40 | Old and new apps may run side by side during validation, on the shared database | n/a | Check that both can't allocate the same invoice, receipt or deposit number (T3) | Verify |
+| M40 | Old and new apps may run side by side during validation, on the shared database | n/a | Checked: the API already takes numbers atomically, but the legacy invoice run, receipt form and deposit form hold a number and write it back later, which can wind a sequence back. API (branch): skips any number already in use, so it never issues a duplicate, and `GET /api/settings/number-sequences` reports a sequence that is behind or a number used twice. The reverse (legacy reusing an API number) needs the operating rules in the API's `docs/PARALLEL-RUNNING.md`, or a small legacy patch. | Branch (API only) |
 | M41 | Immediate scope is feature parity with the existing app; no fixed cut-over date | n/a | Use `DESIGN-NOTES.md` §2 and §4 as the parity checklist. They are partly out of date. | Info |
 
 ### Open questions
@@ -308,10 +308,11 @@ Open question added: **Q13** (for the customer): by "heading" on the packing sli
 | --- | --- |
 | Done | M1, M3, M28 |
 | Branch | M2, M4, M7, M8, M9, M15, M16, M18, M26 |
+| Branch (API only) | M40 |
 | Branch (UI + API) | M14, M19, M23, M24 |
 | Partial | M5, M6, M11, M12, M13, M27 |
 | To do | M17, M29, M32 |
-| Verify | M10, M20, M21, M36, M40 |
+| Verify | M10, M20, M21, M36 |
 | Design needed | M25, M31, M35, M37, M38 |
 | Question | M22, M30, M33, M39 |
 | Info | M34, M41 |
@@ -347,7 +348,7 @@ Stays close to Jackson Beecher's despatch branch and the order screen.
 | M32, 32 | Price maintenance in SQL with Excel import and export | Biggest piece: new API table, endpoints and a UI page. Blocked on Q8. |
 | M29 | Bank deposits | Customer said probably not needed; confirm it is dropped before building. |
 | M30, 21 | Card storage and CVV | Raise the PCI concern with the customer; do not build until they answer. |
-| M40 | Running-number clashes with both apps on one database | API change; needs a design. |
+| M40 | Running-number clashes with both apps on one database | Done on the API branch (guard and health check). Still to decide: the operating rules, and whether to patch the legacy app or add unique indexes (see the API's `docs/PARALLEL-RUNNING.md`). |
 | Invoice register cap | Done on the API branch: the limit (`ReportQuery.MaxInvoices`) is raised from 500 to 5,000, and a report over the limit is now refused with a message to narrow the dates or customers, instead of quietly dropping the newest invoices. UI unchanged: it already shows the message. |
 
 ### Shared rules
