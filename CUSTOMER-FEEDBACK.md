@@ -197,7 +197,7 @@ Compared with the web app on the hub branch, the API and the legacy repo (status
 
 | # | Request | Today | Change needed | Status |
 | --- | --- | --- | --- | --- |
-| M26 | Compact customer screen: too many fields, too much scrolling | Eleven stacked cards (Identity, Invoice address, Delivery address, Contact, Pricing & GST, Freight & delivery, Credit, Invoicing & documents, Proofs, Web order defaults, Remembered payment details) | Rework as tabs and remove rarely used fields | To do |
+| M26 | Compact customer screen: too many fields, too much scrolling | Eleven stacked cards (Identity, Invoice address, Delivery address, Contact, Pricing & GST, Freight & delivery, Credit, Invoicing & documents, Proofs, Web order defaults, Remembered payment details) | Rework as tabs and remove rarely used fields | Branch: four tabs (Details, Pricing & freight, Invoicing & proofs, Web & payment), one Save. No fields removed yet: we need the customer to say which are rarely used. |
 | M27 | Separate fields that were combined; rename State to Company; remove cheque and fax options; keep delivery and return address | Company rename done; cheque and fax mostly gone (paper item 19) | Ask which combined fields they mean (Q3) | Partial |
 | M28 | Receipts: pick customer, review outstanding items, enter amount, auto-allocate; keep settlement discount | Done | None | Done |
 | M29 | Bank deposits happen automatically after a receipt; the Bank deposits screen may go | Deposits are a manual run over unbanked receipts (`DepositService`) | **Earlier answer (29 Oct 2026, API repo `docs/CUSTOMER-REQUIREMENTS.md`): the Bank deposits screen is "probably not necessary" because banking is done in Xero; the last deposit recorded was 16 April 2026.** So this may simply be removing the screen rather than automating deposits. Confirm, then keep or drop the deposit history report (Q4) | To do |
@@ -307,10 +307,10 @@ Open question added: **Q13** (for the customer): by "heading" on the packing sli
 | Status | Items |
 | --- | --- |
 | Done | M1, M3, M28 |
-| Branch | M2, M4, M7, M8, M9, M15, M16, M18 |
+| Branch | M2, M4, M7, M8, M9, M15, M16, M18, M26 |
 | Branch (UI + API) | M14, M19, M23, M24 |
 | Partial | M5, M6, M11, M12, M13, M27 |
-| To do | M17, M26, M29, M32 |
+| To do | M17, M29, M32 |
 | Verify | M10, M20, M21, M36, M40 |
 | Design needed | M25, M31, M35, M37, M38 |
 | Question | M22, M30, M33, M39 |
