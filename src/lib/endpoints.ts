@@ -192,12 +192,20 @@ export const invoices = {
       `/api/invoices/history/${encodeURIComponent(invoiceNo)}`,
     ),
 
-  /** POST /api/invoices/history/{invoiceNo}/email — sends the invoice to the customer (E1) */
-  email: (invoiceNo: string, toOverride?: string) =>
-    api.post<EmailSendResult>(
-      `/api/invoices/history/${encodeURIComponent(invoiceNo)}/email`,
-      toOverride ? { toOverride } : {},
-    ),
+  /**
+   * POST /api/invoices/history/{invoiceNo}/email — sends the invoice to the customer (E1).
+   * `subject` and `message` are optional: blank uses the standard subject and greeting.
+   */
+  email: (
+    invoiceNo: string,
+    toOverride?: string,
+    extra?: { subject?: string; message?: string },
+  ) =>
+    api.post<EmailSendResult>(`/api/invoices/history/${encodeURIComponent(invoiceNo)}/email`, {
+      ...(toOverride ? { toOverride } : {}),
+      ...(extra?.subject ? { subject: extra.subject } : {}),
+      ...(extra?.message ? { message: extra.message } : {}),
+    }),
 };
 
 // --- Receipts ---------------------------------------------------------------------------

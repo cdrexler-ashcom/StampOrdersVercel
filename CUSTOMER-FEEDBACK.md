@@ -21,7 +21,7 @@ merged to `master` once it is done.
 
 | Branch | Items | Merged | Notes |
 | --- | --- | --- | --- |
-| `feat/despatch-labels` (Jackson Beecher), which includes `feat/order-dealer-return-address` | 1, 3, 9 | 11 Nov 2026 | The developer says it is about 99% done. **Still to do:** the print button has been taken off the Despatch page on purpose. Printing will move to its own sidebar button, which has not been built yet. Until it is, labels print only from **Accept** in the Scan Tracking dialog. This branch also removes the "Ready to notify" grid from the Despatch page. |
+| `feat/despatch-labels` (Jackson Beecher), which includes `feat/order-dealer-return-address` | 1, 3, 9 | 11 Nov 2026 | The developer says it is about 99% done. The print button has been taken off the Despatch page on purpose. Printing now has its own sidebar button, **Email invoices**, whose Reprint invoice tab prints, previews or emails one invoice (on `feat/cf-despatch-email-tab`). Despatch labels print only from **Accept** in the Scan Tracking dialog. This branch also removes the "Ready to notify" grid from the Despatch page. |
 
 **Status key**
 
@@ -47,7 +47,7 @@ Status as at 11 Nov 2026.
 
 | # | Request | Source | Status | Notes |
 | --- | --- | --- | --- | --- |
-| 1 | How do we print the despatch labels? | P1 | Branch | **Still to do: a separate sidebar print button** (see the merged-branches table above). From `feat/despatch-labels`: capturing a consignment prints a return label and a delivery label (`DespatchLabelPrint.tsx`, `GET /api/tracking/labels/{invoiceNo}`). The Despatch page is rebuilt to work like the old Tracking Entry screen (Scan and Process buttons, `ScanTrackingDialog.tsx`). |
+| 1 | How do we print the despatch labels? | P1 | Branch | **Sidebar print button: done** (the **Email invoices** sidebar page, Reprint invoice tab; see the merged-branches table above). From `feat/despatch-labels`: capturing a consignment prints a return label and a delivery label (`DespatchLabelPrint.tsx`, `GET /api/tracking/labels/{invoiceNo}`). The Despatch page is rebuilt to work like the old Tracking Entry screen (Scan and Process buttons, `ScanTrackingDialog.tsx`). |
 | 2 | Put a heading on the packing slip. It is blank now; it should come from the dealer or the invoice. | P1 | Branch (API) | API: the delivery docket report now prints the invoice company's letterhead as its heading, top right like the invoice. The UI invoice page's docket view hard-codes "Stead Brothers" and is unchanged. **Confirm with the customer that "heading" means the company logo/letterhead and not text** (Q13). The tax invoice report has the same blank slot (no data binding) and was not changed. |
 | 3 | Where do we find the Express Post numbers, to see whether we missed any? | P1 | Branch (partial) | `feat/despatch-labels` adds Order, an editable Tracking number(s) column and a Required toggle to the pending despatch list, so invoices still missing a number are visible. There is no list of numbers already used. Confirm with the customer that this is enough. |
 | 4 | What CSV format do we need to import from Mr Stamps? ("CSV type?") | P1 ✓ | Question | Send them the import file spec for `/imports` (`POST /api/imports/web-orders`). The meeting reports a newly acquired company's CSV being rejected; see M21. |
@@ -168,8 +168,8 @@ Compared with the web app on the hub branch, the API and the legacy repo (status
 | # | Request | Today | Change needed | Status |
 | --- | --- | --- | --- | --- |
 | M16 | Verify each order has a consignment number, then confirm the batch as tracked | Branch: editable tracking column and a "Process" button with a confirm | None | Branch |
-| M17 | One batch action to email invoice and tracking to customers; orders can be held overnight | **Not built.** The Despatch page says emails will be "planned as their own tab", and the "Ready to notify" grid was removed. The API already has per-invoice and batch send. | Add the send action. Confirm the despatch email includes the invoice (Q7). | To do |
-| M18 | Simplified dispatch screen with one consolidated action | Mostly done on the branch | The sidebar print button is the developer's remaining part (paper item 1) | Branch |
+| M17 | One batch action to email invoice and tracking to customers; orders can be held overnight | **Built on `feat/cf-despatch-email-tab`, not yet on the hub branch.** The **Email invoices** sidebar page has a Send despatch emails tab, modelled on the old Email Invoices screen: Preview, Send Now, an "OK to send invoices?" confirmation and a result list with failures. The "Ready to notify" grid was removed from the Despatch page. | Still open: the email has no invoice PDF and no tracking link, and the old wording and company SMTP settings are not ported (Q7). The old app also had a test-mode switch that sent every email to one internal address. The new app has none. | Partial |
+| M18 | Simplified dispatch screen with one consolidated action | Mostly done on the branch | The sidebar print button is done: the Email invoices page (paper item 1) | Branch |
 
 ### Proofs and companies
 
@@ -282,7 +282,7 @@ Committed on the API repo's `feat/customer-feedback-nov-2026` branch (base: `mas
 | Customer account-number range on the archived-invoice reports | `GET /api/reports/{name}/html`: `custFrom`, `custTo` | M24 | Done (Customer from/to on the Invoice Register) |
 | Company letterhead as the delivery docket heading | `DelDocket` report | 2 | None, unless "heading" means text (Q13) |
 
-Not done on the API: emailing a pro forma (the pro forma itself needs no API work: the UI builds it from the order, M15), batch despatch email action (M17; the batch send exists), automatic deposits (M29), and pricing in SQL (M31–M33).
+Not done on the API: emailing a pro forma (the pro forma itself needs no API work: the UI builds it from the order, M15), the invoice PDF and tracking link on the despatch email (M17, Q7), automatic deposits (M29), and pricing in SQL (M31–M33).
 
 Open question added: **Q13** (for the customer): by "heading" on the packing slip do they mean the company logo/letterhead (what the API now prints), or the company name and address as text?
 
@@ -295,7 +295,7 @@ Open question added: **Q13** (for the customer): by "heading" on the packing sli
 | Status | Items |
 | --- | --- |
 | Done | 7, 11, 14, 15, 16, 17, 18, 22, 27, 29, 30 |
-| Branch (on the hub branch, not yet on `master`) | 1 (sidebar print button still to do), 3 (partial), 9, 12, 13, 19, 20, 31 |
+| Branch (on the hub branch, not yet on `master`) | 1 (sidebar print button done), 3 (partial), 9, 12, 13, 19, 20, 31 |
 | Branch (UI + API) | 5, 6, 24, 28, 32 |
 | Branch (API only; docket heading) | 2 |
 | Partial | 8 |
@@ -311,8 +311,7 @@ Open question added: **Q13** (for the customer): by "heading" on the packing sli
 | Branch (API only) | M40 |
 | Branch (UI + API) | M14, M19, M23, M24, M32 |
 | Branch (API) | M31, M33 |
-| Partial | M5, M6, M11, M12, M13, M27 |
-| To do | M17 |
+| Partial | M5, M6, M11, M12, M13, M17, M27 |
 | Verify | M10, M20, M21, M36 |
 | Design needed | M25, M35, M37, M38 |
 | Question | M22, M30, M39 |
@@ -354,8 +353,7 @@ not yet on `master`. What is left:
 
 | Item | Notes |
 | --- | --- |
-| M17 batch despatch email | Check with Jackson Beecher first (his despatch work). The API batch send exists. |
-| Paper item 1, despatch sidebar print button | Jackson's area. |
+| M17 despatch email content | The batch send is built (Email invoices page). Still to do: the invoice PDF, tracking link, old wording and company SMTP settings (Q7). |
 | M5, M6, M11, M12, M13, M27 | Partly done. M6 needs an audit of other screens for mouse-only steps. |
 | M35 to M37, M25, M38 | Cloud and direct label printing, and the cloud test environment. Need a design first. |
 | Pro forma by email | The API has no endpoint for emailing an order. |
@@ -384,8 +382,8 @@ Stays close to Jackson Beecher's despatch branch and the order screen.
 
 | Item | What | Notes |
 | --- | --- | --- |
-| M17 | Batch despatch email | Check with Jackson first. The API batch send exists; mostly UI plus a small API action. |
-| 1 | Despatch sidebar print button | Jackson's area; not built. |
+| M17 | Despatch email | The batch send is built. Still to do: invoice PDF, tracking link, old wording, company SMTP settings (Q7). |
+| 1 | Despatch sidebar print button | Done: the Email invoices sidebar page (Reprint invoice tab). |
 | 2 | Docket heading | Blocked on Q13 (logo or text?). |
 | M6, M5, M11, M12, M13, M27 | Keyboard audit of other screens, and the partials | First task: read these rows and list what each still needs. |
 | M35–M37 | Cloud and direct label printing | Design note only to start; high risk. |
