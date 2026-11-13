@@ -190,7 +190,7 @@ Compared with the web app on the hub branch, the API and the legacy repo (status
 | # | Request | Today | Change needed | Status |
 | --- | --- | --- | --- | --- |
 | M23 | History: type what you know, then press Search. No automatic load. Search by name, phone, email, invoice no., job no. or approximate date. | The grid loads when the page opens. Recipient, job, order and invoice no. search exist. No date, phone or email search. | Done on both: email, phone and date-range boxes (paper item 28), and an explicit Search button (or Enter) with an empty start, so nothing loads or re-queries until asked. Search needs at least one box filled. The search is remembered across Back | Branch (UI + API) |
-| M24 | Invoice register by date range and a customer range that covers company prefixes | Date range and a single customer picker | Done on both: the register takes a customer code from/to; "to" includes every code starting with it, so ADM to ADM is all ADM accounts. The printed register names the customers covered. The API also accepts the range for Customer Sales and Product Sales, but only the register screen offers it. **Known problem: the report silently stops at 500 invoices (`ReportQuery.MaxInvoices`), newest dropped, with totals that leave them out. A company over a long date range could hit that.** Decide whether to raise it or to refuse with a message | Branch (UI + API) |
+| M24 | Invoice register by date range and a customer range that covers company prefixes | Date range and a single customer picker | Done on both: the register takes a customer code from/to; "to" includes every code starting with it, so ADM to ADM is all ADM accounts. The printed register names the customers covered. The API also accepts the range for Customer Sales and Product Sales, but only the register screen offers it. **The report used to stop silently at 500 invoices (newest dropped, totals short). Fixed on the API branch: the limit is now 5,000 and a larger run is refused with a message to narrow the dates or customers.** | Branch (UI + API) |
 | M25 | Reports print directly, not saved as PDF | Browser print dialog (`lib/print.ts`) | Depends on the cloud printing decision (M35–M36) | Design needed |
 
 ### Customers, receipts, deposits
@@ -348,7 +348,7 @@ Stays close to Jackson Beecher's despatch branch and the order screen.
 | M29 | Bank deposits | Customer said probably not needed; confirm it is dropped before building. |
 | M30, 21 | Card storage and CVV | Raise the PCI concern with the customer; do not build until they answer. |
 | M40 | Running-number clashes with both apps on one database | API change; needs a design. |
-| (decide) | Invoice Register 500-invoice cap (`ReportQuery.MaxInvoices`) | Raise it or refuse the run; the owner decides. |
+| Invoice register cap | Done on the API branch: the limit (`ReportQuery.MaxInvoices`) is raised from 500 to 5,000, and a report over the limit is now refused with a message to narrow the dates or customers, instead of quietly dropping the newest invoices. UI unchanged: it already shows the message. |
 
 ### Shared rules
 
