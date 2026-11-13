@@ -63,6 +63,7 @@ export function EditOrderDialog({
   const [invPostCode, setInvPostCode] = useState(order.invPostCode ?? "");
 
   const [direct, setDirect] = useState(order.direct);
+  const [dealerReturn, setDealerReturn] = useState(order.directDelivery);
   const [freightApplies, setFreightApplies] = useState(order.freightApplies);
   const [freight, setFreight] = useState(
     order.freight != null ? String(order.freight) : "",
@@ -93,6 +94,7 @@ export function EditOrderDialog({
     setInvAdr3(order.invAdr3 ?? "");
     setInvPostCode(order.invPostCode ?? "");
     setDirect(order.direct);
+    setDealerReturn(order.directDelivery);
     setFreightApplies(order.freightApplies);
     setFreight(order.freight != null ? String(order.freight) : "");
     setPriceCode(order.priceCode != null ? String(order.priceCode) : "");
@@ -145,6 +147,7 @@ export function EditOrderDialog({
       invAdr3: orNull(invAdr3),
       invPostCode: orNull(invPostCode),
       direct,
+      dealerReturnAddress: dealerReturn,
       freightApplies,
       freight: freight === "" ? null : Number(freight),
       priceCode: priceCode === "" ? null : Number(priceCode),
@@ -345,6 +348,11 @@ export function EditOrderDialog({
             label="Delivery docket (direct)"
             checked={direct}
             onChange={(e) => setDirect(e.target.checked)}
+          />
+          <Checkbox
+            label="Dealer return address"
+            checked={dealerReturn}
+            onChange={(e) => setDealerReturn(e.target.checked)}
           />
           <Checkbox
             label="Marked paid"

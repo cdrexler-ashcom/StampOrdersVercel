@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 
 import { AddLineDialog } from "@/components/AddLineDialog";
 import { CreditCheckPanel } from "@/components/CreditCheckPanel";
@@ -80,6 +80,9 @@ import type {
  */
 export function OrderWorkspace({ initialOrderId }: { initialOrderId?: number }) {
   const router = useRouter();
+  // Start order takes focus once a customer is chosen and any open-order prompt is dealt with, so
+  // for a keyboard user it is: pick the customer (Enter), then Enter again to start the order.
+  const startOrderRef = useRef<HTMLButtonElement>(null);
   const queryClient = useQueryClient();
 
   const [orderId, setOrderId] = useState<number | null>(initialOrderId ?? null);
@@ -92,6 +95,7 @@ export function OrderWorkspace({ initialOrderId }: { initialOrderId?: number }) 
   const [newDelCode, setNewDelCode] = useState("");
   const [newEmail, setNewEmail] = useState("");
   const [newIsCredit, setNewIsCredit] = useState(false);
+  const [newDealerReturn, setNewDealerReturn] = useState(false);
   const [newInvoiceApplied, setNewInvoiceApplied] = useState("Open");
   const [newDelName, setNewDelName] = useState("");
   const [newDelAdr0, setNewDelAdr0] = useState("");
@@ -108,6 +112,7 @@ export function OrderWorkspace({ initialOrderId }: { initialOrderId?: number }) 
     setNewRunNo(next?.runNo?.trim() ?? "");
     setNewDelCode(next?.defDelCode?.trim() ?? "");
     setNewEmail(next?.accountsEmail?.trim() ?? "");
+    setNewDealerReturn(next?.dealerReturnAddress ?? false);
   };
 
   // ----- dialog / interaction state ---------------------------------------------------
@@ -192,6 +197,28 @@ export function OrderWorkspace({ initialOrderId }: { initialOrderId?: number }) 
     return () => window.removeEventListener("keydown", handler);
   }, [canAddLine]);
 
+  // Alt+P / Alt+N step to the previous / next order in the list this one was opened from. They
+  // replace the legacy F5 / F6, which a browser uses for reload and the address bar. Not while a
+  // dialog is up, and only when there is a list to step through.
+  const canStepOrders = !isCreate && !anyDialogOpen && contextIndex >= 0;
+  useEffect(() => {
+    if (!canStepOrders) return;
+    const handler = (event: KeyboardEvent) => {
+      if (!event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+      const key = event.key.toLowerCase();
+      if (key !== "p" && key !== "n") return;
+      event.preventDefault();
+      const target = key === "p" ? prevOrderId : nextOrderId;
+      if (target == null) return;
+      // Header fields save when they lose focus. Clicking the Previous / Next link does that for
+      // a mouse user, so do it here too, or an edit still being typed would be left behind.
+      (document.activeElement as HTMLElement | null)?.blur();
+      router.push(`/orders/${target}`);
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [canStepOrders, prevOrderId, nextOrderId, router]);
+
   const customerQuery = useQuery({
     queryKey: ["customer", order?.custId],
     queryFn: () => customers.get(order!.custId!),
@@ -222,6 +249,7 @@ export function OrderWorkspace({ initialOrderId }: { initialOrderId?: number }) 
       delCode: newDelCode.trim() || null,
       email: newEmail.trim() || null,
       isCredit: newIsCredit,
+      dealerReturnAddress: newDealerReturn,
       invoiceApplied: newIsCredit ? newInvoiceApplied.trim() || "Open" : null,
       delName: newDelName.trim() || null,
       delAdr0: newDelAdr0.trim() || null,
@@ -236,7 +264,10 @@ export function OrderWorkspace({ initialOrderId }: { initialOrderId?: number }) 
   const saveMutation = useMutation({
     mutationFn: (body: UpdateOrderRequest) => orders.update(orderId!, body),
     onSuccess: (updated) => {
-      queryClient.setQueryData(["order", orderId], updated);
+      // The PUT returns the header only (no lines), so keep the cached lines.
+      queryClient.setQueryData<OrderHeader>(["order", orderId], (prev) =>
+        prev ? { ...updated, lines: prev.lines } : updated,
+      );
       queryClient.invalidateQueries({ queryKey: ["order-totals", orderId] });
       queryClient.invalidateQueries({ queryKey: ["orders"] });
       setSavedAt(Date.now());
@@ -320,6 +351,7 @@ export function OrderWorkspace({ initialOrderId }: { initialOrderId?: number }) 
               <Button
                 type="button"
                 variant="primary"
+                ref={startOrderRef}
                 loading={createMutation.isPending}
                 disabled={!customer}
                 onClick={startOrder}
@@ -333,7 +365,7 @@ export function OrderWorkspace({ initialOrderId }: { initialOrderId?: number }) 
                 <div className="mr-1 flex items-center gap-1 border-r border-slate-200 pr-3">
                   {prevOrderId ? (
                     <Link href={`/orders/${prevOrderId}`}>
-                      <Button variant="ghost" size="sm" title="Previous order in this list">
+                      <Button variant="ghost" size="sm" title="Previous order in this list (Alt+P)">
                         <ChevronLeft className="size-3.5" />
                         Previous
                       </Button>
@@ -351,7 +383,7 @@ export function OrderWorkspace({ initialOrderId }: { initialOrderId?: number }) 
 
                   {nextOrderId ? (
                     <Link href={`/orders/${nextOrderId}`}>
-                      <Button variant="ghost" size="sm" title="Next order in this list">
+                      <Button variant="ghost" size="sm" title="Next order in this list (Alt+N)">
                         Next
                         <ChevronRight className="size-3.5" />
                       </Button>
@@ -364,23 +396,34 @@ export function OrderWorkspace({ initialOrderId }: { initialOrderId?: number }) 
                   )}
                 </div>
               )}
+              {/* Labels say what each button does (customer feedback, Nov 2026: they didn't know
+                  what "More fields", "Invoice run" and "Job card" did). */}
               <Button
                 onClick={() => setEditOrderOpen(true)}
-                title="Freight, price code, company and flags"
+                title="Edit freight, price code, company, delivery docket and paid for this order"
               >
                 <Pencil className="size-3.5" />
-                More fields
+                Edit order
               </Button>
               <Button variant="danger" onClick={() => setConfirmDelete(true)}>
                 <Trash2 className="size-3.5" />
                 Delete
               </Button>
-              <Link href="/invoicing">
-                <Button>Invoice run</Button>
+              <Link href="/invoicing" title="Open the Invoice run screen, which invoices whole runs, not just this order">
+                <Button>Go to invoice run</Button>
               </Link>
-              <Button onClick={() => setJobCardOpen(true)}>
+              <Link
+                href={`/orders/${order!.orderId}/pro-forma`}
+                title="Print a pro forma invoice for this order, for a customer who wants paperwork before paying"
+              >
+                <Button>Pro forma</Button>
+              </Link>
+              <Button
+                onClick={() => setJobCardOpen(true)}
+                title="View and print the job card for this order"
+              >
                 <FileText className="size-3.5" />
-                Job card
+                Print job card
                 <JobCardIndicator orderId={order!.orderId} />
               </Button>
               <Button variant="primary" onClick={() => setAddLineOpen(true)}>
@@ -429,7 +472,10 @@ export function OrderWorkspace({ initialOrderId }: { initialOrderId?: number }) 
       {/* Create-only prompts, kept out of the cards so the card skeleton stays identical. */}
       {isCreate && customer && (
         <div className="mb-4 space-y-3">
-          <ExistingOpenOrderDialog custId={customer.uniqueId} />
+          <ExistingOpenOrderDialog
+            custId={customer.uniqueId}
+            onSettled={() => startOrderRef.current?.focus()}
+          />
           {customer.orderNote?.trim() && (
             <Notice tone="amber" title="Order note on this account">
               {customer.orderNote}
@@ -579,6 +625,18 @@ export function OrderWorkspace({ initialOrderId }: { initialOrderId?: number }) 
                 />
               )}
             </Field>
+
+            <div className="sm:col-span-2">
+              <Checkbox
+                label="Dealer return address"
+                checked={isCreate ? newDealerReturn : order!.directDelivery}
+                onChange={(e) =>
+                  isCreate
+                    ? setNewDealerReturn(e.target.checked)
+                    : savePatch({ dealerReturnAddress: e.target.checked })
+                }
+              />
+            </div>
 
             <div className="sm:col-span-2">
               <Checkbox
@@ -1009,6 +1067,7 @@ function fullUpdate(o: OrderHeader): UpdateOrderRequest {
     invAdr3: o.invAdr3,
     invPostCode: o.invPostCode,
     direct: o.direct,
+    dealerReturnAddress: o.directDelivery,
     freightApplies: o.freightApplies,
     freight: o.freight,
     priceCode: o.priceCode,

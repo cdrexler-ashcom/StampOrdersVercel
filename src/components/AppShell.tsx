@@ -3,7 +3,6 @@
 import clsx from "clsx";
 import {
   Archive,
-  Banknote,
   Boxes,
   Bug,
   Building2,
@@ -12,6 +11,7 @@ import {
   FileSearch,
   FileText,
   LayoutDashboard,
+  Printer,
   Receipt,
   Settings,
   SlidersHorizontal,
@@ -47,6 +47,7 @@ const navigation = [
     items: [
       { href: "/orders", label: "Orders", icon: ClipboardList },
       { href: "/invoicing", label: "Invoice run", icon: FileText },
+      { href: "/job-cards", label: "Job cards", icon: Printer },
       { href: "/despatch", label: "Despatch", icon: Truck },
       { href: "/imports", label: "Import web orders", icon: Upload },
       { href: "/proofs", label: "Proofs", icon: FileSearch },
@@ -56,7 +57,6 @@ const navigation = [
     heading: "Money in",
     items: [
       { href: "/receipts", label: "Receipts", icon: Receipt },
-      { href: "/deposits", label: "Bank deposits", icon: Banknote },
     ],
   },
   {
@@ -74,7 +74,8 @@ const navigation = [
       { href: "/settings/bins", label: "Bins", icon: Archive },
       { href: "/settings/stamp-labels", label: "Stamp labels", icon: Tag },
       { href: "/settings/invoice-states", label: "Companies", icon: Building2 },
-      { href: "/settings/pricing", label: "Pricing", icon: Tag },
+      { href: "/settings/pricing", label: "Pricing rules", icon: Tag },
+      { href: "/settings/price-list", label: "Price list", icon: Tag },
       { href: "/settings/control", label: "System control", icon: SlidersHorizontal },
       { href: "/system", label: "System", icon: Settings },
       { href: "/reports/debug", label: "Report debug", icon: Bug },

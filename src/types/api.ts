@@ -94,6 +94,15 @@ export interface JobCard {
   holdMemo: string | null;
 }
 
+/** GET /api/job-cards — the job cards of every live order in a run range, for batch printing. */
+export interface JobCardRunResult {
+  startRun: number | null;
+  endRun: number | null;
+  /** How many live orders the range matched. Some may have no stamp job, so no card. */
+  orderCount: number;
+  cards: JobCard[];
+}
+
 export interface OrderHeader {
   orderId: number;
   custId: number | null;
@@ -113,6 +122,8 @@ export interface OrderHeader {
   delAdr3: string | null;
   delCode: string | null;
   direct: boolean;
+  /** Dealer return address (OrdHeader.DirectDelivery). Not the delivery docket flag (direct). */
+  directDelivery: boolean;
   freight: number | null;
   freightApplies: boolean;
   credit: boolean;
@@ -492,6 +503,8 @@ export interface CreateOrderRequest {
   delAdr3?: string | null;
   isCredit?: boolean;
   invoiceApplied?: string | null;
+  /** Omitted = default from the customer's dealerReturnAddress. */
+  dealerReturnAddress?: boolean;
 }
 
 export interface AddOrderLineRequest {
@@ -528,6 +541,8 @@ export interface UpdateOrderRequest {
   invAdr3?: string | null;
   invPostCode?: string | null;
   direct: boolean;
+  /** Omitted = leave unchanged. */
+  dealerReturnAddress?: boolean;
   freightApplies: boolean;
   freight?: number | null;
   priceCode?: number | null;
@@ -578,6 +593,22 @@ export interface RecordReceiptRequest {
 export interface PostDepositRequest {
   receiptHistoryIds: number[];
   depositDate?: string | null;
+}
+
+/** GET /api/tracking/labels/{invoiceNo}. Lines are in print order, blank lines already dropped. */
+export interface DespatchLabel {
+  lines: string[];
+}
+
+export interface DespatchLabels {
+  invoiceNo: string | null;
+  custTitle: string | null;
+  /** The customer's invoice company (shown in the scan dialog). */
+  invoiceComp: string | null;
+  /** The order's Dealer Return Address flag: true = customer is the sender, false = invoice company. */
+  dealerReturnAddress: boolean;
+  returnLabel: DespatchLabel;
+  deliveryLabel: DespatchLabel;
 }
 
 export interface AddTrackingRequest {
@@ -973,4 +1004,69 @@ export interface EmailBatchResult {
   sent: number;
   failed: number;
   items: EmailBatchItem[];
+}
+
+// --- Price list (the Orders database price list, M31-M33) ---------------------------------
+
+/** One product's prices. A null price means "not set here"; order entry then uses Soset's. */
+export interface ProductPrice {
+  prodId: string;
+  description: string | null;
+  cost: number | null;
+  price1: number | null;
+  price2: number | null;
+  price3: number | null;
+  price4: number | null;
+  price5: number | null;
+  price6: number | null;
+  price7: number | null;
+  price8: number | null;
+  price9: number | null;
+  updatedAt: string | null;
+}
+
+/** PUT /api/pricing/products/{prodId}. Everything sent is stored, so null clears a value. */
+export type ProductPriceRequest = Omit<ProductPrice, "prodId" | "updatedAt">;
+
+export interface PriceListStatus {
+  /** True once order entry reads the list (Pricing:UseSqlPrices on the API). */
+  useSqlPrices: boolean;
+  products: number;
+}
+
+/** A problem with an imported file. Line 0 is the file as a whole; line 1 is the heading row. */
+export interface PriceListIssue {
+  line: number;
+  prodId: string | null;
+  message: string;
+}
+
+export interface PriceListChange {
+  prodId: string;
+  kind: "Added" | "Updated";
+  details: string[];
+}
+
+export interface PriceListImportResult {
+  dryRun: boolean;
+  applied: boolean;
+  rows: number;
+  added: number;
+  updated: number;
+  unchanged: number;
+  pricesCleared: number;
+  errors: PriceListIssue[];
+  warnings: PriceListIssue[];
+  changes: PriceListChange[];
+  changesTruncated: boolean;
+}
+
+export interface PriceListSeedResult {
+  dryRun: boolean;
+  applied: boolean;
+  sosetProducts: number;
+  added: number;
+  alreadyInList: number;
+  skipped: number;
+  warnings: string[];
 }

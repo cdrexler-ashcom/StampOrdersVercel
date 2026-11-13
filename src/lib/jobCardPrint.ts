@@ -22,11 +22,27 @@ export function buildJobCardPrintHtml(orderId: number, cards: JobCard[]): string
     ? cards.map(cardHtml).join("\n")
     : `<div class="page"><p class="empty">No job cards have been printed for order ${orderId} yet.</p></div>`;
 
+  return documentHtml(`Job card — order ${orderId}`, pages);
+}
+
+/**
+ * The same cards as one document for a whole batch, e.g. every order in a run. One job card per
+ * page, in the order given. `title` names the document in the print dialog.
+ */
+export function buildJobCardBatchPrintHtml(title: string, cards: JobCard[]): string {
+  const pages = cards.length > 0
+    ? cards.map(cardHtml).join("\n")
+    : `<div class="page"><p class="empty">There are no job cards to print.</p></div>`;
+
+  return documentHtml(title, pages);
+}
+
+function documentHtml(title: string, pages: string): string {
   return `<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<title>Job card — order ${orderId}</title>
+<title>${esc(title)}</title>
 <style>
   * { box-sizing: border-box; }
   body {

@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { Search } from "lucide-react";
 
 import { CustomerPicker } from "@/components/CustomerPicker";
 import {
@@ -39,6 +40,41 @@ type SortKey =
 type SortDirection = "asc" | "desc";
 
 /**
+ * What a search was run with. The boxes on the page are only a draft until Search is pressed
+ * (customer feedback, Nov 2026: History is for finding an old invoice from whatever you know, so it
+ * should not load anything, or re-query on every keystroke, until asked). Text is trimmed and the
+ * customer is held as its id, so two searches that mean the same thing compare equal.
+ */
+interface SearchCriteria {
+  custId?: number;
+  invoiceNo: string;
+  recipientName: string;
+  emailSearch: string;
+  phoneSearch: string;
+  dateFrom: string;
+  dateTo: string;
+  jobNo: string;
+  custOrderNo: string;
+}
+
+/** True when at least one box is filled in: an empty search would just list the newest 200. */
+function hasCriteria(c: SearchCriteria): boolean {
+  return (
+    c.custId !== undefined ||
+    [
+      c.invoiceNo,
+      c.recipientName,
+      c.emailSearch,
+      c.phoneSearch,
+      c.dateFrom,
+      c.dateTo,
+      c.jobNo,
+      c.custOrderNo,
+    ].some((value) => value !== "")
+  );
+}
+
+/**
  * The job numbers or customer order numbers on one invoice. An invoice has a line per stamp
  * job, so this can be long: the first few are shown, the rest behind "+N more", and the full
  * list is on hover.
@@ -74,6 +110,13 @@ export default function InvoiceHistoryPage() {
   const [invoiceNo, setInvoiceNo] = useGridState("invoices:invoiceNo", "");
   // Part of the recipient's name; the Recipient column filter below picks exact names instead.
   const [recipientName, setRecipientName] = useGridState("invoices:recipientName", "");
+  // Part of the invoice email address or phone number, and an invoice-date range for when only an
+  // approximate date is known (customer feedback, Nov 2026: find an old job from whatever the
+  // customer can tell you). Dates are yyyy-MM-dd, as a date input gives them.
+  const [emailSearch, setEmailSearch] = useGridState("invoices:emailSearch", "");
+  const [phoneSearch, setPhoneSearch] = useGridState("invoices:phoneSearch", "");
+  const [dateFrom, setDateFrom] = useGridState("invoices:dateFrom", "");
+  const [dateTo, setDateTo] = useGridState("invoices:dateTo", "");
   // Job and customer order numbers are on the invoice lines, so they are searched with their own
   // exact-match boxes (like the invoice number) rather than column filters.
   const [jobNo, setJobNo] = useGridState("invoices:jobNo", "");
@@ -118,11 +161,46 @@ export default function InvoiceHistoryPage() {
     >
   >("invoices:filters", {});
 
+  // The boxes above are a draft; the search that is actually showing is `applied`, set by the
+  // Search button (or Enter in a box) and remembered like the rest so Back from an invoice brings
+  // the same results back. Null until the first search: nothing loads before that.
+  const draft: SearchCriteria = {
+    custId: customer?.uniqueId,
+    invoiceNo: invoiceNo.trim(),
+    recipientName: recipientName.trim(),
+    emailSearch: emailSearch.trim(),
+    phoneSearch: phoneSearch.trim(),
+    dateFrom,
+    dateTo,
+    jobNo: jobNo.trim(),
+    custOrderNo: custOrderNo.trim(),
+  };
+  const [applied, setApplied] = useGridState<SearchCriteria | null>("invoices:applied", null);
+  const canSearch = hasCriteria(draft);
+  const resultsAreStale = applied !== null && JSON.stringify(applied) !== JSON.stringify(draft);
+
+  const search = () => {
+    if (canSearch) setApplied(draft);
+  };
+
+  const clearSearch = () => {
+    setCustomer(null);
+    setRecipientName("");
+    setInvoiceNo("");
+    setJobNo("");
+    setCustOrderNo("");
+    setEmailSearch("");
+    setPhoneSearch("");
+    setDateFrom("");
+    setDateTo("");
+    setApplied(null);
+  };
+
   const query = useQuery({
     queryKey: [
       "invoices",
       "history",
-      { custId: customer?.uniqueId, invoiceNo, recipientName, jobNo, custOrderNo },
+      applied,
       sort,
       filterSelected.custTitle,
       filterSelected.custCode,
@@ -132,13 +210,19 @@ export default function InvoiceHistoryPage() {
       filterSelected.email,
       filterSelected.phoneNo,
     ],
+    // Nothing is requested until a search has been run.
+    enabled: applied !== null,
     queryFn: () =>
       invoices.history({
-        custId: customer?.uniqueId,
-        invoiceNo: invoiceNo.trim() || undefined,
-        recipientName: recipientName.trim() || undefined,
-        jobNo: jobNo.trim() || undefined,
-        custOrderNo: custOrderNo.trim() || undefined,
+        custId: applied!.custId,
+        invoiceNo: applied!.invoiceNo || undefined,
+        recipientName: applied!.recipientName || undefined,
+        emailSearch: applied!.emailSearch || undefined,
+        phoneSearch: applied!.phoneSearch || undefined,
+        dateFrom: applied!.dateFrom || undefined,
+        dateTo: applied!.dateTo || undefined,
+        jobNo: applied!.jobNo || undefined,
+        custOrderNo: applied!.custOrderNo || undefined,
         sortBy: sort?.key,
         sortDir: sort?.direction,
         custTitle: filterSelected.custTitle,
@@ -195,59 +279,113 @@ export default function InvoiceHistoryPage() {
     <>
       <PageHeader
         title="History"
-        description="Issued invoices and credits, newest first."
+        description="Find an issued invoice or credit: enter what you know, then press Search."
       />
 
       <Card className="mb-4">
-        <CardBody className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_10rem_10rem_10rem_auto] sm:items-end">
-          <Field label="Customer">
-            <CustomerPicker value={customer} onChange={setCustomer} />
-          </Field>
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            search();
+          }}
+        >
+          <CardBody className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_10rem_10rem_10rem_auto] sm:items-end">
+            <Field label="Customer">
+              <CustomerPicker value={customer} onChange={setCustomer} />
+            </Field>
 
-          <Field label="Recipient">
-            <Input
-              value={recipientName}
-              placeholder="Search for Recipient"
-              onChange={(event) => setRecipientName(event.target.value)}
-            />
-          </Field>
+            <Field label="Recipient">
+              <Input
+                value={recipientName}
+                placeholder="Search for Recipient"
+                // Start a fresh visit in the first box people usually have something for. Not when
+                // coming back to a search that is already showing.
+                autoFocus={applied === null}
+                onChange={(event) => setRecipientName(event.target.value)}
+              />
+            </Field>
 
-          <Field label="Invoice number">
-            <Input
-              value={invoiceNo}
-              placeholder="Exact match"
-              onChange={(event) => setInvoiceNo(event.target.value)}
-            />
-          </Field>
+            <Field label="Invoice number">
+              <Input
+                value={invoiceNo}
+                placeholder="Exact match"
+                onChange={(event) => setInvoiceNo(event.target.value)}
+              />
+            </Field>
 
-          <Field label="Job number">
-            <Input
-              value={jobNo}
-              placeholder="Exact match"
-              onChange={(event) => setJobNo(event.target.value)}
-            />
-          </Field>
+            <Field label="Job number">
+              <Input
+                value={jobNo}
+                placeholder="Exact match"
+                onChange={(event) => setJobNo(event.target.value)}
+              />
+            </Field>
 
-          <Field label="Customer order no.">
-            <Input
-              value={custOrderNo}
-              placeholder="Exact match"
-              onChange={(event) => setCustOrderNo(event.target.value)}
-            />
-          </Field>
+            <Field label="Customer order no.">
+              <Input
+                value={custOrderNo}
+                placeholder="Exact match"
+                onChange={(event) => setCustOrderNo(event.target.value)}
+              />
+            </Field>
 
-          <Button
-            onClick={() => {
-              setCustomer(null);
-              setRecipientName("");
-              setInvoiceNo("");
-              setJobNo("");
-              setCustOrderNo("");
-            }}
-          >
-            Clear
-          </Button>
-        </CardBody>
+            <div className="flex gap-2">
+              <Button type="submit" variant="primary" disabled={!canSearch} loading={query.isFetching}>
+                <Search className="size-3.5" />
+                Search
+              </Button>
+              <Button type="button" onClick={clearSearch}>
+                Clear
+              </Button>
+            </div>
+          </CardBody>
+
+          <CardBody className="grid gap-3 border-t border-slate-100 sm:grid-cols-2 lg:grid-cols-4">
+            <Field label="Email (invoice)">
+              <Input
+                type="search"
+                value={emailSearch}
+                placeholder="Part of the address"
+                onChange={(event) => setEmailSearch(event.target.value)}
+              />
+            </Field>
+
+            <Field label="Phone (invoice)" hint="Spaces and punctuation are ignored.">
+              <Input
+                type="search"
+                value={phoneSearch}
+                placeholder="Part of the number"
+                onChange={(event) => setPhoneSearch(event.target.value)}
+              />
+            </Field>
+
+            <Field label="Invoice date from">
+              <Input
+                type="date"
+                value={dateFrom}
+                max={dateTo || undefined}
+                onChange={(event) => setDateFrom(event.target.value)}
+              />
+            </Field>
+
+            <Field label="Invoice date to">
+              <Input
+                type="date"
+                value={dateTo}
+                min={dateFrom || undefined}
+                onChange={(event) => setDateTo(event.target.value)}
+              />
+            </Field>
+          </CardBody>
+
+          {(resultsAreStale || (applied === null && !canSearch)) && (
+            <p className="border-t border-slate-100 px-4 py-2 text-xs text-slate-500">
+              {resultsAreStale
+                ? "The results below are for the previous search. Press Search to update them."
+                : "Fill in at least one box, then press Search or Enter."}
+            </p>
+          )}
+        </form>
       </Card>
 
       <GridToolbar
@@ -256,14 +394,19 @@ export default function InvoiceHistoryPage() {
       />
 
       <Card>
-        {query.isLoading ? (
+        {applied === null ? (
+          <EmptyState
+            title="Search for an invoice"
+            description="Enter whatever you know about the customer, recipient, email, phone, date, invoice, job or order number, then press Search."
+          />
+        ) : query.isLoading ? (
           <Spinner />
         ) : query.isError ? (
           <ErrorState error={query.error} />
         ) : (query.data?.length ?? 0) === 0 ? (
           <EmptyState
             title="No invoices found"
-            description="Adjust the customer, recipient, invoice, job or order number and try again."
+            description="Adjust the customer, recipient, email, phone, date, invoice, job or order number and try again."
           />
         ) : (
           <Table>

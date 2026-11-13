@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { Button, Modal } from "@/components/ui";
 import { orders } from "@/lib/endpoints";
@@ -20,21 +20,44 @@ import { orders } from "@/lib/endpoints";
  * useful action first: answering yes opens the existing job to add to, answering no falls
  * through to creating a new order exactly as before.
  */
-export function ExistingOpenOrderDialog({ custId }: { custId: number }) {
+export function ExistingOpenOrderDialog({
+  custId,
+  onSettled,
+}: {
+  custId: number;
+  /**
+   * Called once there is nothing left to ask for this customer: the check found no open order, it
+   * failed, or the operator answered "No, start a new order". The new-order screen uses it to
+   * put the cursor on Start order, so a customer picked from the keyboard needs one more Enter.
+   */
+  onSettled?: () => void;
+}) {
   const router = useRouter();
 
-  // Whether the operator has answered for the current customer. Reset when the customer
-  // changes so re-selecting a different account re-prompts — invoice.Frm re-ran the check
-  // on every Customer_LostFocus where the customer had changed.
-  const [answered, setAnswered] = useState(false);
-  useEffect(() => setAnswered(false), [custId]);
+  // The customer the operator has answered for. Holding the id, rather than a flag that is reset
+  // when the customer changes, means picking a different account re-prompts without a moment in
+  // between where the old answer still counts (invoice.Frm re-ran the check on every
+  // Customer_LostFocus where the customer had changed).
+  const [answeredFor, setAnsweredFor] = useState<number | null>(null);
+  const answered = answeredFor === custId;
+  const setAnswered = (value: boolean) => setAnsweredFor(value ? custId : null);
 
-  const { data } = useQuery({
+  const { data, isError } = useQuery({
     queryKey: ["open-order-check", custId],
     queryFn: () => orders.openOrderCheck(custId),
   });
 
   const open = !answered && !!data?.hasOpenOrder && data.orderId != null;
+
+  const settled =
+    answered || isError || (data !== undefined && !(data.hasOpenOrder && data.orderId != null));
+  const onSettledRef = useRef(onSettled);
+  useEffect(() => {
+    onSettledRef.current = onSettled;
+  });
+  useEffect(() => {
+    if (settled) onSettledRef.current?.();
+  }, [settled, custId]);
 
   return (
     <Modal
@@ -49,6 +72,8 @@ export function ExistingOpenOrderDialog({ custId }: { custId: number }) {
           <Button
             type="button"
             variant="primary"
+            // Enter opens the existing order; Escape (or the other button) starts a new one.
+            autoFocus
             onClick={() => {
               if (data?.orderId != null) router.push(`/orders/${data.orderId}`);
             }}

@@ -13,10 +13,12 @@ import type {
   Customer,
   DepositResult,
   DepositSummary,
+  DespatchLabels,
   InvoiceHeader,
   InvoiceRunRequest,
   InvoiceRunResult,
   JobCard,
+  JobCardRunResult,
   OpenItem,
   OrderHeader,
   OrderLine,
@@ -54,6 +56,11 @@ import type {
   LoginResult,
   PricingRuleRequest,
   PricingRuleResult,
+  PriceListImportResult,
+  PriceListSeedResult,
+  PriceListStatus,
+  ProductPrice,
+  ProductPriceRequest,
   ImportResult,
 } from "@/types/api";
 
@@ -126,6 +133,17 @@ export const orders = {
     api.get<JobCard[]>(`/api/orders/${orderId}/job-card`),
 };
 
+// --- Job cards --------------------------------------------------------------------------
+
+export const jobCards = {
+  /**
+   * GET /api/job-cards — every live order's job cards in a run range (both ends inclusive).
+   * RunNo is text on the API, which compares it as a number, so "10" falls after "2".
+   */
+  forRuns: (startRun: number, endRun: number) =>
+    api.get<JobCardRunResult>("/api/job-cards", { startRun, endRun }),
+};
+
 // --- Invoicing --------------------------------------------------------------------------
 
 export const invoices = {
@@ -156,6 +174,13 @@ export const invoices = {
       recipient?: string[];
       /** Part of the recipient's name (the search box), as opposed to `recipient`'s exact names. */
       recipientName?: string;
+      /** Part of the invoice email address (the search box), not the exact `email` column filter. */
+      emailSearch?: string;
+      /** Part of the invoice phone number; the API ignores spaces, hyphens and brackets. */
+      phoneSearch?: string;
+      /** Invoice date range, yyyy-MM-dd, both days included. */
+      dateFrom?: string;
+      dateTo?: string;
       jobNo?: string;
       custOrderNo?: string;
     } = {},
@@ -210,6 +235,22 @@ export const tracking = {
 
   /** POST /api/tracking */
   add: (body: AddTrackingRequest) => api.post<void>("/api/tracking/", body),
+
+  /** GET /api/tracking/parse-barcode — the consignment number inside a scanned carrier barcode */
+  parseBarcode: (barcode: string) =>
+    api.get<{ trackingNo: string }>("/api/tracking/parse-barcode", { barcode }),
+
+  /** GET /api/tracking/labels/{invoiceNo} — return and delivery label lines */
+  labels: (invoiceNo: string) =>
+    api.get<DespatchLabels>(`/api/tracking/labels/${encodeURIComponent(invoiceNo)}`),
+
+  /** PUT /api/tracking/{archiveId}/tracking-no — free-text edit, pending invoices only */
+  setTrackingNo: (archiveId: number, trackingNo: string) =>
+    api.put<void>(`/api/tracking/${archiveId}/tracking-no`, { trackingNo }),
+
+  /** PUT /api/tracking/{archiveId}/required — pending invoices only */
+  setRequired: (archiveId: number, required: boolean) =>
+    api.put<void>(`/api/tracking/${archiveId}/required`, { required }),
 
   /** POST /api/tracking/advance */
   advance: () => api.post<{ updated: number }>("/api/tracking/advance"),
@@ -397,6 +438,42 @@ export const imports = {
     return api.postForm<ImportResult>("/api/imports/web-orders", formData);
   },
 };
+// --- Price list (Orders database prices, M31-M33) ----------------------------------------
+export const priceList = {
+  /** GET /api/pricing/products/status */
+  status: () => api.get<PriceListStatus>("/api/pricing/products/status"),
+
+  /** GET /api/pricing/products */
+  list: () => api.get<ProductPrice[]>("/api/pricing/products"),
+
+  /** PUT /api/pricing/products/{prodId}. Adds the product or replaces its prices. */
+  save: (prodId: string, body: ProductPriceRequest) =>
+    api.put<ProductPrice>(`/api/pricing/products/${encodeURIComponent(prodId)}`, body),
+
+  /** DELETE /api/pricing/products/{prodId} */
+  remove: (prodId: string) =>
+    api.delete<void>(`/api/pricing/products/${encodeURIComponent(prodId)}`),
+
+  /** GET /api/pricing/products/export. The whole list as CSV, for Excel. */
+  exportCsv: () => api.getBlob("/api/pricing/products/export"),
+
+  /** POST /api/pricing/products/import. A dry run unless told otherwise; the file is read again to apply. */
+  importCsv: (file: File, apply: boolean) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    return api.postForm<PriceListImportResult>(
+      `/api/pricing/products/import?dryRun=${apply ? "false" : "true"}`,
+      formData,
+    );
+  },
+
+  /** POST /api/pricing/products/seed-from-soset. A dry run unless told otherwise. */
+  seedFromSoset: (apply: boolean) =>
+    api.post<PriceListSeedResult>(
+      `/api/pricing/products/seed-from-soset?dryRun=${apply ? "false" : "true"}`,
+    ),
+};
+
 // --- Pricing ----------------------------------------------------------------------------
 export const pricing = {
   /** GET /api/pricing */

@@ -15,9 +15,13 @@ import {
   DetailRow,
   EmptyState,
   ErrorState,
+  Field,
+  Input,
+  Modal,
   Notice,
   Spinner,
 } from "@/components/ui";
+import { InvoiceDocument } from "@/components/InvoiceDocument";
 import { invoices } from "@/lib/endpoints";
 import {
   addressLines,
@@ -59,9 +63,19 @@ export default function InvoiceDocumentPage() {
     queryFn: () => invoices.historyDetail(invoiceNo),
   });
 
-  // Real SMTP send of the invoice to the customer (E1). Uses the invoice's stored address.
+  // Email invoice asks first and shows the recipient, which can be changed (customer feedback,
+  // Nov 2026): the button no longer sends on the first click.
+  const [emailOpen, setEmailOpen] = useState(false);
+  const [emailTo, setEmailTo] = useState("");
+
+  // Real SMTP send of the invoice to the customer (E1). The invoice's stored address is used
+  // unless the operator typed a different one, which is sent as the API's toOverride.
   const emailMutation = useMutation({
-    mutationFn: () => invoices.email(invoiceNo),
+    mutationFn: (to: string) => {
+      const stored = query.data?.invoice.email?.trim() ?? "";
+      return invoices.email(invoiceNo, to !== stored ? to : undefined);
+    },
+    onSettled: () => setEmailOpen(false),
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["invoice", invoiceNo] });
       setEmailResult(
@@ -92,6 +106,16 @@ export default function InvoiceDocumentPage() {
   const { net, gst, gross } = documentTotals(lines);
 
   const hasEmail = Boolean(invoice.email?.trim());
+  const emailTarget = emailTo.trim();
+  const emailChanged = emailTarget !== (invoice.email?.trim() ?? "");
+  const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailTarget);
+  const documentName = invoice.credit ? "credit note" : "invoice";
+
+  const openEmail = () => {
+    setEmailTo(invoice.email?.trim() ?? "");
+    setEmailResult(null);
+    setEmailOpen(true);
+  };
 
   return (
     <>
@@ -126,15 +150,10 @@ export default function InvoiceDocumentPage() {
             </button>
           </div>
 
-          {hasEmail && (
-            <Button
-              loading={emailMutation.isPending}
-              onClick={() => emailMutation.mutate()}
-            >
-              <Mail className="size-3.5" />
-              Email invoice
-            </Button>
-          )}
+          <Button loading={emailMutation.isPending} onClick={openEmail}>
+            <Mail className="size-3.5" />
+            Email invoice
+          </Button>
 
           <Button variant="primary" onClick={() => window.print()}>
             <Printer className="size-3.5" />
@@ -144,138 +163,40 @@ export default function InvoiceDocumentPage() {
       </div>
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_18rem]">
-        <article className="print-page mx-auto w-full max-w-3xl rounded-lg border border-slate-200 bg-white p-8 shadow-sm">
-          <header className="flex items-start justify-between gap-6 border-b border-slate-200 pb-5">
-            <div>
-              <p className="text-lg font-semibold text-slate-900">Stead Brothers</p>
-              <p className="text-xs text-slate-500">
-                {text(invoice.invoiceComp, "Stamp manufacturing")}
-              </p>
-            </div>
-
-            <div className="text-right">
-              <p className="text-sm font-semibold uppercase tracking-wide text-slate-700">
-                {isDocket
-                  ? "Delivery docket"
-                  : invoice.credit
-                    ? "Credit note"
-                    : "Tax invoice"}
-              </p>
-              <p className="mt-1 text-xl font-semibold tabular-nums text-slate-900">
-                {text(invoice.invoiceNo)}
-              </p>
-              <p className="text-xs text-slate-500">
-                {date(invoice.invoiceDate)}
-              </p>
-            </div>
-          </header>
-
-          <section className="grid gap-6 py-5 sm:grid-cols-2">
-            <div>
-              <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                Invoice to
-              </p>
-              {addressLines(
-                invoice.custTitle,
-                invoice.invAdr1,
-                invoice.invAdr2,
-                invoice.invAdr3,
-                invoice.invPostCode,
-              ).map((line, index) => (
-                <p key={index} className="text-sm text-slate-700">
-                  {line}
-                </p>
-              ))}
-            </div>
-
-            <div>
-              <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                Deliver to
-              </p>
-              {addressLines(
-                invoice.delName,
-                invoice.delAdr0,
-                invoice.delAdr1,
-                invoice.delAdr2,
-                invoice.delAdr3,
-              ).map((line, index) => (
-                <p key={index} className="text-sm text-slate-700">
-                  {line}
-                </p>
-              ))}
-            </div>
-          </section>
-
-          <table className="w-full border-t border-slate-200 text-sm">
-            <thead>
-              <tr className="text-xs text-slate-500">
-                <th className="py-2 text-left font-medium">Job</th>
-                <th className="py-2 text-left font-medium">Product</th>
-                <th className="py-2 text-left font-medium">Details</th>
-                <th className="py-2 text-left font-medium">Colour</th>
-                <th className="py-2 text-right font-medium">Qty</th>
-                {!isDocket && (
-                  <>
-                    <th className="py-2 text-right font-medium">Price</th>
-                    <th className="py-2 text-right font-medium">Total</th>
-                  </>
-                )}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {lines.map((line) => (
-                <tr key={`${line.orderId}-${line.jobNo}`}>
-                  <td className="py-2 text-slate-700">{line.jobNo}</td>
-                  <td className="py-2 text-slate-700">{line.product}</td>
-                  <td className="py-2 text-slate-700">{text(line.details)}</td>
-                  <td className="py-2 text-slate-700">
-                    {text(line.colourDesc ?? line.colour)}
-                  </td>
-                  <td className="py-2 text-right tabular-nums text-slate-700">
-                    {formatQty(line.qty)}
-                  </td>
-                  {!isDocket && (
-                    <>
-                      <td className="py-2 text-right tabular-nums text-slate-700">
-                        {money(line.price)}
-                      </td>
-                      <td className="py-2 text-right tabular-nums font-medium text-slate-900">
-                        {money(lineTotal(line))}
-                      </td>
-                    </>
-                  )}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-
-          {!isDocket && (
-            <div className="mt-4 flex justify-end border-t border-slate-200 pt-4">
-              <dl className="w-56 space-y-1 text-sm">
-                <div className="flex justify-between">
-                  <dt className="text-slate-500">Net</dt>
-                  <dd className="tabular-nums text-slate-700">{money(net)}</dd>
-                </div>
-                <div className="flex justify-between">
-                  <dt className="text-slate-500">GST</dt>
-                  <dd className="tabular-nums text-slate-700">{money(gst)}</dd>
-                </div>
-                <div className="flex justify-between border-t border-slate-200 pt-1">
-                  <dt className="font-semibold text-slate-900">Total</dt>
-                  <dd className="tabular-nums font-semibold text-slate-900">
-                    {money(gross)}
-                  </dd>
-                </div>
-              </dl>
-            </div>
+        <InvoiceDocument
+          heading="Stead Brothers"
+          subheading={text(invoice.invoiceComp, "Stamp manufacturing")}
+          title={isDocket ? "Delivery docket" : invoice.credit ? "Credit note" : "Tax invoice"}
+          number={text(invoice.invoiceNo)}
+          dateText={date(invoice.invoiceDate)}
+          invoiceTo={addressLines(
+            invoice.custTitle,
+            invoice.invAdr1,
+            invoice.invAdr2,
+            invoice.invAdr3,
+            invoice.invPostCode,
           )}
-
-          {invoice.note?.trim() && (
-            <p className="mt-6 border-t border-slate-200 pt-3 text-xs text-slate-600">
-              {invoice.note}
-            </p>
+          deliverTo={addressLines(
+            invoice.delName,
+            invoice.delAdr0,
+            invoice.delAdr1,
+            invoice.delAdr2,
+            invoice.delAdr3,
           )}
-        </article>
+          lines={lines.map((line) => ({
+            key: `${line.orderId}-${line.jobNo}`,
+            jobNo: line.jobNo,
+            product: line.product,
+            details: line.details,
+            colour: line.colourDesc ?? line.colour,
+            qty: line.qty,
+            price: line.price,
+            total: lineTotal(line),
+          }))}
+          showPrices={!isDocket}
+          totals={{ net, gst, gross }}
+          note={invoice.note}
+        />
 
         <aside className="no-print space-y-4">
           <Card>
@@ -340,12 +261,60 @@ export default function InvoiceDocumentPage() {
           ) : (
             <Notice tone="slate" title="Emailing">
               {hasEmail
-                ? "Email invoice sends a summary to the customer's stored address via the server."
-                : "This invoice has no email address, so it can't be emailed."}
+                ? "Email invoice asks you to confirm, and lets you change the address first. The server sends it."
+                : "This invoice has no stored email address. Enter one when you email it."}
             </Notice>
           )}
         </aside>
       </div>
+
+      <Modal
+        open={emailOpen}
+        onClose={() => setEmailOpen(false)}
+        title={`Email ${documentName}`}
+        description={`${invoice.credit ? "Credit note" : "Invoice"} ${invoiceNo}`}
+        bodyOverflow="visible"
+        footer={
+          <>
+            <Button onClick={() => setEmailOpen(false)}>Cancel</Button>
+            <Button
+              variant="primary"
+              loading={emailMutation.isPending}
+              disabled={!emailValid}
+              onClick={() => emailMutation.mutate(emailTarget)}
+            >
+              <Mail className="size-3.5" />
+              Send
+            </Button>
+          </>
+        }
+      >
+        <Field
+          label="Send to"
+          error={emailTarget && !emailValid ? "Enter a valid email address." : undefined}
+          hint={
+            emailChanged && emailValid
+              ? hasEmail
+                ? `Differs from the address on the invoice (${invoice.email?.trim()}). This send only; the invoice keeps its address.`
+                : "The invoice has no stored address. This send only."
+              : "The address stored on the invoice. Change it to send somewhere else."
+          }
+        >
+          <Input
+            type="email"
+            autoFocus
+            value={emailTo}
+            onChange={(e) => setEmailTo(e.target.value)}
+            onFocus={(e) => e.target.select()}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && emailValid && !emailMutation.isPending) {
+                e.preventDefault();
+                emailMutation.mutate(emailTarget);
+              }
+            }}
+          />
+        </Field>
+      </Modal>
     </>
   );
 }

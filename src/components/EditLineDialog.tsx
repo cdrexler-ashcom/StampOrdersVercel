@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { orders, reference } from "@/lib/endpoints";
 import {
@@ -28,6 +28,8 @@ import {
   Select,
 } from "./ui";
 
+const selectAll = (e: React.FocusEvent<HTMLInputElement>) => e.target.select();
+
 /**
  * Edit a single order line — the amend half of UpdLine.Frm (the add half is AddLineDialog).
  *
@@ -40,6 +42,13 @@ import {
  * The job number is immutable (it is the Soset join key), so it is shown read-only; changing
  * it would be delete + add. The API re-prices on save and reconciles the Soset stamp; the
  * saved line replaces whatever preview was shown.
+ *
+ * Keyboard behaviour matches AddLineDialog (customer feedback, Nov 2026): the first editable field
+ * takes focus, numbers and the customer order number are selected on focus, Colour comes straight
+ * after Product, Details and the GST tick are skipped by Tab, and Save changes is the last tab stop,
+ * looping back to the top. Unlike the add dialog, F2 keeps its usual meaning here (search for a
+ * different product): the product is always already chosen on an edit, and F2 is the only
+ * keyboard way to change it. Colour is the next Tab stop anyway.
  */
 export function EditLineDialog({
   open,
@@ -55,6 +64,8 @@ export function EditLineDialog({
   customer: Customer | null;
 }) {
   const queryClient = useQueryClient();
+  const firstFieldRef = useRef<HTMLInputElement>(null);
+  const colourRef = useRef<HTMLSelectElement>(null);
 
   const [product, setProduct] = useState<SosetProduct | null>(null);
   const [details, setDetails] = useState("");
@@ -90,12 +101,21 @@ export function EditLineDialog({
     setStampLabelCode(line.stampLabelCode ?? "");
     setPriceNote(null);
 
+    // The first field takes focus when the dialog opens, before these values arrive, so its
+    // selection-on-focus finds it empty. Select the loaded text once it is in place.
+    const selectFirst = window.setTimeout(() => {
+      const first = firstFieldRef.current;
+      if (first && document.activeElement === first) first.select();
+    }, 0);
+
     // The line stores a product code; the picker wants a product object. Look it up so the
     // picker shows the current product and a product change can re-resolve price.
     reference
       .product(line.product)
       .then((p) => setProduct(p))
       .catch(() => setProduct(null));
+
+    return () => window.clearTimeout(selectFirst);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, line?.jobNo]);
 
@@ -193,12 +213,25 @@ export function EditLineDialog({
       width="lg"
       footer={
         <>
-          <Button onClick={onClose}>Cancel</Button>
+          {/* Escape cancels, so the button is only for the mouse and stays out of the tab order. */}
+          <Button tabIndex={-1} onClick={onClose}>
+            Cancel
+          </Button>
           <Button
             variant="primary"
             onClick={submit}
+            onKeyDown={(e) => {
+              // Save changes is the last tab stop; Tab loops back to the first field.
+              if (e.key === "Tab" && !e.shiftKey) {
+                e.preventDefault();
+                firstFieldRef.current?.focus();
+              }
+            }}
             loading={mutation.isPending}
-            disabled={!canSubmit}
+            // Not `disabled`: a disabled button cannot take focus, which would drop it from the
+            // tab order whenever the form is incomplete. submit() re-validates.
+            aria-disabled={!canSubmit}
+            className={canSubmit ? undefined : "cursor-not-allowed opacity-60"}
           >
             Save changes
           </Button>
@@ -239,26 +272,25 @@ export function EditLineDialog({
             <Input
               value={custOrderNo}
               maxLength={20}
+              autoFocus
+              ref={firstFieldRef}
+              onFocus={selectAll}
               onChange={(e) => setCustOrderNo(e.target.value)}
             />
           </Field>
         </div>
 
         <Field label="Product" required>
-          <ProductPicker value={product} onChange={setProduct} />
+          <ProductPicker
+            value={product}
+            onChange={setProduct}
+            onSelected={() => colourRef.current?.focus()}
+          />
         </Field>
 
         <div className="grid gap-3 sm:grid-cols-2">
-          <Field label="Details" required>
-            <Input
-              value={details}
-              maxLength={30}
-              onChange={(e) => setDetails(e.target.value)}
-            />
-          </Field>
-
           <Field label="Colour" required>
-            <Select value={colour} onChange={(e) => setColour(e.target.value)}>
+            <Select ref={colourRef} value={colour} onChange={(e) => setColour(e.target.value)}>
               <option value="">Select a colour…</option>
               {colours?.map((c) => (
                 <option key={c.colourId} value={c.colourId}>
@@ -266,6 +298,16 @@ export function EditLineDialog({
                 </option>
               ))}
             </Select>
+          </Field>
+
+          {/* Details is skipped in the tab order (legacy TabStop = False), as on the add dialog. */}
+          <Field label="Details" required>
+            <Input
+              value={details}
+              maxLength={30}
+              tabIndex={-1}
+              onChange={(e) => setDetails(e.target.value)}
+            />
           </Field>
         </div>
 
@@ -276,6 +318,7 @@ export function EditLineDialog({
               min="0"
               step="1"
               value={qty}
+              onFocus={selectAll}
               onChange={(e) => setQty(e.target.value)}
             />
           </Field>
@@ -286,6 +329,7 @@ export function EditLineDialog({
               min="0"
               step="0.01"
               value={price}
+              onFocus={selectAll}
               onChange={(e) => {
                 setPrice(e.target.value);
                 setPriceNote(null);
@@ -299,6 +343,7 @@ export function EditLineDialog({
               min="0"
               step="0.01"
               value={discPct}
+              onFocus={selectAll}
               onChange={(e) => setDiscPct(e.target.value)}
             />
           </Field>
@@ -308,6 +353,7 @@ export function EditLineDialog({
           <Checkbox
             label="Price includes GST"
             checked={priceIncGst}
+            tabIndex={-1}
             onChange={(e) => setPriceIncGst(e.target.checked)}
           />
           <Checkbox

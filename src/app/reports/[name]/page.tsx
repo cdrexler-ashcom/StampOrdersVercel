@@ -14,6 +14,7 @@ import {
 } from "@/components/ReportParamsPanel";
 import { Button, Notice, PageHeader, Spinner } from "@/components/ui";
 import {
+  describeCustomerRange,
   findReport,
   type ReportQueryParams,
   type ReportView,
@@ -71,6 +72,8 @@ function ReportViewer() {
       from: applied.params.from || undefined,
       to: applied.params.to || undefined,
       custId: applied.params.customer?.uniqueId ?? undefined,
+      custFrom: applied.params.custFrom.trim() || undefined,
+      custTo: applied.params.custTo.trim() || undefined,
       invoiceNo: applied.params.invoiceNo || undefined,
       sortBy: applied.params.sortBy || undefined,
       detail: applied.params.detail || undefined,
@@ -213,6 +216,15 @@ function buildChips(
       key: "customer",
       label: customerLabel || `Customer ${applied.customer.uniqueId}`,
       onRemove: () => onApply({ ...applied, customer: null }),
+    });
+  }
+
+  const customerRange = describeCustomerRange(applied.custFrom, applied.custTo);
+  if (customerRange) {
+    chips.push({
+      key: "custRange",
+      label: customerRange,
+      onRemove: () => onApply({ ...applied, custFrom: "", custTo: "" }),
     });
   }
 

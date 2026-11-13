@@ -16,6 +16,7 @@ import {
   Textarea,
 } from "@/components/ui";
 import { InvoiceEntityPicker } from "@/components/InvoiceEntityPicker";
+import { Tabs, tabPanelId } from "@/components/Tabs";
 import type { Customer, CustomerRequest } from "@/types/api";
 
 /**
@@ -71,6 +72,19 @@ const CREDIT_STATUS_OPTIONS: { value: string; label: string }[] = [
   { value: "90 Days", label: "90 Days" },
   { value: "Always", label: "Always" },
 ];
+
+/**
+ * The form is split into tabs (customer feedback, Nov 2026, M26: too many fields and too much
+ * scrolling). Only the active tab is shown; all the values live in one form state, so nothing is
+ * lost by switching tabs and one Save covers them all.
+ */
+const TABS = [
+  { id: "details", label: "Details" },
+  { id: "pricing", label: "Pricing & freight" },
+  { id: "invoicing", label: "Invoicing & proofs" },
+  { id: "web", label: "Web & payment" },
+] as const;
+type TabId = (typeof TABS)[number]["id"];
 
 interface FormState {
   accountNo: string;
@@ -309,6 +323,19 @@ function validate(form: FormState): string[] {
     }
   }
 
+  // Checked here as well as by the browser, because a field on a tab that is not showing cannot
+  // be checked by the browser.
+  const emails: [string, string][] = [
+    ["Accounts email", form.accountsEmail],
+    ["Contact email", form.email],
+    ["Proof email “from” address", form.sendFromEmail],
+  ];
+  for (const [field, value] of emails) {
+    if (value.trim() !== "" && !/^[^s@]+@[^s@]+$/.test(value.trim())) {
+      problems.push(`${field} is not a valid email address.`);
+    }
+  }
+
   if (form.priceCode.trim() !== "") {
     const code = Number(form.priceCode);
     if (!Number.isFinite(code) || !Number.isInteger(code)) {
@@ -340,6 +367,10 @@ export function CustomerForm({
   error?: Error | null;
 }) {
   const [form, setForm] = useState<FormState>(() => (initial ? toForm(initial) : emptyForm));
+  const [tab, setTab] = useState<TabId>("details");
+  // The account number takes focus when the form opens, but not when Details is shown again by
+  // switching tabs, which would pull focus out of the tab strip while arrowing through it.
+  const [tabChanged, setTabChanged] = useState(false);
 
   // Re-seeds if a different customer is passed in (defends against the same mounted
   // component being reused across customers; harmless when it's the same one twice).
@@ -379,17 +410,17 @@ export function CustomerForm({
         description={heading.description}
         actions={
           <>
-            <Button type="button" onClick={onCancel} disabled={pending}>
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              variant="primary"
-              loading={pending}
-              disabled={problems.length > 0}
-            >
-              {submitLabel}
-            </Button>
+                <Button type="button" onClick={onCancel} disabled={pending}>
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  variant="primary"
+                  loading={pending}
+                  disabled={problems.length > 0}
+                >
+                  {submitLabel}
+                </Button>
           </>
         }
       />
@@ -402,390 +433,400 @@ export function CustomerForm({
         </div>
       )}
 
-      <div className="space-y-4">
-        <Card>
-          <CardHeader title="Identity" />
-          <CardBody className="grid gap-3 sm:grid-cols-2">
-            <Field label="Account number" required hint={`Up to ${MAX.accountNo} characters. The business key.`}>
-              <Input
-                value={form.accountNo}
-                maxLength={MAX.accountNo}
-                autoFocus
-                onChange={(e) => set("accountNo", e.target.value)}
-              />
-            </Field>
-            <Field label="Title" hint="Customer name.">
-              <Input
-                value={form.title}
-                maxLength={MAX.title}
-                onChange={(e) => set("title", e.target.value)}
-              />
-            </Field>
-          </CardBody>
-        </Card>
+      <Tabs
+        tabs={[...TABS]}
+        active={tab}
+        onChange={(id) => {
+          setTab(id);
+          setTabChanged(true);
+        }}
+        label="Customer sections"
+      />
 
-        <Card>
-          <CardHeader title="Invoice address" />
-          <CardBody className="grid gap-3 sm:grid-cols-2">
-            <Field label="Address line 1" className="sm:col-span-2">
-              <Input
-                value={form.address1}
-                maxLength={MAX.address1}
-                onChange={(e) => set("address1", e.target.value)}
-              />
-            </Field>
-            <Field label="Address line 2" className="sm:col-span-2">
-              <Input
-                value={form.address2}
-                maxLength={MAX.address2}
-                onChange={(e) => set("address2", e.target.value)}
-              />
-            </Field>
-            <Field label="Suburb (address line 3)">
-              <Input
-                value={form.address3}
-                maxLength={MAX.address3}
-                onChange={(e) => set("address3", e.target.value)}
-              />
-            </Field>
-            <Field label="Post code">
-              <Input
-                value={form.postCode}
-                maxLength={MAX.postCode}
-                onChange={(e) => set("postCode", e.target.value)}
-              />
-            </Field>
-          </CardBody>
-        </Card>
+      <div
+        className="space-y-4"
+        role="tabpanel"
+        id={tabPanelId(tab)}
+        aria-labelledby={`tab-${tab}`}
+      >
+        {tab === "details" && (
+          <>
+            <Card>
+              <CardHeader title="Identity" />
+              <CardBody className="grid gap-3 sm:grid-cols-2">
+                <Field label="Account number" required hint={`Up to ${MAX.accountNo} characters. The business key.`}>
+                  <Input
+                    value={form.accountNo}
+                    maxLength={MAX.accountNo}
+                    autoFocus={!tabChanged}
+                    onChange={(e) => set("accountNo", e.target.value)}
+                  />
+                </Field>
+                <Field label="Title" hint="Customer name.">
+                  <Input
+                    value={form.title}
+                    maxLength={MAX.title}
+                    onChange={(e) => set("title", e.target.value)}
+                  />
+                </Field>
+              </CardBody>
+            </Card>
 
-        <Card>
-          <CardHeader
-            title="Delivery address"
-            actions={
-              <Button type="button" size="sm" onClick={copyInvoiceAddress}>
-                Copy invoice address
-              </Button>
-            }
-          />
-          <CardBody className="grid gap-3 sm:grid-cols-2">
-            <Field label="Address line 1" className="sm:col-span-2">
-              <Input
-                value={form.delivery1}
-                maxLength={MAX.delivery1}
-                onChange={(e) => set("delivery1", e.target.value)}
-              />
-            </Field>
-            <Field label="Address line 2" className="sm:col-span-2">
-              <Input
-                value={form.delivery2}
-                maxLength={MAX.delivery2}
-                onChange={(e) => set("delivery2", e.target.value)}
-              />
-            </Field>
-            <Field label="Suburb (address line 3)">
-              <Input
-                value={form.delivery3}
-                maxLength={MAX.delivery3}
-                onChange={(e) => set("delivery3", e.target.value)}
-              />
-            </Field>
-            <div className="grid grid-cols-2 gap-3">
-              <Field label="State" hint={`${MAX.delState} chars`}>
-                <Input
-                  value={form.delState}
-                  maxLength={MAX.delState}
-                  onChange={(e) => set("delState", e.target.value)}
-                />
-              </Field>
-              <Field label="Post code" hint={`${MAX.delPostCode} chars`}>
-                <Input
-                  value={form.delPostCode}
-                  maxLength={MAX.delPostCode}
-                  onChange={(e) => set("delPostCode", e.target.value)}
-                />
-              </Field>
-            </div>
-          </CardBody>
-        </Card>
+            <Card>
+              <CardHeader title="Invoice address" />
+              <CardBody className="grid gap-3 sm:grid-cols-2">
+                <Field label="Address line 1" className="sm:col-span-2">
+                  <Input
+                    value={form.address1}
+                    maxLength={MAX.address1}
+                    onChange={(e) => set("address1", e.target.value)}
+                  />
+                </Field>
+                <Field label="Address line 2" className="sm:col-span-2">
+                  <Input
+                    value={form.address2}
+                    maxLength={MAX.address2}
+                    onChange={(e) => set("address2", e.target.value)}
+                  />
+                </Field>
+                <Field label="Suburb (address line 3)">
+                  <Input
+                    value={form.address3}
+                    maxLength={MAX.address3}
+                    onChange={(e) => set("address3", e.target.value)}
+                  />
+                </Field>
+                <Field label="Post code">
+                  <Input
+                    value={form.postCode}
+                    maxLength={MAX.postCode}
+                    onChange={(e) => set("postCode", e.target.value)}
+                  />
+                </Field>
+              </CardBody>
+            </Card>
 
-        <Card>
-          <CardHeader title="Contact" />
-          <CardBody className="grid gap-3 sm:grid-cols-2">
-            <Field label="Phone number">
-              <Input
-                value={form.phoneNo}
-                maxLength={MAX.phoneNo}
-                onChange={(e) => set("phoneNo", e.target.value)}
+            <Card>
+              <CardHeader
+                title="Delivery address"
+                actions={
+                  <Button type="button" size="sm" onClick={copyInvoiceAddress}>
+                    Copy invoice address
+                  </Button>
+                }
               />
-            </Field>
-            <Field label="Accounts email" hint="Used for invoice delivery.">
-              <Input
-                type="email"
-                value={form.accountsEmail}
-                maxLength={MAX.accountsEmail}
-                onChange={(e) => set("accountsEmail", e.target.value)}
-              />
-            </Field>
-            <Field label="Contact email" hint="Ordering contact; used when sending proofs.">
-              <Input
-                type="email"
-                value={form.email}
-                maxLength={MAX.email}
-                onChange={(e) => set("email", e.target.value)}
-              />
-            </Field>
-          </CardBody>
-        </Card>
+              <CardBody className="grid gap-3 sm:grid-cols-2">
+                <Field label="Address line 1" className="sm:col-span-2">
+                  <Input
+                    value={form.delivery1}
+                    maxLength={MAX.delivery1}
+                    onChange={(e) => set("delivery1", e.target.value)}
+                  />
+                </Field>
+                <Field label="Address line 2" className="sm:col-span-2">
+                  <Input
+                    value={form.delivery2}
+                    maxLength={MAX.delivery2}
+                    onChange={(e) => set("delivery2", e.target.value)}
+                  />
+                </Field>
+                <Field label="Suburb (address line 3)">
+                  <Input
+                    value={form.delivery3}
+                    maxLength={MAX.delivery3}
+                    onChange={(e) => set("delivery3", e.target.value)}
+                  />
+                </Field>
+                <div className="grid grid-cols-2 gap-3">
+                  <Field label="State" hint={`${MAX.delState} chars`}>
+                    <Input
+                      value={form.delState}
+                      maxLength={MAX.delState}
+                      onChange={(e) => set("delState", e.target.value)}
+                    />
+                  </Field>
+                  <Field label="Post code" hint={`${MAX.delPostCode} chars`}>
+                    <Input
+                      value={form.delPostCode}
+                      maxLength={MAX.delPostCode}
+                      onChange={(e) => set("delPostCode", e.target.value)}
+                    />
+                  </Field>
+                </div>
+              </CardBody>
+            </Card>
 
-        <Card>
-          <CardHeader title="Pricing & GST" />
-          <CardBody className="grid gap-3 sm:grid-cols-2">
-            <Field
-              label="Price code"
-              hint={`Whole number, ${PRICE_CODE_MIN} to ${PRICE_CODE_MAX}.`}
-            >
-              <Input
-                type="number"
-                step="1"
-                value={form.priceCode}
-                onChange={(e) => set("priceCode", e.target.value)}
-              />
-            </Field>
-            <Field label="Discount %" hint="e.g. 5 for 5%.">
-              <Input
-                type="number"
-                step="0.01"
-                value={form.discPct}
-                onChange={(e) => set("discPct", e.target.value)}
-              />
-            </Field>
-            <div className="flex flex-wrap items-center gap-4 sm:col-span-2">
-              <Checkbox
-                label="GST exempt"
-                checked={form.gstExempt}
-                onChange={(e) => set("gstExempt", e.target.checked)}
-              />
-              <Checkbox
-                label="Prices include GST"
-                checked={form.priceIncGst}
-                onChange={(e) => set("priceIncGst", e.target.checked)}
-              />
-              <Checkbox
-                label="Alternative pricing (catalogue columns)"
-                checked={form.altPricing}
-                onChange={(e) => set("altPricing", e.target.checked)}
-              />
-            </div>
-            <p className="text-xs text-slate-500 sm:col-span-2">
-              Alternative pricing makes price codes read the product&rsquo;s catalogue columns
-              instead of its unit prices.
-            </p>
-          </CardBody>
-        </Card>
+            <Card>
+              <CardHeader title="Contact" />
+              <CardBody className="grid gap-3 sm:grid-cols-2">
+                <Field label="Phone number">
+                  <Input
+                    value={form.phoneNo}
+                    maxLength={MAX.phoneNo}
+                    onChange={(e) => set("phoneNo", e.target.value)}
+                  />
+                </Field>
+                <Field label="Accounts email" hint="Used for invoice delivery.">
+                  <Input
+                    type="email"
+                    value={form.accountsEmail}
+                    maxLength={MAX.accountsEmail}
+                    onChange={(e) => set("accountsEmail", e.target.value)}
+                  />
+                </Field>
+                <Field label="Contact email" hint="Ordering contact; used when sending proofs.">
+                  <Input
+                    type="email"
+                    value={form.email}
+                    maxLength={MAX.email}
+                    onChange={(e) => set("email", e.target.value)}
+                  />
+                </Field>
+              </CardBody>
+            </Card>
 
-        <Card>
-          <CardHeader title="Freight & delivery" />
-          <CardBody className="space-y-3">
-            <Checkbox
-              label="Freight applies"
-              checked={form.freight}
-              onChange={(e) => set("freight", e.target.checked)}
-            />
-            <div className="grid gap-3 sm:grid-cols-2">
-              <Field label="Freight amount" hint="Flat amount charged when freight applies.">
-                <Input
-                  type="number"
-                  step="0.01"
-                  disabled={!form.freight}
-                  value={form.freightAmt}
-                  onChange={(e) => set("freightAmt", e.target.value)}
-                />
-              </Field>
-              <Field label="Delivery threshold" hint="Order value above which freight is waived.">
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={form.deliveryThreshold}
-                  onChange={(e) => set("deliveryThreshold", e.target.value)}
-                />
-              </Field>
-              <Field label="Default delivery code" hint={`${MAX.defDelCode} chars`}>
-                <Input
-                  value={form.defDelCode}
-                  maxLength={MAX.defDelCode}
-                  onChange={(e) => set("defDelCode", e.target.value)}
-                />
-              </Field>
-              <Field label="Run number" hint={`${MAX.runNo} chars, text not a number.`}>
-                <Input
-                  value={form.runNo}
-                  maxLength={MAX.runNo}
-                  onChange={(e) => set("runNo", e.target.value)}
-                />
-              </Field>
-            </div>
-          </CardBody>
-        </Card>
+          </>
+        )}
 
-        <Card>
-          <CardHeader title="Credit" />
-          <CardBody className="space-y-3">
-            <Field label="Credit status">
-              <Select
-                value={form.creditStatus}
-                onChange={(e) => set("creditStatus", e.target.value)}
-                className="max-w-48"
-              >
-                {CREDIT_STATUS_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </Select>
-            </Field>
-            <Field label="Credit message" hint="Shown wherever this account's credit is checked.">
-              <Textarea
-                rows={3}
-                value={form.creditMsg}
-                onChange={(e) => set("creditMsg", e.target.value)}
-              />
-            </Field>
-          </CardBody>
-        </Card>
+        {tab === "pricing" && (
+          <>
+            <Card>
+              <CardHeader title="Pricing & GST" />
+              <CardBody className="grid gap-3 sm:grid-cols-2">
+                <Field
+                  label="Price code"
+                  hint={`Whole number, ${PRICE_CODE_MIN} to ${PRICE_CODE_MAX}.`}
+                >
+                  <Input
+                    type="number"
+                    step="1"
+                    value={form.priceCode}
+                    onChange={(e) => set("priceCode", e.target.value)}
+                  />
+                </Field>
+                <Field label="Discount %" hint="e.g. 5 for 5%.">
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={form.discPct}
+                    onChange={(e) => set("discPct", e.target.value)}
+                  />
+                </Field>
+                <div className="flex flex-wrap items-center gap-4 sm:col-span-2">
+                  {/* GST exempt has no checkbox any more (customer feedback, Nov 2026). The stored
+                      value is still loaded into `form` and sent back on save, so a customer who is
+                      already exempt stays exempt; new customers default to false. */}
+                  <Checkbox
+                    label="Prices include GST"
+                    checked={form.priceIncGst}
+                    onChange={(e) => set("priceIncGst", e.target.checked)}
+                  />
+                  <Checkbox
+                    label="Alternative pricing (catalogue columns)"
+                    checked={form.altPricing}
+                    onChange={(e) => set("altPricing", e.target.checked)}
+                  />
+                </div>
+                <p className="text-xs text-slate-500 sm:col-span-2">
+                  Alternative pricing makes price codes read the product&rsquo;s catalogue columns
+                  instead of its unit prices.
+                </p>
+              </CardBody>
+            </Card>
 
-        <Card>
-          <CardHeader title="Invoicing & documents" />
-          <CardBody className="space-y-3">
-            <div className="flex flex-wrap items-center gap-4">
-              <Checkbox
-                label="Email invoices"
-                checked={form.emailInvoice}
-                onChange={(e) => set("emailInvoice", e.target.checked)}
-              />
-              <Checkbox
-                label="Dealer return address"
-                checked={form.dealerReturnAddress}
-                onChange={(e) => set("dealerReturnAddress", e.target.checked)}
-              />
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <Field
-                label="Company"
-                hint="The company (letterhead and bank block) this account is invoiced under."
-              >
-                <InvoiceEntityPicker
-                  value={form.invoiceComp}
-                  onChange={(state) => set("invoiceComp", state ?? "")}
+            <Card>
+              <CardHeader title="Freight & delivery" />
+              <CardBody className="space-y-3">
+                <Checkbox
+                  label="Freight applies"
+                  checked={form.freight}
+                  onChange={(e) => set("freight", e.target.checked)}
                 />
-              </Field>
-              <Field label="Order note" hint="Shown whenever a new order is raised for this account.">
-                <Input
-                  value={form.orderNote}
-                  maxLength={MAX.orderNote}
-                  onChange={(e) => set("orderNote", e.target.value)}
-                />
-              </Field>
-            </div>
-          </CardBody>
-        </Card>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <Field label="Freight amount" hint="Flat amount charged when freight applies.">
+                    <Input
+                      type="number"
+                      step="0.01"
+                      disabled={!form.freight}
+                      value={form.freightAmt}
+                      onChange={(e) => set("freightAmt", e.target.value)}
+                    />
+                  </Field>
+                  <Field label="Delivery threshold" hint="Order value above which freight is waived.">
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={form.deliveryThreshold}
+                      onChange={(e) => set("deliveryThreshold", e.target.value)}
+                    />
+                  </Field>
+                  <Field label="Default delivery code" hint={`${MAX.defDelCode} chars`}>
+                    <Input
+                      value={form.defDelCode}
+                      maxLength={MAX.defDelCode}
+                      onChange={(e) => set("defDelCode", e.target.value)}
+                    />
+                  </Field>
+                  <Field label="Run number" hint={`${MAX.runNo} chars, text not a number.`}>
+                    <Input
+                      value={form.runNo}
+                      maxLength={MAX.runNo}
+                      onChange={(e) => set("runNo", e.target.value)}
+                    />
+                  </Field>
+                </div>
+              </CardBody>
+            </Card>
 
-        <Card>
-          <CardHeader
-            title="Proofs"
-            description="Per-customer overrides used when a stamp proof is emailed."
-          />
-          <CardBody className="space-y-3">
-            <Checkbox
-              label="Plain proof (no letterhead)"
-              checked={form.noProofHeader}
-              onChange={(e) => set("noProofHeader", e.target.checked)}
-            />
-            <div className="grid gap-3 sm:grid-cols-2">
-              <Field
-                label="Letterhead image"
-                hint="Path to this customer's own letterhead, overriding the company's."
-                className="sm:col-span-2"
-              >
-                <Input
-                  value={form.proofHeader}
-                  maxLength={MAX.proofHeader}
-                  onChange={(e) => set("proofHeader", e.target.value)}
-                />
-              </Field>
-              <Field
-                label="Proof email “from”"
-                hint="Overrides the default sender address for this customer's proof emails."
-              >
-                <Input
-                  type="email"
-                  value={form.sendFromEmail}
-                  maxLength={MAX.sendFromEmail}
-                  onChange={(e) => set("sendFromEmail", e.target.value)}
-                />
-              </Field>
-            </div>
-          </CardBody>
-        </Card>
+            <Card>
+              <CardHeader title="Credit" />
+              <CardBody className="space-y-3">
+                <Field label="Credit status">
+                  <Select
+                    value={form.creditStatus}
+                    onChange={(e) => set("creditStatus", e.target.value)}
+                    className="max-w-48"
+                  >
+                    {CREDIT_STATUS_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </Select>
+                </Field>
+                <Field label="Credit message" hint="Shown wherever this account's credit is checked.">
+                  <Textarea
+                    rows={3}
+                    value={form.creditMsg}
+                    onChange={(e) => set("creditMsg", e.target.value)}
+                  />
+                </Field>
+              </CardBody>
+            </Card>
 
-        <Card>
-          <CardHeader title="Web order defaults" />
-          <CardBody className="space-y-3">
-            <div className="flex flex-wrap items-center gap-4">
-              <Checkbox
-                label="Email dealer"
-                checked={form.webEmail}
-                onChange={(e) => set("webEmail", e.target.checked)}
-              />
-              <Checkbox
-                label="Freight applies"
-                checked={form.webFreightApplies}
-                onChange={(e) => set("webFreightApplies", e.target.checked)}
-              />
-              <Checkbox
-                label="Delivery docket"
-                checked={form.webDeliveryDocket}
-                onChange={(e) => set("webDeliveryDocket", e.target.checked)}
-              />
-            </div>
-            <Field label="Run number" hint={`${MAX.webRunNo} chars, text not a number.`} className="max-w-40">
-              <Input
-                value={form.webRunNo}
-                maxLength={MAX.webRunNo}
-                onChange={(e) => set("webRunNo", e.target.value)}
-              />
-            </Field>
-          </CardBody>
-        </Card>
+          </>
+        )}
 
-        <Card>
-          <CardHeader
-            title="Remembered payment details"
-            description="Not written back from the receipt screen, and not shown anywhere else."
-          />
-          <CardBody className="space-y-3">
-            <div className="grid gap-3 sm:grid-cols-2">
-              <Field label="Card number" hint={`${MAX.cardNumber} chars`}>
-                <Input
-                  value={form.cardNumber}
-                  maxLength={MAX.cardNumber}
-                  onChange={(e) => set("cardNumber", e.target.value)}
+        {tab === "invoicing" && (
+          <>
+            <Card>
+              <CardHeader title="Invoicing & documents" />
+              <CardBody className="space-y-3">
+                <div className="flex flex-wrap items-center gap-4">
+                  <Checkbox
+                    label="Email invoices"
+                    checked={form.emailInvoice}
+                    onChange={(e) => set("emailInvoice", e.target.checked)}
+                  />
+                  <Checkbox
+                    label="Dealer return address"
+                    checked={form.dealerReturnAddress}
+                    onChange={(e) => set("dealerReturnAddress", e.target.checked)}
+                  />
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <Field
+                    label="Company"
+                    hint="The company (letterhead and bank block) this account is invoiced under."
+                  >
+                    <InvoiceEntityPicker
+                      value={form.invoiceComp}
+                      onChange={(state) => set("invoiceComp", state ?? "")}
+                    />
+                  </Field>
+                  <Field label="Order note" hint="Shown whenever a new order is raised for this account.">
+                    <Input
+                      value={form.orderNote}
+                      maxLength={MAX.orderNote}
+                      onChange={(e) => set("orderNote", e.target.value)}
+                    />
+                  </Field>
+                </div>
+              </CardBody>
+            </Card>
+
+            <Card>
+              <CardHeader
+                title="Proofs"
+                description="A proof's letterhead and sender come from the customer's company."
+              />
+              <CardBody className="space-y-3">
+                <Checkbox
+                  label="Plain proof (no letterhead)"
+                  checked={form.noProofHeader}
+                  onChange={(e) => set("noProofHeader", e.target.checked)}
                 />
-              </Field>
-              <Field label="Expiry date" hint={`${MAX.expiryDate} chars`}>
-                <Input
-                  value={form.expiryDate}
-                  maxLength={MAX.expiryDate}
-                  onChange={(e) => set("expiryDate", e.target.value)}
-                />
-              </Field>
-            </div>
-            <Checkbox
-              label="Paid by default"
-              checked={form.paidDefault}
-              onChange={(e) => set("paidDefault", e.target.checked)}
-            />
-          </CardBody>
-        </Card>
+                {/* Letterhead image and Proof email "from" no longer have fields (customer feedback,
+                    Nov 2026: "pick up from State Invoice"). Their stored values are still loaded into
+                    `form` and sent back on save, so nothing already set is lost; the proof screen
+                    still offers a stored letterhead as an explicit choice. */}
+              </CardBody>
+            </Card>
+
+          </>
+        )}
+
+        {tab === "web" && (
+          <>
+            <Card>
+              <CardHeader title="Web order defaults" />
+              <CardBody className="space-y-3">
+                <div className="flex flex-wrap items-center gap-4">
+                  <Checkbox
+                    label="Email dealer"
+                    checked={form.webEmail}
+                    onChange={(e) => set("webEmail", e.target.checked)}
+                  />
+                  <Checkbox
+                    label="Freight applies"
+                    checked={form.webFreightApplies}
+                    onChange={(e) => set("webFreightApplies", e.target.checked)}
+                  />
+                  <Checkbox
+                    label="Delivery docket"
+                    checked={form.webDeliveryDocket}
+                    onChange={(e) => set("webDeliveryDocket", e.target.checked)}
+                  />
+                </div>
+                <Field label="Run number" hint={`${MAX.webRunNo} chars, text not a number.`} className="max-w-40">
+                  <Input
+                    value={form.webRunNo}
+                    maxLength={MAX.webRunNo}
+                    onChange={(e) => set("webRunNo", e.target.value)}
+                  />
+                </Field>
+              </CardBody>
+            </Card>
+
+            <Card>
+              <CardHeader
+                title="Remembered payment details"
+                description="Not written back from the receipt screen, and not shown anywhere else."
+              />
+              <CardBody className="space-y-3">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <Field label="Card number" hint={`${MAX.cardNumber} chars`}>
+                    <Input
+                      value={form.cardNumber}
+                      maxLength={MAX.cardNumber}
+                      onChange={(e) => set("cardNumber", e.target.value)}
+                    />
+                  </Field>
+                  <Field label="Expiry date" hint={`${MAX.expiryDate} chars`}>
+                    <Input
+                      value={form.expiryDate}
+                      maxLength={MAX.expiryDate}
+                      onChange={(e) => set("expiryDate", e.target.value)}
+                    />
+                  </Field>
+                </div>
+                {/* Paid by default has no checkbox any more (customer feedback, Nov 2026). As with
+                    GST exempt, the stored value is kept and sent back unchanged on save. */}
+              </CardBody>
+            </Card>
+
+          </>
+        )}
 
         {problems.length > 0 && (
           <ul className="space-y-0.5 text-xs text-slate-500">

@@ -6,6 +6,9 @@ VB6 desktop UI and talks exclusively to the `StampOrders` C# API.
 See `DESIGN-NOTES.md` for the VB6 form mapping, the consolidations, and the list of legacy
 functions the API does not yet support.
 
+See `CUSTOMER-FEEDBACK.md` for the November 2026 customer feedback and the status of each
+requested change.
+
 ---
 
 ## Running it

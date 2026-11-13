@@ -29,6 +29,12 @@ export type ReportCategory =
 export interface ReportFilters {
   dates?: boolean; // from / to
   custId?: boolean;
+  /**
+   * A customer account-number range (from / to) instead of one customer. The API takes custFrom
+   * and custTo for the archived-invoice reports; "to" includes every account starting with it, so
+   * the same text at both ends is a whole company prefix. See describeCustomerRange.
+   */
+  custRange?: boolean;
   invoiceNo?: boolean;
   /**
    * A single "as at" date instead of a from/to range. Sent as the `to` param (the `from` is left
@@ -126,7 +132,9 @@ export const REPORTS: ReportMeta[] = [
       "which differed from this one only in fixed sort order.",
     category: "Invoice register",
     bound: true,
-    filters: { dates: true, custId: true },
+    // A customer range rather than one customer: the register is used to review one company at a
+    // time, and companies are told apart by account-number prefix (customer feedback, Nov 2026).
+    filters: { dates: true, custRange: true },
     simple: true,
   },
 
@@ -214,14 +222,6 @@ export const REPORTS: ReportMeta[] = [
   },
 
   // --- Receipts history (Receipts_History / Customer) ---
-  {
-    name: "bankdep",
-    title: "Bank Deposit",
-    description: "Banking slip summarising receipts by payment type (cash / card / cheque), with a deposit total.",
-    category: "Operational",
-    bound: true,
-    filters: { dates: true, custId: true },
-  },
   {
     name: "rechist",
     title: "Receipt History",
@@ -347,10 +347,32 @@ export const REPORT_CATEGORIES: ReportCategory[] = [
 
 export type ReportView = "html" | "layout";
 
+/**
+ * Says which customers a customer range covers, in the same words the API prints on the report:
+ * "Customers starting with ADM", "Customers ADM to ADMZ", "Customers from ADM", "Customers up to
+ * ADM". Null when neither end is filled in. "To" includes every account starting with it, so the
+ * same text at both ends is a whole company prefix.
+ */
+export function describeCustomerRange(from: string, to: string): string | null {
+  const lo = from.trim();
+  const hi = to.trim();
+  if (lo && hi) {
+    return lo.toLowerCase() === hi.toLowerCase()
+      ? `Customers starting with ${lo}`
+      : `Customers ${lo} to ${hi}`;
+  }
+  if (lo) return `Customers from ${lo}`;
+  if (hi) return `Customers up to ${hi}`;
+  return null;
+}
+
 export interface ReportQueryParams {
   from?: string;
   to?: string;
   custId?: string | number;
+  /** Customer account-number range, for the archived-invoice reports. Both ends optional. */
+  custFrom?: string;
+  custTo?: string;
   invoiceNo?: string;
   /** Runtime sort override — currently only honoured by the API for `invreg`. */
   sortBy?: string;
