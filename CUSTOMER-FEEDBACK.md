@@ -348,7 +348,7 @@ Stays close to Jackson Beecher's despatch branch and the order screen.
 | M32, 32 | Price maintenance in SQL with Excel import and export | Biggest piece: new API table, endpoints and a UI page. Blocked on Q8. |
 | M29 | Bank deposits | Customer said probably not needed; confirm it is dropped before building. |
 | M30, 21 | Card storage and CVV | Raise the PCI concern with the customer; do not build until they answer. |
-| M40 | Running-number clashes with both apps on one database | Done on the API branch (guard and health check). Still to decide: the operating rules, and whether to patch the legacy app or add unique indexes (see the API's `docs/PARALLEL-RUNNING.md`). |
+| M40 | Running-number clashes with both apps on one database | Done on the API branch (guard and health check), plus a legacy VB6 patch (Legacy repo, branch `feat/cf-number-writeback`, not compiled or run: build and test it in VB6 first) and a unique-index script (`docs/sql/unique-document-numbers.sql` in the API repo, run only after checking duplicates). Operating rules are in the API's `docs/PARALLEL-RUNNING.md`. Also found: the legacy receipt screen empties the `Receipts` and `RecInvoice` working tables when it opens, and the web app keeps its receipt batch in the same tables, so only one app may have a receipt batch open at a time. |
 | Invoice register cap | Done on the API branch: the limit (`ReportQuery.MaxInvoices`) is raised from 500 to 5,000, and a report over the limit is now refused with a message to narrow the dates or customers, instead of quietly dropping the newest invoices. UI unchanged: it already shows the message. |
 
 ### Shared rules
