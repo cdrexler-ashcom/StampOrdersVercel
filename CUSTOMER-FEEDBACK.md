@@ -318,3 +318,51 @@ Open question added: **Q13** (for the customer): by "heading" on the packing sli
 
 **Biggest risks:** cloud and direct label printing (M35–M37), moving pricing into SQL (M31–M33),
 and running both apps on one database (M40).
+
+---
+
+## 13. Splitting the remaining work between two developers
+
+The remaining items are split by code area so the two developers rarely edit the same files, with
+the work that is blocked on customer answers put first.
+
+### Developer A: despatch, printing and order entry
+
+Stays close to Jackson Beecher's despatch branch and the order screen.
+
+| Item | What | Notes |
+| --- | --- | --- |
+| M17 | Batch despatch email | Check with Jackson first. The API batch send exists; mostly UI plus a small API action. |
+| 1 | Despatch sidebar print button | Jackson's area; not built. |
+| 2 | Docket heading | Blocked on Q13 (logo or text?). |
+| M6, M5, M11, M12, M13, M27 | Keyboard audit of other screens, and the partials | First task: read these rows and list what each still needs. |
+| M35–M37 | Cloud and direct label printing | Design note only to start; high risk. |
+| (check) | Soset worker `SosetDataPath` `C:\FoxPro` to `C:\Soset` | Confirm the change is intended. |
+
+### Developer B: customers, pricing and money
+
+| Item | What | Notes |
+| --- | --- | --- |
+| M26 | Customer screen tabs | Do first; not blocked. |
+| M32, 32 | Price maintenance in SQL with Excel import and export | Biggest piece: new API table, endpoints and a UI page. Blocked on Q8. |
+| M29 | Bank deposits | Customer said probably not needed; confirm it is dropped before building. |
+| M30, 21 | Card storage and CVV | Raise the PCI concern with the customer; do not build until they answer. |
+| M40 | Running-number clashes with both apps on one database | API change; needs a design. |
+| (decide) | Invoice Register 500-invoice cap (`ReportQuery.MaxInvoices`) | Raise it or refuse the run; the owner decides. |
+
+### Shared rules
+
+1. **Branches.** Each developer works on a sub-branch of `feat/customer-feedback-nov-2026` in both
+   repos (for example `feat/cf-despatch-print` and `feat/cf-customers-pricing`) and merges back into
+   the hub branch, not `master`.
+2. **API ownership.** A owns despatch and tracking in the API; B owns customers, pricing and
+   numbering. Ask the other developer before changing their area.
+3. **This file.** It is the most likely thing to conflict. Each developer edits only the rows for
+   their own items, and one person merges those edits.
+4. **Customer questions.** Send Q1–Q13 and T1–T5 as one batch before either starts, so nobody
+   waits on answers mid-build.
+5. **Claude Code.** Point each session at this file as the brief. Commit and push only when asked;
+   check the API repo is up to date and has no unmerged work before changing it; leave the API
+   repo's `stash@{0}` (unfinished statement remittance work) alone.
+6. **Balance.** A has more, smaller items; B has fewer, heavier ones. If B is blocked on Q8, B takes
+   M26 and the 500-invoice decision first while A carries on with M6 and the despatch work.
