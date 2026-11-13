@@ -1,7 +1,7 @@
 "use client";
 
 import { useQueryClient } from "@tanstack/react-query";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { Button, Field, Input, Modal, Notice } from "@/components/ui";
 import { tracking } from "@/lib/endpoints";
@@ -10,21 +10,26 @@ import type { DespatchLabels } from "@/types/api";
 /**
  * Scan Tracking — a port of TrackAdd.frm, field for field and key for key.
  *
- *  1. Invoice No   Enter -> Barcode.  Tab is blocked.  Esc closes the dialog.
- *                  Leaving the field looks the invoice up and fills the customer, the RETURN
- *                  ADDRESS block and the DELIVER TO block (the return address follows the order's
- *                  Dealer Return Address flag).
+ *  1. Invoice No   Enter -> Barcode.  Tab (and Shift+Tab) is blocked.  Esc closes the dialog.
+ *                  Leaving the field looks the invoice up — only invoices still awaiting tracking,
+ *                  like the legacy GetArchHdrTracking — and fills the customer, the RETURN ADDRESS
+ *                  block and the DELIVER TO block (the return address follows the order's Dealer
+ *                  Return Address flag).
  *  2. Barcode      Enter -> Tracking number.  Leaving the field (only if an invoice number has been
  *                  entered) turns the barcode into the consignment number and puts it in the
  *                  Tracking number box:  01993... = 22 chars from position 19;  T... = 10 chars
  *                  from position 8;  anything else as scanned.
- *  3. Tracking no. Editable.  Esc here records the number WITHOUT printing labels (the legacy
+ *  3. Tracking no. Read-only (the legacy lblTrackingNo is Locked): only the barcode parse fills it.
+ *                  Esc here records the number WITHOUT printing labels (the legacy
  *                  lblTrackingNo_KeyDown calls Run_Accept only).
- *  4. Accept       Prints the return label then the delivery label, then records the tracking
+ *  4. Accept       Alt+A (the legacy button is "&Accept"). Prints the return label then the delivery label, then records the tracking
  *                  number against the invoice (appended with ", " if it already has one), clears
  *                  the form and goes back to Invoice No ready for the next parcel.
  *
  * Like the legacy dialog, it stays open for the next parcel until you Exit (or Esc in Invoice No).
+ * Invoice No is the only Tab stop, as on the legacy form (the other fields and the buttons have
+ * TabStop = False), so Enter is how you move between fields; Tab in Barcode or Tracking number
+ * returns to Invoice No rather than escaping the dialog.
  * The label printer settings menu is not ported: a browser can't choose a printer, so the print
  * dialog's destination does that.
  */
@@ -100,7 +105,7 @@ export function ScanTrackingDialog({
       .catch(() => {
         if (token === lookupToken.current) {
           setLabels(null);
-          setNotFound(`Invoice ${no} was not found.`);
+          setNotFound(`Invoice ${no} was not found, or is no longer awaiting tracking.`);
         }
         return null;
       });
@@ -140,9 +145,9 @@ export function ScanTrackingDialog({
           ? await lookup()
           : await (lookupPromise.current ?? Promise.resolve(labels));
 
-      // The tracking number box is what gets recorded, so a hand edit wins. Only when it is
-      // still empty do we wait for the barcode to be parsed (it may have been scanned a moment
-      // ago, or never blurred at all).
+      // The tracking number box is what gets recorded. It is read-only, so only the barcode parse
+      // fills it; when it is still empty we wait for that parse (the barcode may have been scanned
+      // a moment ago, or never blurred at all).
       let consignment = trackingNo.trim();
       if (!consignment) {
         if (barcode.trim() && invoice && parsedFor.current !== barcode) {
@@ -167,6 +172,38 @@ export function ScanTrackingDialog({
     }
   };
 
+  /** btnAccept_Click: does nothing until the Barcode box has something in it. */
+  const accept = () => {
+    if (!barcode.trim()) return;
+    void finish(true);
+  };
+
+  // Alt+A is Accept (the legacy button is "&Accept"). Held in a ref so the window listener always
+  // calls the latest render's handler.
+  const acceptRef = useRef(accept);
+  useEffect(() => {
+    acceptRef.current = accept;
+  });
+  useEffect(() => {
+    if (!open) return;
+    const handler = (event: KeyboardEvent) => {
+      if (!event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+      if (event.key.toLowerCase() !== "a") return;
+      event.preventDefault();
+      acceptRef.current();
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [open]);
+
+  /** Tab from the other fields goes back to Invoice No — the only Tab stop on the legacy form. */
+  const backToInvoice = (event: React.KeyboardEvent) => {
+    if (event.key !== "Tab") return false;
+    event.preventDefault();
+    invoiceRef.current?.focus();
+    return true;
+  };
+
   return (
     <Modal
       open={open}
@@ -175,14 +212,20 @@ export function ScanTrackingDialog({
       width="lg"
       footer={
         <>
-          <Button onClick={close}>Exit</Button>
+          <Button tabIndex={-1} onClick={close}>
+            Exit
+          </Button>
           <Button
             variant="primary"
+            tabIndex={-1}
+            title="Alt+A"
             loading={busy}
             disabled={!barcode.trim()}
-            onClick={() => finish(true)}
+            onClick={accept}
           >
-            Accept
+            <span>
+              <u>A</u>ccept
+            </span>
           </Button>
         </>
       }
@@ -200,8 +243,8 @@ export function ScanTrackingDialog({
                 if (event.key === "Enter") {
                   event.preventDefault();
                   barcodeRef.current?.focus();
-                } else if (event.key === "Tab" && !event.shiftKey) {
-                  // Tab is deliberately blocked in the legacy invoice field.
+                } else if (event.key === "Tab") {
+                  // Tab is deliberately blocked in the legacy invoice field (KeyCode = 0).
                   event.preventDefault();
                 }
               }}
@@ -212,9 +255,11 @@ export function ScanTrackingDialog({
             <Input
               ref={barcodeRef}
               value={barcode}
+              tabIndex={-1}
               onChange={(event) => setBarcode(event.target.value)}
               onBlur={() => void parse()}
               onKeyDown={(event) => {
+                if (backToInvoice(event)) return;
                 if (event.key === "Enter") {
                   event.preventDefault();
                   trackingRef.current?.focus();
@@ -231,8 +276,10 @@ export function ScanTrackingDialog({
           <Input
             ref={trackingRef}
             value={trackingNo}
-            onChange={(event) => setTrackingNo(event.target.value)}
+            readOnly
+            tabIndex={-1}
             onKeyDown={(event) => {
+              if (backToInvoice(event)) return;
               if (event.key === "Escape") {
                 // Esc here is "accept without printing", not "close".
                 event.preventDefault();
@@ -274,7 +321,9 @@ function AddressBlock({ heading, lines }: { heading: string; lines?: string[] })
       <p className="mb-1 text-xs font-semibold tracking-wide text-slate-500">{heading}</p>
       <div className="min-h-16 space-y-0.5 text-sm text-slate-800">
         {(lines ?? []).map((line, i) => (
-          <div key={i}>{line}</div>
+          <div key={i} className="whitespace-pre-wrap">
+            {line}
+          </div>
         ))}
       </div>
     </div>

@@ -47,7 +47,7 @@ export function DespatchLabelPrint({
         }
       `}</style>
       <div id="despatch-labels" style={{ background: "#fff", color: "#000" }}>
-        <div className="despatch-label" style={{ fontSize: "10pt", fontFamily: "Arial, sans-serif" }}>
+        <div className="despatch-label" style={{ fontSize: "10pt", fontFamily: "Arial, sans-serif", whiteSpace: "pre-wrap" }}>
           {labels.returnLabel.lines.map((line, i) => (
             <div key={i}>{line}</div>
           ))}
@@ -58,6 +58,7 @@ export function DespatchLabelPrint({
             fontSize: "16pt",
             fontWeight: 700,
             fontFamily: '"Arial Narrow", Arial, sans-serif',
+            whiteSpace: "pre-wrap",
           }}
         >
           {labels.deliveryLabel.lines.map((line, i) => (
