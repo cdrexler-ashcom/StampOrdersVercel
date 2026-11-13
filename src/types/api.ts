@@ -1005,3 +1005,68 @@ export interface EmailBatchResult {
   failed: number;
   items: EmailBatchItem[];
 }
+
+// --- Price list (the Orders database price list, M31-M33) ---------------------------------
+
+/** One product's prices. A null price means "not set here"; order entry then uses Soset's. */
+export interface ProductPrice {
+  prodId: string;
+  description: string | null;
+  cost: number | null;
+  price1: number | null;
+  price2: number | null;
+  price3: number | null;
+  price4: number | null;
+  price5: number | null;
+  price6: number | null;
+  price7: number | null;
+  price8: number | null;
+  price9: number | null;
+  updatedAt: string | null;
+}
+
+/** PUT /api/pricing/products/{prodId}. Everything sent is stored, so null clears a value. */
+export type ProductPriceRequest = Omit<ProductPrice, "prodId" | "updatedAt">;
+
+export interface PriceListStatus {
+  /** True once order entry reads the list (Pricing:UseSqlPrices on the API). */
+  useSqlPrices: boolean;
+  products: number;
+}
+
+/** A problem with an imported file. Line 0 is the file as a whole; line 1 is the heading row. */
+export interface PriceListIssue {
+  line: number;
+  prodId: string | null;
+  message: string;
+}
+
+export interface PriceListChange {
+  prodId: string;
+  kind: "Added" | "Updated";
+  details: string[];
+}
+
+export interface PriceListImportResult {
+  dryRun: boolean;
+  applied: boolean;
+  rows: number;
+  added: number;
+  updated: number;
+  unchanged: number;
+  pricesCleared: number;
+  errors: PriceListIssue[];
+  warnings: PriceListIssue[];
+  changes: PriceListChange[];
+  changesTruncated: boolean;
+}
+
+export interface PriceListSeedResult {
+  dryRun: boolean;
+  applied: boolean;
+  sosetProducts: number;
+  added: number;
+  alreadyInList: number;
+  skipped: number;
+  warnings: string[];
+}

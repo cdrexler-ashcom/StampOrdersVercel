@@ -118,7 +118,7 @@ Status as at 11 Nov 2026.
 
 | # | Request | Source | Status | Notes |
 | --- | --- | --- | --- | --- |
-| 32 | "I want pricing to be linked from Excel. Do a page like my price increase Access program." | P3 p4 | To do, **approach changed** | Modelled on their Access form "Change prices in Soset": product ID, name, search code, weight, supplier code, cost, retail and price codes 2–9 (Aust Post; ENZ code 7; Adams/RSA/eStamps code 8, inc delivery and GST; Stamp World code 9), the NoStamp flag and **Go to next record**. **The meeting then agreed prices live in the Orders SQL database, maintained by Excel-compatible export and import** (see M31–M34), not by writing to Soset. Today the catalogue and `unitPrice1`–`5` are read from Soset only, so this needs new SQL product and price tables and a data migration. The largest item on this list. |
+| 32 | "I want pricing to be linked from Excel. Do a page like my price increase Access program." | P3 p4 | Branch (UI + API), **approach changed**; see M31 to M33 | Modelled on their Access form "Change prices in Soset": product ID, name, search code, weight, supplier code, cost, retail and price codes 2–9 (Aust Post; ENZ code 7; Adams/RSA/eStamps code 8, inc delivery and GST; Stamp World code 9), the NoStamp flag and **Go to next record**. **The meeting then agreed prices live in the Orders SQL database, maintained by Excel-compatible export and import** (see M31–M34), not by writing to Soset. Today the catalogue and `unitPrice1`–`5` are read from Soset only, so this needs new SQL product and price tables and a data migration. The largest item on this list. **Built on the branch (best-judgement version, may be reworked once Q8 is answered):** a Price list screen (Settings > Price list) with export, a checked import, a Soset copy and single-product edit, on a new `ProductPrice` table. |
 
 ## 10. Unclear
 
@@ -207,9 +207,9 @@ Compared with the web app on the hub branch, the API and the legacy repo (status
 
 | # | Request | Today | Change needed | Status |
 | --- | --- | --- | --- | --- |
-| M31 | Pricing stays in the Orders SQL database, alongside the product catalogue, not in the website database | The product catalogue and `unitPrice1`–`5` are read from Soset (`Product` is a Soset entity). SQL holds pricing rules only. | New SQL product and price tables, plus a migration. This contradicts "no new database fields" (M39). | Design needed |
-| M32 | Export prices, edit in Excel, import the revised file | None | Export and import endpoints and a screen. CSV underneath is fine; Excel in the user-facing flow (paper item 32). **Known shape of their sample sheet (API repo `docs/CUSTOMER-REQUIREMENTS.md`): about 961 rows of Prod ID, Product Description, nine price codes and COST, no formulas; most rows have only a Code 1 price. Price code names: 1 Web including delivery, 2 Web add delivery, 3 Dealers, 4 Govt High Volume, 5 Aust Post, 6 Phil Stead, 7 to 9 unnamed.** That is not the shape Soset supplies today (`UnitPrice1`–`5`, `Cat1`–`Cat5`), and does not match the Access screen on the scan (price codes 2 to 9, cost, retail). The sample used placeholder values. | To do, blocked on Q8 |
-| M33 | Where prices are resolved at order entry | The API resolves price from Soset `unitPrice` columns by price code | Switch to the SQL price source. Decide what happens to the catalogue and Soset's stamp jobs (T4). | Question |
+| M31 | Pricing stays in the Orders SQL database, alongside the product catalogue, not in the website database | The product catalogue and `unitPrice1`–`5` are read from Soset (`Product` is a Soset entity). SQL holds pricing rules only. | New SQL product and price tables, plus a migration. This contradicts "no new database fields" (M39). | **Branch (API).** New table `ProductPrice` (`docs/sql/product-prices.sql`, run it first): one row per product, `Price1` to `Price9`, `Cost`, description. A one-off "Copy from Soset" fills it without overwriting anything. Only prices are migrated, not the whole catalogue (T4 assumed, not confirmed). |
+| M32 | Export prices, edit in Excel, import the revised file | None | Export and import endpoints and a screen. CSV underneath is fine; Excel in the user-facing flow (paper item 32). **Known shape of their sample sheet (API repo `docs/CUSTOMER-REQUIREMENTS.md`): about 961 rows of Prod ID, Product Description, nine price codes and COST, no formulas; most rows have only a Code 1 price. Price code names: 1 Web including delivery, 2 Web add delivery, 3 Dealers, 4 Govt High Volume, 5 Aust Post, 6 Phil Stead, 7 to 9 unnamed.** That is not the shape Soset supplies today (`UnitPrice1`–`5`, `Cat1`–`Cat5`), and does not match the Access screen on the scan (price codes 2 to 9, cost, retail). The sample used placeholder values. | **Branch (UI + API).** CSV in and out (opens in Excel; accepts Excel's own CSV, semicolons and a byte-order mark). The import is checked first and shows what would change, applies all-or-nothing, never deletes a product, treats a missing column as "leave alone" and a blank cell as "clear". **Not done: reading .xlsx directly** (save as CSV for now), and the column set is the sample sheet's shape, so Q8 may change it. |
+| M33 | Where prices are resolved at order entry | The API resolves price from Soset `unitPrice` columns by price code | Switch to the SQL price source. Decide what happens to the catalogue and Soset's stamp jobs (T4). | **Branch (API).** Order entry uses the list before Soset for the customer's price code, behind the switch `Pricing:UseSqlPrices` (off by default, so deploying changes nothing). A blank price falls back to Soset, and customer pricing rules still win. Cut-over steps are in `docs/sql/product-prices.sql`. Soset's catalogue and stamp jobs are untouched. |
 | M34 | Future stock control should be able to read the same data | n/a | Keep the structure open for it; not in scope | Info |
 
 ### Printing from the cloud
@@ -295,10 +295,9 @@ Open question added: **Q13** (for the customer): by "heading" on the packing sli
 | --- | --- |
 | Done | 7, 11, 14, 15, 16, 17, 18, 22, 27, 29, 30 |
 | Branch (on the hub branch, not yet on `master`) | 1 (sidebar print button still to do), 3 (partial), 9, 12, 13, 19, 20, 31 |
-| Branch (UI + API) | 5, 6, 24, 28 |
+| Branch (UI + API) | 5, 6, 24, 28, 32 |
 | Branch (API only; docket heading) | 2 |
 | Partial | 8 |
-| To do | 32 (approach changed, and blocked on Q8; see M31–M34) |
 | Question | 4, 10, 23, 25, 26, 33 |
 | Push back | 21 |
 
@@ -309,15 +308,17 @@ Open question added: **Q13** (for the customer): by "heading" on the packing sli
 | Done | M1, M3, M28 |
 | Branch | M2, M4, M7, M8, M9, M15, M16, M18, M26 |
 | Branch (API only) | M40 |
-| Branch (UI + API) | M14, M19, M23, M24 |
+| Branch (UI + API) | M14, M19, M23, M24, M32 |
+| Branch (API) | M31, M33 |
 | Partial | M5, M6, M11, M12, M13, M27 |
-| To do | M17, M29, M32 |
+| To do | M17, M29 |
 | Verify | M10, M20, M21, M36 |
-| Design needed | M25, M31, M35, M37, M38 |
-| Question | M22, M30, M33, M39 |
+| Design needed | M25, M35, M37, M38 |
+| Question | M22, M30, M39 |
 | Info | M34, M41 |
 
-**Biggest risks:** cloud and direct label printing (M35–M37), moving pricing into SQL (M31–M33),
+**Biggest risks:** cloud and direct label printing (M35–M37), switching order entry over to the SQL
+price list (M31–M33; built, but off until someone checks prices and turns on `Pricing:UseSqlPrices`),
 and running both apps on one database (M40).
 
 ---
@@ -345,7 +346,7 @@ Stays close to Jackson Beecher's despatch branch and the order screen.
 | Item | What | Notes |
 | --- | --- | --- |
 | M26 | Customer screen tabs | Do first; not blocked. |
-| M32, 32 | Price maintenance in SQL with Excel import and export | Biggest piece: new API table, endpoints and a UI page. Blocked on Q8. |
+| M32, 32 | Price maintenance in SQL with Excel import and export | Built on the branch as a best-judgement version (see M31 to M33): table, endpoints, Price list screen. May be reworked when Q8 is answered. Not done: reading .xlsx directly. |
 | M29 | Bank deposits | Customer said probably not needed; confirm it is dropped before building. |
 | M30, 21 | Card storage and CVV | Raise the PCI concern with the customer; do not build until they answer. |
 | M40 | Running-number clashes with both apps on one database | Done on the API branch (guard and health check), plus a legacy VB6 patch (Legacy repo, branch `feat/cf-number-writeback`, not compiled or run: build and test it in VB6 first) and a unique-index script (`docs/sql/unique-document-numbers.sql` in the API repo, run only after checking duplicates). Operating rules are in the API's `docs/PARALLEL-RUNNING.md`. Also found: the legacy receipt screen empties the `Receipts` and `RecInvoice` working tables when it opens, and the web app keeps its receipt batch in the same tables, so only one app may have a receipt batch open at a time. |

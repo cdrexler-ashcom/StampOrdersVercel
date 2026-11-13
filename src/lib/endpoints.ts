@@ -56,6 +56,11 @@ import type {
   LoginResult,
   PricingRuleRequest,
   PricingRuleResult,
+  PriceListImportResult,
+  PriceListSeedResult,
+  PriceListStatus,
+  ProductPrice,
+  ProductPriceRequest,
   ImportResult,
 } from "@/types/api";
 
@@ -433,6 +438,42 @@ export const imports = {
     return api.postForm<ImportResult>("/api/imports/web-orders", formData);
   },
 };
+// --- Price list (Orders database prices, M31-M33) ----------------------------------------
+export const priceList = {
+  /** GET /api/pricing/products/status */
+  status: () => api.get<PriceListStatus>("/api/pricing/products/status"),
+
+  /** GET /api/pricing/products */
+  list: () => api.get<ProductPrice[]>("/api/pricing/products"),
+
+  /** PUT /api/pricing/products/{prodId}. Adds the product or replaces its prices. */
+  save: (prodId: string, body: ProductPriceRequest) =>
+    api.put<ProductPrice>(`/api/pricing/products/${encodeURIComponent(prodId)}`, body),
+
+  /** DELETE /api/pricing/products/{prodId} */
+  remove: (prodId: string) =>
+    api.delete<void>(`/api/pricing/products/${encodeURIComponent(prodId)}`),
+
+  /** GET /api/pricing/products/export. The whole list as CSV, for Excel. */
+  exportCsv: () => api.getBlob("/api/pricing/products/export"),
+
+  /** POST /api/pricing/products/import. A dry run unless told otherwise; the file is read again to apply. */
+  importCsv: (file: File, apply: boolean) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    return api.postForm<PriceListImportResult>(
+      `/api/pricing/products/import?dryRun=${apply ? "false" : "true"}`,
+      formData,
+    );
+  },
+
+  /** POST /api/pricing/products/seed-from-soset. A dry run unless told otherwise. */
+  seedFromSoset: (apply: boolean) =>
+    api.post<PriceListSeedResult>(
+      `/api/pricing/products/seed-from-soset?dryRun=${apply ? "false" : "true"}`,
+    ),
+};
+
 // --- Pricing ----------------------------------------------------------------------------
 export const pricing = {
   /** GET /api/pricing */
