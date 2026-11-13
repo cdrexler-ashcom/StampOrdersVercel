@@ -247,6 +247,7 @@ Compared with the web app on the hub branch, the API and the legacy repo (status
 | Q10 | What does "How to update here" refer to (paper item 10)? | paper item 10 |
 | Q11 | Handwritten price list on Part 2 page 6: what is it? | paper item 33 |
 | Q12 | Should less common order fields be in-page and expandable, or stay in the popup? | M5, M11 |
+| Q14 | Which fields on the customer screen are rarely used and can be removed? (The screen is now in four tabs; nothing has been removed.) | M26 |
 
 **For the team and Ashcom**
 
@@ -320,6 +321,55 @@ Open question added: **Q13** (for the customer): by "heading" on the packing sli
 **Biggest risks:** cloud and direct label printing (M35–M37), switching order entry over to the SQL
 price list (M31–M33; built, but off until someone checks prices and turns on `Pricing:UseSqlPrices`),
 and running both apps on one database (M40).
+
+### Still outstanding (as at 13 Nov 2026)
+
+Everything below "Done" is on the hub branches (`feat/customer-feedback-nov-2026` in the UI and the API),
+not yet on `master`. What is left:
+
+**1. Waiting on the customer** (nothing to build until they answer)
+
+| Question | Holds up |
+| --- | --- |
+| Q1 pro forma wording and whether it needs a number | M15 (built with my own wording) |
+| Q4 should a receipt post to the ledger as soon as it is recorded, with no Process step? | M29 (automatic processing) |
+| Q8 which price columns they edit, who edits them, their real Excel file | M31 to M33 (built as a best-judgement version, may be reworked) |
+| Q13 is the docket "heading" the company logo or the company name and address as text? | paper item 2 |
+| Q14 which customer-screen fields are rarely used? | M26 (tabs done, nothing removed) |
+| The PCI concern: do not store a card security code; 542 customers already have card numbers stored | M30, paper item 21 |
+| Q2, Q3, Q5, Q6, Q7, Q9, Q10, Q11, Q12 | M14, M27, M22, M21, M17, M12, paper items 10 and 33, M5 and M11 |
+
+**2. Built, but needs testing or a decision before it is used**
+
+| What | Needed |
+| --- | --- |
+| Price list (M31 to M33) | Run `docs/sql/product-prices.sql` (API repo) before deploying. Fill the list, check some prices against Soset, then turn on `Pricing:UseSqlPrices`. It is off by default. |
+| Number clashes (M40) legacy patch | Not compiled or run. Build it in VB6 and test against a copy of the database (Legacy repo, branch `feat/cf-number-writeback`, not merged to `master`). |
+| Number clashes (M40) unique indexes | Run `docs/sql/unique-document-numbers.sql` only after the duplicate check is clean and a receipt and an invoice run have been tested from the legacy app. |
+| Number clashes (M40) operating rules | Agree them with the staff: one app at a time for invoicing, and one receipt batch open at a time (both apps share the receipt working tables). |
+| Invoice register cap | The limit is now 5,000 and a bigger run is refused. Tell the staff what the message means. |
+| Soset worker path | The despatch branch changes `SosetDataPath` from `C:\FoxPro` to `C:\Soset`. Confirm it is intended. |
+
+**3. Not built**
+
+| Item | Notes |
+| --- | --- |
+| M17 batch despatch email | Check with Jackson Beecher first (his despatch work). The API batch send exists. |
+| Paper item 1, despatch sidebar print button | Jackson's area. |
+| M5, M6, M11, M12, M13, M27 | Partly done. M6 needs an audit of other screens for mouse-only steps. |
+| M35 to M37, M25, M38 | Cloud and direct label printing, and the cloud test environment. Need a design first. |
+| Pro forma by email | The API has no endpoint for emailing an order. |
+| Reading .xlsx for the price list | CSV only for now. |
+| Product Control screen (item 12: supplier, margins, costs) | Needs a data model. |
+| Automatic receipt processing (M29) | Waiting on Q4. |
+
+**4. To check**
+
+M10, M20, M21 and M36 may already work. They need checking against the API or real data before any change.
+
+**5. Release**
+
+None of this is on `master` yet. When the hub branches are merged, `master` is mirrored to GitHub and Vercel by the pipeline.
 
 ---
 
