@@ -200,7 +200,7 @@ Compared with the web app on the hub branch, the API and the legacy repo (status
 | M26 | Compact customer screen: too many fields, too much scrolling | Eleven stacked cards (Identity, Invoice address, Delivery address, Contact, Pricing & GST, Freight & delivery, Credit, Invoicing & documents, Proofs, Web order defaults, Remembered payment details) | Rework as tabs and remove rarely used fields | Branch: four tabs (Details, Pricing & freight, Invoicing & proofs, Web & payment), one Save. No fields removed yet: we need the customer to say which are rarely used. |
 | M27 | Separate fields that were combined; rename State to Company; remove cheque and fax options; keep delivery and return address | Company rename done; cheque and fax mostly gone (paper item 19) | Ask which combined fields they mean (Q3) | Partial |
 | M28 | Receipts: pick customer, review outstanding items, enter amount, auto-allocate; keep settlement discount | Done | None | Done |
-| M29 | Bank deposits happen automatically after a receipt; the Bank deposits screen may go | Deposits are a manual run over unbanked receipts (`DepositService`) | **Earlier answer (29 Oct 2026, API repo `docs/CUSTOMER-REQUIREMENTS.md`): the Bank deposits screen is "probably not necessary" because banking is done in Xero; the last deposit recorded was 16 April 2026.** So this may simply be removing the screen rather than automating deposits. Confirm, then keep or drop the deposit history report (Q4) | To do |
+| M29 | Bank deposits happen automatically after a receipt; the Bank deposits screen may go | Deposits are a manual run over unbanked receipts (`DepositService`) | **Earlier answer (29 Oct 2026, API repo `docs/CUSTOMER-REQUIREMENTS.md`): the Bank deposits screen is "probably not necessary" because banking is done in Xero; the last deposit recorded was 16 April 2026.** So this may simply be removing the screen rather than automating deposits. **Done on the branch (UI only): the Bank deposits menu entry, the dashboard "Receipts to bank" tile and the Bank Deposit report (`bankdep`) are removed, and the receipts screen no longer says receipts are "available to bank".** This follows their 29 Oct answer ("No. Just automatically process.") and the meeting. It is a soft removal: the `/deposits` page, the API (`/api/deposits`) and all deposit data are untouched, so putting it back is a few lines. **Not built: "automatically process".** It probably means receipts post to the ledger when recorded, with no separate "Process unprocessed receipts" step, but that removes the chance to correct a receipt before it posts, so it needs their confirmation (Q4, reworded). | Branch (UI only), automatic processing to confirm |
 | M30 | Retain credit-card details where required | "Remembered payment details" stores card number and expiry | **Conflicts with earlier advice (29 Oct 2026): do not store card numbers either; 542 customers had a card number stored, and a purge plan is needed.** The customer was told to use a payment gateway (Stripe or Square); the emailed-invoice payment link (PR 309) is the start of that. Raise this before keeping the fields; see paper item 21 (CVV) | Question |
 
 ### Pricing
@@ -238,7 +238,7 @@ Compared with the web app on the hub branch, the API and the legacy repo (status
 | Q1 | Pro forma: what should it show, and does it need a number? | M15 |
 | Q2 | Job cards: which status triggers printing ("corrected status" is unclear)? Print by run only, or also by date? | M14 |
 | Q3 | Which fields on the customer record should be separated? | M27 |
-| Q4 | Automatic banking: one deposit per day? Per payment type? Do they still need a deposit history report? | M29 |
+| Q4 | We have hidden Bank deposits and its report. Does "automatically process" mean a receipt should post to the ledger as soon as it is recorded, with no separate Process step (so it cannot be corrected first)? Or is today's Process button fine? | M29 |
 | Q5 | Which Adams control or setting should be removed? | M22 |
 | Q6 | Send the failing CSV and a working one. | M21 |
 | Q7 | Should the despatch email attach the invoice as well as the tracking number? | M17 |
@@ -306,12 +306,12 @@ Open question added: **Q13** (for the customer): by "heading" on the packing sli
 | Status | Items |
 | --- | --- |
 | Done | M1, M3, M28 |
-| Branch | M2, M4, M7, M8, M9, M15, M16, M18, M26 |
+| Branch | M2, M4, M7, M8, M9, M15, M16, M18, M26, M29 |
 | Branch (API only) | M40 |
 | Branch (UI + API) | M14, M19, M23, M24, M32 |
 | Branch (API) | M31, M33 |
 | Partial | M5, M6, M11, M12, M13, M27 |
-| To do | M17, M29 |
+| To do | M17 |
 | Verify | M10, M20, M21, M36 |
 | Design needed | M25, M35, M37, M38 |
 | Question | M22, M30, M39 |
@@ -347,7 +347,7 @@ Stays close to Jackson Beecher's despatch branch and the order screen.
 | --- | --- | --- |
 | M26 | Customer screen tabs | Do first; not blocked. |
 | M32, 32 | Price maintenance in SQL with Excel import and export | Built on the branch as a best-judgement version (see M31 to M33): table, endpoints, Price list screen. May be reworked when Q8 is answered. Not done: reading .xlsx directly. |
-| M29 | Bank deposits | Customer said probably not needed; confirm it is dropped before building. |
+| M29 | Bank deposits | Done on the branch (menu, dashboard tile and report hidden; API untouched). Automatic processing still to confirm with the customer (Q4). |
 | M30, 21 | Card storage and CVV | Raise the PCI concern with the customer; do not build until they answer. |
 | M40 | Running-number clashes with both apps on one database | Done on the API branch (guard and health check), plus a legacy VB6 patch (Legacy repo, branch `feat/cf-number-writeback`, not compiled or run: build and test it in VB6 first) and a unique-index script (`docs/sql/unique-document-numbers.sql` in the API repo, run only after checking duplicates). Operating rules are in the API's `docs/PARALLEL-RUNNING.md`. Also found: the legacy receipt screen empties the `Receipts` and `RecInvoice` working tables when it opens, and the web app keeps its receipt batch in the same tables, so only one app may have a receipt batch open at a time. |
 | Invoice register cap | Done on the API branch: the limit (`ReportQuery.MaxInvoices`) is raised from 500 to 5,000, and a report over the limit is now refused with a message to narrow the dates or customers, instead of quietly dropping the newest invoices. UI unchanged: it already shows the message. |

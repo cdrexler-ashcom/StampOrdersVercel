@@ -223,14 +223,6 @@ export const REPORTS: ReportMeta[] = [
 
   // --- Receipts history (Receipts_History / Customer) ---
   {
-    name: "bankdep",
-    title: "Bank Deposit",
-    description: "Banking slip summarising receipts by payment type (cash / card / cheque), with a deposit total.",
-    category: "Operational",
-    bound: true,
-    filters: { dates: true, custId: true },
-  },
-  {
     name: "rechist",
     title: "Receipt History",
     description: "Receipts grouped by customer, with per-customer and grand totals.",

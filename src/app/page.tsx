@@ -3,15 +3,14 @@
 import { useQuery } from "@tanstack/react-query";
 import {
   ArrowRight,
-  Banknote,
   ClipboardList,
   FileText,
   Truck,
 } from "lucide-react";
 import Link from "next/link";
 
-import { deposits, invoices, orders, tracking } from "@/lib/endpoints";
-import { date, money, text } from "@/lib/format";
+import { invoices, orders, tracking } from "@/lib/endpoints";
+import { date, text } from "@/lib/format";
 import {
   Badge,
   Card,
@@ -43,15 +42,6 @@ export default function DashboardPage() {
     queryKey: ["tracking", "awaiting-notification"],
     queryFn: () => tracking.awaitingNotification(),
   });
-  const bankable = useQuery({
-    queryKey: ["deposits", "bankable"],
-    queryFn: () => deposits.bankable(),
-  });
-
-  const bankableTotal = (bankable.data ?? []).reduce(
-    (sum, receipt) => sum + (receipt.amount ?? 0),
-    0,
-  );
 
   return (
     <>
@@ -60,7 +50,7 @@ export default function DashboardPage() {
         description="Where work is sitting right now."
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         <Tile
           href="/orders"
           icon={ClipboardList}
@@ -89,14 +79,6 @@ export default function DashboardPage() {
           value={pendingTracking.data?.length}
           loading={pendingTracking.isLoading}
           hint={`${awaitingNotification.data?.length ?? 0} ready to notify`}
-        />
-        <Tile
-          href="/deposits"
-          icon={Banknote}
-          label="Receipts to bank"
-          value={bankable.data?.length}
-          loading={bankable.isLoading}
-          hint={bankable.data ? money(bankableTotal) : undefined}
         />
       </div>
 
