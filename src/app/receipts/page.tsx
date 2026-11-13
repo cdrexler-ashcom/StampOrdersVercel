@@ -156,7 +156,6 @@ export default function ReceiptsPage() {
     mutationFn: () => receipts.process(),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["receipts"] });
-      queryClient.invalidateQueries({ queryKey: ["deposits"] });
     },
   });
 
@@ -208,7 +207,7 @@ export default function ReceiptsPage() {
         <div className="mb-4">
           <Notice tone="green" title="Receipts processed">
             {processMutation.data.receiptsProcessed} receipt(s) applied, total{" "}
-            {money(processMutation.data.totalApplied)}. They are now available to bank.
+            {money(processMutation.data.totalApplied)}.
           </Notice>
         </div>
       )}
@@ -216,7 +215,7 @@ export default function ReceiptsPage() {
       {recordMutation.isSuccess && (
         <div className="mb-4">
           <Notice tone="green" title="Receipt recorded">
-            Run Process to apply it to the ledger and make it bankable.
+            Run Process to apply it to the ledger.
           </Notice>
         </div>
       )}

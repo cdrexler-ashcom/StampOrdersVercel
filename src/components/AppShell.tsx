@@ -3,7 +3,6 @@
 import clsx from "clsx";
 import {
   Archive,
-  Banknote,
   Boxes,
   Bug,
   Building2,
@@ -58,7 +57,6 @@ const navigation = [
     heading: "Money in",
     items: [
       { href: "/receipts", label: "Receipts", icon: Receipt },
-      { href: "/deposits", label: "Bank deposits", icon: Banknote },
     ],
   },
   {
