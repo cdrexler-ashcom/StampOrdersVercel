@@ -24,7 +24,7 @@ merged to `master` once it is done.
 | `feat/despatch-labels` (Jackson Beecher), which includes `feat/order-dealer-return-address` | 1, 3, 9 | 11 Nov 2026 | The developer says it is about 99% done. The print button has been taken off the Despatch page on purpose. Printing now has its own sidebar button, **Email invoices**, whose Reprint invoice tab prints, previews or emails one invoice (on `feat/cf-despatch-email-tab`). Despatch labels print only from **Accept** in the Scan Tracking dialog. This branch also removes the "Ready to notify" grid from the Despatch page. |
 | `feat/cf-despatch-email-tab` (UI PR 321), `feat/cf-despatch-email-content` (API PR 320), scan dialog (UI PR 318) and label lookup (API PR 319), all Jackson Beecher | 1, 3, M9, M17 | 13 Nov 2026 | The Email invoices page (Send despatch emails and Reprint invoice tabs), a subject and message on the invoice email, a Scan Tracking dialog closer to the old form, and a label lookup that only finds invoices still awaiting tracking. |
 | `feat/cf-customers-pricing` (Coen Drexler, UI and API) | M26, M29, M31 to M33, M40, paper 32, invoice register cap | 13 Nov 2026 | Customer screen in four tabs, the SQL price list with CSV import and export, Bank deposits hidden, the number-clash guard and health check, and the 5,000-invoice cap. The VB6 patch for M40 is in the Legacy repo (`feat/cf-number-writeback`, not merged). |
-| `feat/cf-docket-logo` (API only, Jackson Beecher) | 2 | **Not on the API hub branch.** Merged into the API `master` locally on 16 Nov 2026. | `GET /api/invoice-states/{state}/letterhead` returns the company logo. The UI side waits on Q13. |
+| `feat/cf-docket-logo` (UI and API, Jackson Beecher) | 2 | **Not on the hub branches yet.** The API branch is merged into the API `master` locally on 16 Nov 2026. | `GET /api/invoice-states/{state}/letterhead` returns the company logo, and the UI delivery docket (invoice page and Reprint tab) shows it as its heading, falling back to text when a company has none. Q13 is answered: a logo. |
 
 **Status key**
 
@@ -55,7 +55,7 @@ this file has reached the pipeline, GitHub or Vercel, so "Branch" below still me
 | # | Request | Source | Status | Notes |
 | --- | --- | --- | --- | --- |
 | 1 | How do we print the despatch labels? | P1 | Branch | **Sidebar print button: done** (the **Email invoices** sidebar page, Reprint invoice tab; see the merged-branches table above). From `feat/despatch-labels`: capturing a consignment prints a return label and a delivery label (`DespatchLabelPrint.tsx`, `GET /api/tracking/labels/{invoiceNo}`). The Despatch page is rebuilt to work like the old Tracking Entry screen (Scan and Process buttons, `ScanTrackingDialog.tsx`). |
-| 2 | Put a heading on the packing slip. It is blank now; it should come from the dealer or the invoice. | P1 | Branch (API) | API: the delivery docket report now prints the invoice company's letterhead as its heading, top right like the invoice. The UI invoice page's docket view hard-codes "Stead Brothers" and is unchanged. **Confirm with the customer that "heading" means the company logo/letterhead and not text** (Q13). The tax invoice report has the same blank slot (no data binding) and was not changed. |
+| 2 | Put a heading on the packing slip. It is blank now; it should come from the dealer or the invoice. | P1 | Branch (API) | API: the delivery docket report now prints the invoice company's letterhead as its heading, top right like the invoice. UI: the delivery docket view (the invoice page and the Reprint tab) now shows the company logo as its heading, and falls back to the text heading when the company has no logo (it uses the new `GET /api/invoice-states/{state}/letterhead`). **The customer confirmed the heading is the logo** (Q13). The tax invoice report has the same blank slot (no data binding) and was not changed. |
 | 3 | Where do we find the Express Post numbers, to see whether we missed any? | P1 | Branch (partial) | `feat/despatch-labels` adds Order, an editable Tracking number(s) column and a Required toggle to the pending despatch list, so invoices still missing a number are visible. There is no list of numbers already used. Confirm with the customer that this is enough. |
 | 4 | What CSV format do we need to import from Mr Stamps? ("CSV type?") | P1 ✓ | Question | Send them the import file spec for `/imports` (`POST /api/imports/web-orders`). The meeting reports a newly acquired company's CSV being rejected; see M21. |
 | 5 | Print job cards for a whole run. | P1 ✓ | Branch (UI + API) | API: `GET /api/job-cards?startRun=&endRun=`. UI: new **Job cards** page (Order to invoice): first and last run, a list of what will print with orders that have no stamp job flagged, one Print for the batch, and a Reprint by order number. The order screen's Print job card still covers one order. Not yet tried against a running API. See M14. |
@@ -287,14 +287,14 @@ Committed on the API repo's `feat/customer-feedback-nov-2026` branch (base: `mas
 | Job cards for a whole run | `GET /api/job-cards?startRun=&endRun=` | 5; M14 | Done (Job cards page) |
 | Proof defaults follow the order's company | `GET /api/proofs/{jobNo}` | 24, 6; M19, M20 | Done (customer letterhead off by default; customer proof fields removed) |
 | Customer account-number range on the archived-invoice reports | `GET /api/reports/{name}/html`: `custFrom`, `custTo` | M24 | Done (Customer from/to on the Invoice Register) |
-| Company letterhead as the delivery docket heading | `DelDocket` report | 2 | None, unless "heading" means text (Q13) |
-| Company logo for a state | `GET /api/invoice-states/{state}/letterhead` (`feat/cf-docket-logo`, not on the hub branch) | 2 | Use it for the docket heading once Q13 is answered |
+| Company letterhead as the delivery docket heading | `DelDocket` report | 2 | The UI docket view now shows the logo too (Q13: confirmed a logo) |
+| Company logo for a state | `GET /api/invoice-states/{state}/letterhead` (`feat/cf-docket-logo`, not on the hub branch) | 2 | Done (the UI delivery docket shows it as the heading) |
 | Invoice email takes a subject and a message (Jackson Beecher, PR 320) | Invoice email endpoint | M17 | Done (Email invoices page) |
 | Label lookup only finds invoices still awaiting tracking (Jackson Beecher, PR 319) | `/api/tracking/labels` | 1, 3 | Done |
 
 Not done on the API: emailing a pro forma (the pro forma itself needs no API work: the UI builds it from the order, M15), the invoice PDF and tracking link on the despatch email (M17, Q7), automatic deposits (M29), and pricing in SQL (M31–M33).
 
-Open question added: **Q13** (for the customer): by "heading" on the packing slip do they mean the company logo/letterhead (what the API now prints), or the company name and address as text?
+**Q13 answered:** the "heading" on the packing slip is the company logo/letterhead, which is what the API prints.
 
 ---
 
@@ -307,7 +307,7 @@ Open question added: **Q13** (for the customer): by "heading" on the packing sli
 | Done | 7, 11, 14, 15, 16, 17, 18, 22, 27, 29, 30 |
 | Branch (on the hub branch, not yet on `master`) | 1 (sidebar print button done), 3 (partial), 9, 12, 13, 19, 20, 31 |
 | Branch (UI + API) | 5, 6, 24, 28, 32 |
-| Branch (API only; docket heading) | 2 |
+| Branch (UI + API; docket heading, logo confirmed) | 2 |
 | Partial | 8 |
 | Question | 4, 10, 23, 25, 26, 33 |
 | Push back | 21 |
@@ -343,7 +343,6 @@ and, locally, on `master` in both repos, which has not been pushed. What is left
 | Q1 pro forma wording and whether it needs a number | M15 (built with my own wording) |
 | Q4 should a receipt post to the ledger as soon as it is recorded, with no Process step? | M29 (automatic processing) |
 | Q8 which price columns they edit, who edits them, their real Excel file | M31 to M33 (built as a best-judgement version, may be reworked) |
-| Q13 is the docket "heading" the company logo or the company name and address as text? | paper item 2 |
 | Q14 which customer-screen fields are rarely used? | M26 (tabs done, nothing removed) |
 | The PCI concern: do not store a card security code; 542 customers already have card numbers stored | M30, paper item 21 |
 | Q2, Q3, Q5, Q6, Q7, Q9, Q10, Q11, Q12 | M14, M27, M22, M21, M17, M12, paper items 10 and 33, M5 and M11 |
@@ -359,7 +358,7 @@ and, locally, on `master` in both repos, which has not been pushed. What is left
 | Invoice register cap | The limit is now 5,000 and a bigger run is refused. Tell the staff what the message means. |
 | Soset worker path | The despatch branch changes `SosetDataPath` from `C:\FoxPro` to `C:\Soset`. Confirm it is intended. |
 | Price list "Copy from Soset" | Not yet run. The local `ProductPrice` table exists and is empty. The test stopped because the local API login returned 401 (needs a working dev login, or run it from Settings, Price list). |
-| Docket logo (paper item 2) | `feat/cf-docket-logo` (API) is not on the API hub branch. Decide whether to merge it there, then wait for Q13 before using it in the UI. |
+| Docket logo (paper item 2) | Both `feat/cf-docket-logo` branches (the API endpoint and the UI docket view) still need merging into their hub branches. Q13 is answered (a logo). The UI docket needs the API endpoint deployed first. |
 
 **3. Not built**
 
@@ -410,7 +409,7 @@ Stays close to Jackson Beecher's despatch branch and the order screen.
 | --- | --- | --- |
 | M17 | Despatch email | The batch send is built. Still to do: invoice PDF, tracking link, old wording, company SMTP settings (Q7). |
 | 1 | Despatch sidebar print button | Done: the Email invoices sidebar page (Reprint invoice tab). |
-| 2 | Docket heading | Blocked on Q13 (logo or text?). |
+| 2 | Docket heading | Done: the customer confirmed a logo (Q13). The UI docket now shows it. |
 | M6, M5, M11, M12, M13, M27 | Keyboard audit of other screens, and the partials | First task: read these rows and list what each still needs. |
 | M35–M37 | Cloud and direct label printing | Design note only to start; high risk. |
 | (check) | Soset worker `SosetDataPath` `C:\FoxPro` to `C:\Soset` | Confirm the change is intended. |

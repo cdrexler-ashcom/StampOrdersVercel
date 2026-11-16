@@ -26,6 +26,7 @@ export interface DocumentLine {
  */
 export function InvoiceDocument({
   heading,
+  logoUrl,
   subheading,
   title,
   numberLabel,
@@ -41,6 +42,8 @@ export function InvoiceDocument({
 }: {
   /** The business name at the top left. */
   heading: string;
+  /** The company logo. When given it takes the place of the heading text (the delivery docket). */
+  logoUrl?: string | null;
   subheading: string;
   /** "Tax invoice", "Credit note", "Delivery docket" or "Pro forma invoice". */
   title: string;
@@ -61,8 +64,15 @@ export function InvoiceDocument({
     <article className="print-page mx-auto w-full max-w-3xl rounded-lg border border-slate-200 bg-white p-8 shadow-sm">
       <header className="flex items-start justify-between gap-6 border-b border-slate-200 pb-5">
         <div>
-          <p className="text-lg font-semibold text-slate-900">{heading}</p>
-          <p className="text-xs text-slate-500">{subheading}</p>
+          {logoUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element -- a blob URL, not optimisable
+            <img src={logoUrl} alt={heading} className="max-h-20 max-w-64 object-contain" />
+          ) : (
+            <>
+              <p className="text-lg font-semibold text-slate-900">{heading}</p>
+              <p className="text-xs text-slate-500">{subheading}</p>
+            </>
+          )}
         </div>
 
         <div className="text-right">
