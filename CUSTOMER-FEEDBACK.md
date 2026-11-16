@@ -61,7 +61,7 @@ this file has reached the pipeline, GitHub or Vercel, so "Branch" below still me
 | 5 | Print job cards for a whole run. | P1 ✓ | Branch (UI + API) | API: `GET /api/job-cards?startRun=&endRun=`. UI: new **Job cards** page (Order to invoice): first and last run, a list of what will print with orders that have no stamp job flagged, one Print for the batch, and a Reprint by order number. The order screen's Print job card still covers one order. Not yet tried against a running API. See M14. |
 | 6 | Email proofs from every company on the proof screen. | P1 ✓ | To do | Check that the company list on `ProofDialog` offers every company and that each one sends. The meeting says emailing fails for non-Stead companies; see M19–M20. API: proof defaults now follow the order's company (see item 24). Not reproduced against a real job. |
 | 7 | F2 keys. | P1 ✓ | Done | PR 317: F2 opens Colour in the add line dialog. Pickers already open by typing. |
-| 8 | Make it usable without a mouse. | P1 ✓ | Partial | PR 317: tab order, shortcuts and Alt+L on the order screen. Continue across the other screens. |
+| 8 | Make it usable without a mouse. | P1 ✓ | Partial | PR 317: tab order, shortcuts and Alt+L on the order screen. Continue across the other screens. Esc does not close a sidebar screen (see M6). |
 
 ## 2. Order screen (Part 2, pages 1–3 and 7)
 
@@ -149,7 +149,7 @@ Compared with the web app on the hub branch, the API and the legacy repo (status
 | M3 | F2 to search for a different customer | `CustomerPicker` handles F2 | None | Done |
 | M4 | Enter job/order no., product, qty and colour without the mouse | PR 317: tab order, text selected on focus, F2 for Colour, Alt+L for a new line, double-click to edit | Done: the edit-line dialog now has the same focus, select-on-focus, skipped Details and GST tick, and looping Save. F2 there still means change product | Branch |
 | M5 | Rarely changed fields out of the tab order or in an expandable section | Done in the add-line dialog. On the order, infrequent fields are in the "More fields" popup. | Decide whether "expandable" means in-page instead of a popup (Q12) | Partial |
-| M6 | Keyboard use across the whole app; replacements for F5/F6 | Key handlers only on Orders, the pickers, Despatch and Pricing. Previous/Next on the order are buttons only. | **Done: Alt+P / Alt+N for Previous / Next order** (with Alt+L for a new line). **Still to do:** audit every other screen for mouse-only steps. Ask the customer which screens (paper item 8) | Partial |
+| M6 | Keyboard use across the whole app; replacements for F5/F6 | Key handlers only on Orders, the pickers, Despatch and Pricing. Previous/Next on the order are buttons only. | **Done: Alt+P / Alt+N for Previous / Next order** (with Alt+L for a new line). **Decision (16 Nov 2026): Esc no longer closes a screen that is reached directly from the sidebar** (the old app's Esc closed the order form, because the main menu was a separate form). Esc still closes dialogs and dropdowns. **Still to do:** audit every other screen for mouse-only steps. Ask the customer which screens (paper item 8) | Partial |
 
 ### Order details, drop-ship labels, email
 
@@ -441,3 +441,6 @@ Stays close to Jackson Beecher's despatch branch and the order screen.
    repo's `stash@{0}` (unfinished statement remittance work) alone.
 6. **Balance.** A has more, smaller items; B has fewer, heavier ones. If B is blocked on Q8, B takes
    M26 and the 500-invoice decision first while A carries on with M6 and the despatch work.
+7. **Esc.** The main menu is a sidebar now, so Esc does not close any screen that is opened
+   directly from it. Esc still closes dialogs and dropdown lists (and cancels an edit in a field
+   that has one). Do not copy the old app's "Esc closes the form" onto a new screen.

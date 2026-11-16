@@ -36,7 +36,9 @@ const looksLikeAnEmail = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(va
  *
  *  * Invoice No      Leaving the field looks the invoice up: it shows the customer's name and fills
  *                    the email address from the invoice. "Invoice number not found" if there is no
- *                    such invoice. Enter prints (Print was the form's default button). Esc leaves.
+ *                    such invoice. Enter prints (Print was the form's default button). Unlike the
+ *                    legacy form, Esc does not leave the screen: it is opened from the sidebar, so
+ *                    Esc does not close it (see CUSTOMER-FEEDBACK.md, M6). Use Exit.
  *  * Print Delivery Docket   Prints the delivery docket (no prices) instead of the invoice.
  *  * Print / Preview Print opens the browser's print dialog; Preview shows the document first.
  *  * Email           Needs an address ("An email address must be entered."), asks "OK to email this
@@ -193,8 +195,6 @@ export function ReprintInvoicePanel() {
                       // Print is the legacy form's default button, so Enter prints.
                       event.preventDefault();
                       void print();
-                    } else if (event.key === "Escape") {
-                      router.push("/");
                     }
                   }}
                 />
