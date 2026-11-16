@@ -21,13 +21,10 @@ import {
   Notice,
   Spinner,
 } from "@/components/ui";
-import { InvoiceDocument } from "@/components/InvoiceDocument";
+import { ArchivedInvoiceDocument } from "@/components/ArchivedInvoiceDocument";
 import { invoices } from "@/lib/endpoints";
 import {
-  addressLines,
   date,
-  documentTotals,
-  lineTotal,
   money,
   qty as formatQty,
   text,
@@ -98,12 +95,6 @@ export default function InvoiceDocumentPage() {
   const { invoice, lines } = query.data;
   const isDocket = documentType === "docket";
 
-  // Archive lines carry price/qty/discount/GST but no stored line total, so the document
-  // rebuilds net/GST/gross the same way the legacy GetTotPrcArch and the server's
-  // OrderTotalCalculator do: sum (qty·price − rounded discount) and add the GST stored on
-  // each line as-is. Freight, when charged, is itself one of these lines (product =
-  // Control.FreightProd) — there is no separate header amount to add.
-  const { net, gst, gross } = documentTotals(lines);
 
   const hasEmail = Boolean(invoice.email?.trim());
   const emailTarget = emailTo.trim();
@@ -163,40 +154,7 @@ export default function InvoiceDocumentPage() {
       </div>
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_18rem]">
-        <InvoiceDocument
-          heading="Stead Brothers"
-          subheading={text(invoice.invoiceComp, "Stamp manufacturing")}
-          title={isDocket ? "Delivery docket" : invoice.credit ? "Credit note" : "Tax invoice"}
-          number={text(invoice.invoiceNo)}
-          dateText={date(invoice.invoiceDate)}
-          invoiceTo={addressLines(
-            invoice.custTitle,
-            invoice.invAdr1,
-            invoice.invAdr2,
-            invoice.invAdr3,
-            invoice.invPostCode,
-          )}
-          deliverTo={addressLines(
-            invoice.delName,
-            invoice.delAdr0,
-            invoice.delAdr1,
-            invoice.delAdr2,
-            invoice.delAdr3,
-          )}
-          lines={lines.map((line) => ({
-            key: `${line.orderId}-${line.jobNo}`,
-            jobNo: line.jobNo,
-            product: line.product,
-            details: line.details,
-            colour: line.colourDesc ?? line.colour,
-            qty: line.qty,
-            price: line.price,
-            total: lineTotal(line),
-          }))}
-          showPrices={!isDocket}
-          totals={{ net, gst, gross }}
-          note={invoice.note}
-        />
+        <ArchivedInvoiceDocument invoice={invoice} lines={lines} docket={isDocket} />
 
         <aside className="no-print space-y-4">
           <Card>
