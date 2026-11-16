@@ -22,6 +22,9 @@ merged to `master` once it is done.
 | Branch | Items | Merged | Notes |
 | --- | --- | --- | --- |
 | `feat/despatch-labels` (Jackson Beecher), which includes `feat/order-dealer-return-address` | 1, 3, 9 | 11 Nov 2026 | The developer says it is about 99% done. The print button has been taken off the Despatch page on purpose. Printing now has its own sidebar button, **Email invoices**, whose Reprint invoice tab prints, previews or emails one invoice (on `feat/cf-despatch-email-tab`). Despatch labels print only from **Accept** in the Scan Tracking dialog. This branch also removes the "Ready to notify" grid from the Despatch page. |
+| `feat/cf-despatch-email-tab` (UI PR 321), `feat/cf-despatch-email-content` (API PR 320), scan dialog (UI PR 318) and label lookup (API PR 319), all Jackson Beecher | 1, 3, M9, M17 | 13 Nov 2026 | The Email invoices page (Send despatch emails and Reprint invoice tabs), a subject and message on the invoice email, a Scan Tracking dialog closer to the old form, and a label lookup that only finds invoices still awaiting tracking. |
+| `feat/cf-customers-pricing` (Coen Drexler, UI and API) | M26, M29, M31 to M33, M40, paper 32, invoice register cap | 13 Nov 2026 | Customer screen in four tabs, the SQL price list with CSV import and export, Bank deposits hidden, the number-clash guard and health check, and the 5,000-invoice cap. The VB6 patch for M40 is in the Legacy repo (`feat/cf-number-writeback`, not merged). |
+| `feat/cf-docket-logo` (API only, Jackson Beecher) | 2 | **Not on the API hub branch.** Merged into the API `master` locally on 16 Nov 2026. | `GET /api/invoice-states/{state}/letterhead` returns the company logo. The UI side waits on Q13. |
 
 **Status key**
 
@@ -39,7 +42,11 @@ merged to `master` once it is done.
 A ✓ in the **Source** column means the customer ticked the item on the scan. On the Part 1
 typed list a tick probably means "discussed" or "agreed", not "done".
 
-Status as at 11 Nov 2026.
+Status as at 16 Nov 2026.
+
+**Where `master` is (16 Nov 2026).** In both repos the local `master` already contains the hub branch
+(and, in the API, `feat/cf-docket-logo`), but neither `master` has been pushed. Until it is, nothing in
+this file has reached the pipeline, GitHub or Vercel, so "Branch" below still means "not live".
 
 ---
 
@@ -168,7 +175,7 @@ Compared with the web app on the hub branch, the API and the legacy repo (status
 | # | Request | Today | Change needed | Status |
 | --- | --- | --- | --- | --- |
 | M16 | Verify each order has a consignment number, then confirm the batch as tracked | Branch: editable tracking column and a "Process" button with a confirm | None | Branch |
-| M17 | One batch action to email invoice and tracking to customers; orders can be held overnight | **Built on `feat/cf-despatch-email-tab`, not yet on the hub branch.** The **Email invoices** sidebar page has a Send despatch emails tab, modelled on the old Email Invoices screen: Preview, Send Now, an "OK to send invoices?" confirmation and a result list with failures. The "Ready to notify" grid was removed from the Despatch page. | Still open: the email has no invoice PDF and no tracking link, and the old wording and company SMTP settings are not ported (Q7). The old app also had a test-mode switch that sent every email to one internal address. The new app has none. | Partial |
+| M17 | One batch action to email invoice and tracking to customers; orders can be held overnight | **Built, and on the hub branch (UI PR 321).** The **Email invoices** sidebar page has a Send despatch emails tab, modelled on the old Email Invoices screen: Preview, Send Now, an "OK to send invoices?" confirmation and a result list with failures. The "Ready to notify" grid was removed from the Despatch page. | The API invoice email now accepts a subject and a message (PR 320). Still open: the email has no invoice PDF and no tracking link, and the old wording and company SMTP settings are not ported (Q7). The old app also had a test-mode switch that sent every email to one internal address. The new app has none. | Partial |
 | M18 | Simplified dispatch screen with one consolidated action | Mostly done on the branch | The sidebar print button is done: the Email invoices page (paper item 1) | Branch |
 
 ### Proofs and companies
@@ -271,7 +278,7 @@ Compared with the web app on the hub branch, the API and the legacy repo (status
 
 ## 12. API work for this round
 
-Committed on the API repo's `feat/customer-feedback-nov-2026` branch (base: `master` with `feat/despatch-labels` merged in). Tests: 475 pass; 4 database integration tests fail, which need a real database and were failing before this work (earlier the test database also lacked the `PaymentLinkUrl` column).
+Committed on the API repo's `feat/customer-feedback-nov-2026` branch (base: `master` with `feat/despatch-labels` merged in). Tests (16 Nov 2026): 521 pass and 4 fail. All 4 need the real database: three reconciliation checks explained by old data (see 4a above) and one invoice-history test that is flaky.
 
 | API change | Endpoint or area | For | UI to do |
 | --- | --- | --- | --- |
@@ -281,6 +288,9 @@ Committed on the API repo's `feat/customer-feedback-nov-2026` branch (base: `mas
 | Proof defaults follow the order's company | `GET /api/proofs/{jobNo}` | 24, 6; M19, M20 | Done (customer letterhead off by default; customer proof fields removed) |
 | Customer account-number range on the archived-invoice reports | `GET /api/reports/{name}/html`: `custFrom`, `custTo` | M24 | Done (Customer from/to on the Invoice Register) |
 | Company letterhead as the delivery docket heading | `DelDocket` report | 2 | None, unless "heading" means text (Q13) |
+| Company logo for a state | `GET /api/invoice-states/{state}/letterhead` (`feat/cf-docket-logo`, not on the hub branch) | 2 | Use it for the docket heading once Q13 is answered |
+| Invoice email takes a subject and a message (Jackson Beecher, PR 320) | Invoice email endpoint | M17 | Done (Email invoices page) |
+| Label lookup only finds invoices still awaiting tracking (Jackson Beecher, PR 319) | `/api/tracking/labels` | 1, 3 | Done |
 
 Not done on the API: emailing a pro forma (the pro forma itself needs no API work: the UI builds it from the order, M15), the invoice PDF and tracking link on the despatch email (M17, Q7), automatic deposits (M29), and pricing in SQL (M31–M33).
 
@@ -321,10 +331,10 @@ Open question added: **Q13** (for the customer): by "heading" on the packing sli
 price list (M31–M33; built, but off until someone checks prices and turns on `Pricing:UseSqlPrices`),
 and running both apps on one database (M40).
 
-### Still outstanding (as at 13 Nov 2026)
+### Still outstanding (as at 16 Nov 2026)
 
-Everything below "Done" is on the hub branches (`feat/customer-feedback-nov-2026` in the UI and the API),
-not yet on `master`. What is left:
+Everything below "Done" is on the hub branches (`feat/customer-feedback-nov-2026` in the UI and the API)
+and, locally, on `master` in both repos, which has not been pushed. What is left:
 
 **1. Waiting on the customer** (nothing to build until they answer)
 
@@ -348,6 +358,8 @@ not yet on `master`. What is left:
 | Number clashes (M40) operating rules | Agree them with the staff: one app at a time for invoicing, and one receipt batch open at a time (both apps share the receipt working tables). |
 | Invoice register cap | The limit is now 5,000 and a bigger run is refused. Tell the staff what the message means. |
 | Soset worker path | The despatch branch changes `SosetDataPath` from `C:\FoxPro` to `C:\Soset`. Confirm it is intended. |
+| Price list "Copy from Soset" | Not yet run. The local `ProductPrice` table exists and is empty. The test stopped because the local API login returned 401 (needs a working dev login, or run it from Settings, Price list). |
+| Docket logo (paper item 2) | `feat/cf-docket-logo` (API) is not on the API hub branch. Decide whether to merge it there, then wait for Q13 before using it in the UI. |
 
 **3. Not built**
 
@@ -365,9 +377,23 @@ not yet on `master`. What is left:
 
 M10, M20, M21 and M36 may already work. They need checking against the API or real data before any change.
 
+**4a. Findings from the local database check (16 Nov 2026)**
+
+The scripts `control-payment-link.sql`, `reporting-indexes.sql` and `product-prices.sql` were applied to the local
+`StampOrders` database. The real-database tests then gave 17 passes and 3 failures, all explained by old data, not by code:
+
+| Finding | Detail | What to do |
+| --- | --- | --- |
+| Invoice 228231 (3 Aug 2023) | Its invoice number equals its order number, so it is above `NextsInv` (224,044) and trips the sequence test. The live sequence is correct. | Leave the data. Optionally make the test ignore invoice numbers equal to their order number. |
+| 22 lines with GST off by a few cents | Two 2023 orders (226968, 225108). Order 226968 is 9.9% on every line, which looks like a flat 1% reduction. | Explained; raise `RECON_TOL_LINEGST` or note it in `docs/RECONCILIATION.md`. |
+| Duplicate archive headers | 11 orders (2016 to Dec 2020) each have their header row twice. Reports that read the archive directly could list them twice. | Check before the unique-index script. |
+| **Invoices posted to the ledger twice** | 54 invoices (about $5,100, 24 customers) have two identical open items created within minutes, 43 of them in two November 2024 runs (13 and 18 Nov). Every item is marked paid. | Accounts should check whether any customer paid twice. The M40 guard does not cover the ledger step of an invoice run. |
+| Plaintext SQL password in `appsettings.json` (API) | The file is tracked in git with the `sa` password in the connection string. | Rotate the password and move it to the secret store. |
+| Legacy repo working tree | Four zip files under `OrdersSQL` show as deleted and uncommitted. | Check whether the deletion was intended. |
+
 **5. Release**
 
-None of this is on `master` yet. When the hub branches are merged, `master` is mirrored to GitHub and Vercel by the pipeline.
+Both hub branches are merged into the local `master` in each repo (UI and API), and the Legacy branch is not merged. None of it is pushed. Pushing the UI `master` deploys it through the pipeline to GitHub and Vercel; deploy the API first, after running the SQL scripts, because the UI now calls API endpoints that do not exist on the old build.
 
 ---
 
