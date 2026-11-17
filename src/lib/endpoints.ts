@@ -344,6 +344,12 @@ export const invoiceStates = {
   /** GET /api/invoice-states/{state} */
   get: (state: string) =>
     api.get<StateInvoice>(`/api/invoice-states/${encodeURIComponent(state)}`),
+  /**
+   * GET /api/invoice-states/{state}/letterhead - the company logo as an image (404 when the
+   * company has none). Fetched with the bearer token because a bare <img src> would get a 401.
+   */
+  letterhead: (state: string, signal?: AbortSignal) =>
+    api.getBlob(`/api/invoice-states/${encodeURIComponent(state)}/letterhead`, signal),
   /** POST /api/invoice-states */
   create: (body: CreateInvoiceStateRequest) =>
     api.post<StateInvoice>("/api/invoice-states", body),

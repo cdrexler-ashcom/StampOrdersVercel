@@ -22,6 +22,9 @@ merged to `master` once it is done.
 | Branch | Items | Merged | Notes |
 | --- | --- | --- | --- |
 | `feat/despatch-labels` (Jackson Beecher), which includes `feat/order-dealer-return-address` | 1, 3, 9 | 11 Nov 2026 | The developer says it is about 99% done. The print button has been taken off the Despatch page on purpose. Printing now has its own sidebar button, **Email invoices**, whose Reprint invoice tab prints, previews or emails one invoice (on `feat/cf-despatch-email-tab`). Despatch labels print only from **Accept** in the Scan Tracking dialog. This branch also removes the "Ready to notify" grid from the Despatch page. |
+| `feat/cf-despatch-email-tab` (UI PR 321), `feat/cf-despatch-email-content` (API PR 320), scan dialog (UI PR 318) and label lookup (API PR 319), all Jackson Beecher | 1, 3, M9, M17 | 13 Nov 2026 | The Email invoices page (Send despatch emails and Reprint invoice tabs), a subject and message on the invoice email, a Scan Tracking dialog closer to the old form, and a label lookup that only finds invoices still awaiting tracking. |
+| `feat/cf-customers-pricing` (Coen Drexler, UI and API) | M26, M29, M31 to M33, M40, paper 32, invoice register cap | 13 Nov 2026 | Customer screen in four tabs, the SQL price list with CSV import and export, Bank deposits hidden, the number-clash guard and health check, and the 5,000-invoice cap. The VB6 patch for M40 is in the Legacy repo (`feat/cf-number-writeback`, not merged). |
+| `feat/cf-docket-logo` (UI and API, Jackson Beecher) | 2 | **Not on the hub branches yet.** The API branch is merged into the API `master` locally on 16 Nov 2026. | `GET /api/invoice-states/{state}/letterhead` returns the company logo, and the UI delivery docket (invoice page and Reprint tab) shows it as its heading, falling back to text when a company has none. Q13 is answered: a logo. |
 
 **Status key**
 
@@ -39,7 +42,11 @@ merged to `master` once it is done.
 A ✓ in the **Source** column means the customer ticked the item on the scan. On the Part 1
 typed list a tick probably means "discussed" or "agreed", not "done".
 
-Status as at 11 Nov 2026.
+Status as at 16 Nov 2026.
+
+**Where `master` is (16 Nov 2026).** In both repos the local `master` already contains the hub branch
+(and, in the API, `feat/cf-docket-logo`), but neither `master` has been pushed. Until it is, nothing in
+this file has reached the pipeline, GitHub or Vercel, so "Branch" below still means "not live".
 
 ---
 
@@ -48,13 +55,13 @@ Status as at 11 Nov 2026.
 | # | Request | Source | Status | Notes |
 | --- | --- | --- | --- | --- |
 | 1 | How do we print the despatch labels? | P1 | Branch | **Sidebar print button: done** (the **Email invoices** sidebar page, Reprint invoice tab; see the merged-branches table above). From `feat/despatch-labels`: capturing a consignment prints a return label and a delivery label (`DespatchLabelPrint.tsx`, `GET /api/tracking/labels/{invoiceNo}`). The Despatch page is rebuilt to work like the old Tracking Entry screen (Scan and Process buttons, `ScanTrackingDialog.tsx`). |
-| 2 | Put a heading on the packing slip. It is blank now; it should come from the dealer or the invoice. | P1 | Branch (API) | API: the delivery docket report now prints the invoice company's letterhead as its heading, top right like the invoice. The UI invoice page's docket view hard-codes "Stead Brothers" and is unchanged. **Confirm with the customer that "heading" means the company logo/letterhead and not text** (Q13). The tax invoice report has the same blank slot (no data binding) and was not changed. |
+| 2 | Put a heading on the packing slip. It is blank now; it should come from the dealer or the invoice. | P1 | Branch (API) | API: the delivery docket report now prints the invoice company's letterhead as its heading, top right like the invoice. UI: the delivery docket view (the invoice page and the Reprint tab) now shows the company logo as its heading, and falls back to the text heading when the company has no logo (it uses the new `GET /api/invoice-states/{state}/letterhead`). **The customer confirmed the heading is the logo** (Q13). The tax invoice report has the same blank slot (no data binding) and was not changed. |
 | 3 | Where do we find the Express Post numbers, to see whether we missed any? | P1 | Branch (partial) | `feat/despatch-labels` adds Order, an editable Tracking number(s) column and a Required toggle to the pending despatch list, so invoices still missing a number are visible. There is no list of numbers already used. Confirm with the customer that this is enough. |
 | 4 | What CSV format do we need to import from Mr Stamps? ("CSV type?") | P1 ✓ | Question | Send them the import file spec for `/imports` (`POST /api/imports/web-orders`). The meeting reports a newly acquired company's CSV being rejected; see M21. |
 | 5 | Print job cards for a whole run. | P1 ✓ | Branch (UI + API) | API: `GET /api/job-cards?startRun=&endRun=`. UI: new **Job cards** page (Order to invoice): first and last run, a list of what will print with orders that have no stamp job flagged, one Print for the batch, and a Reprint by order number. The order screen's Print job card still covers one order. Not yet tried against a running API. See M14. |
 | 6 | Email proofs from every company on the proof screen. | P1 ✓ | To do | Check that the company list on `ProofDialog` offers every company and that each one sends. The meeting says emailing fails for non-Stead companies; see M19–M20. API: proof defaults now follow the order's company (see item 24). Not reproduced against a real job. |
 | 7 | F2 keys. | P1 ✓ | Done | PR 317: F2 opens Colour in the add line dialog. Pickers already open by typing. |
-| 8 | Make it usable without a mouse. | P1 ✓ | Partial | PR 317: tab order, shortcuts and Alt+L on the order screen. Continue across the other screens. |
+| 8 | Make it usable without a mouse. | P1 ✓ | Partial | PR 317: tab order, shortcuts and Alt+L on the order screen. Continue across the other screens. Esc does not close a sidebar screen (see M6). |
 
 ## 2. Order screen (Part 2, pages 1–3 and 7)
 
@@ -142,7 +149,7 @@ Compared with the web app on the hub branch, the API and the legacy repo (status
 | M3 | F2 to search for a different customer | `CustomerPicker` handles F2 | None | Done |
 | M4 | Enter job/order no., product, qty and colour without the mouse | PR 317: tab order, text selected on focus, F2 for Colour, Alt+L for a new line, double-click to edit | Done: the edit-line dialog now has the same focus, select-on-focus, skipped Details and GST tick, and looping Save. F2 there still means change product | Branch |
 | M5 | Rarely changed fields out of the tab order or in an expandable section | Done in the add-line dialog. On the order, infrequent fields are in the "More fields" popup. | Decide whether "expandable" means in-page instead of a popup (Q12) | Partial |
-| M6 | Keyboard use across the whole app; replacements for F5/F6 | Key handlers only on Orders, the pickers, Despatch and Pricing. Previous/Next on the order are buttons only. | **Done: Alt+P / Alt+N for Previous / Next order** (with Alt+L for a new line). **Still to do:** audit every other screen for mouse-only steps. Ask the customer which screens (paper item 8) | Partial |
+| M6 | Keyboard use across the whole app; replacements for F5/F6 | Key handlers only on Orders, the pickers, Despatch and Pricing. Previous/Next on the order are buttons only. | **Done: Alt+P / Alt+N for Previous / Next order** (with Alt+L for a new line). **Decision (16 Nov 2026): Esc no longer closes a screen that is reached directly from the sidebar** (the old app's Esc closed the order form, because the main menu was a separate form). Esc still closes dialogs and dropdowns. **Still to do:** audit every other screen for mouse-only steps. Ask the customer which screens (paper item 8) | Partial |
 
 ### Order details, drop-ship labels, email
 
@@ -168,7 +175,7 @@ Compared with the web app on the hub branch, the API and the legacy repo (status
 | # | Request | Today | Change needed | Status |
 | --- | --- | --- | --- | --- |
 | M16 | Verify each order has a consignment number, then confirm the batch as tracked | Branch: editable tracking column and a "Process" button with a confirm | None | Branch |
-| M17 | One batch action to email invoice and tracking to customers; orders can be held overnight | **Built on `feat/cf-despatch-email-tab`, not yet on the hub branch.** The **Email invoices** sidebar page has a Send despatch emails tab, modelled on the old Email Invoices screen: Preview, Send Now, an "OK to send invoices?" confirmation and a result list with failures. The "Ready to notify" grid was removed from the Despatch page. | Still open: the email has no invoice PDF and no tracking link, and the old wording and company SMTP settings are not ported (Q7). The old app also had a test-mode switch that sent every email to one internal address. The new app has none. | Partial |
+| M17 | One batch action to email invoice and tracking to customers; orders can be held overnight | **Built, and on the hub branch (UI PR 321).** The **Email invoices** sidebar page has a Send despatch emails tab, modelled on the old Email Invoices screen: Preview, Send Now, an "OK to send invoices?" confirmation and a result list with failures. The "Ready to notify" grid was removed from the Despatch page. | The API invoice email now accepts a subject and a message (PR 320). Still open: the email has no invoice PDF and no tracking link, and the old wording and company SMTP settings are not ported (Q7). The old app also had a test-mode switch that sent every email to one internal address. The new app has none. | Partial |
 | M18 | Simplified dispatch screen with one consolidated action | Mostly done on the branch | The sidebar print button is done: the Email invoices page (paper item 1) | Branch |
 
 ### Proofs and companies
@@ -271,7 +278,7 @@ Compared with the web app on the hub branch, the API and the legacy repo (status
 
 ## 12. API work for this round
 
-Committed on the API repo's `feat/customer-feedback-nov-2026` branch (base: `master` with `feat/despatch-labels` merged in). Tests: 475 pass; 4 database integration tests fail, which need a real database and were failing before this work (earlier the test database also lacked the `PaymentLinkUrl` column).
+Committed on the API repo's `feat/customer-feedback-nov-2026` branch (base: `master` with `feat/despatch-labels` merged in). Tests (16 Nov 2026): 521 pass and 4 fail. All 4 need the real database: three reconciliation checks explained by old data (see 4a above) and one invoice-history test that is flaky.
 
 | API change | Endpoint or area | For | UI to do |
 | --- | --- | --- | --- |
@@ -280,11 +287,14 @@ Committed on the API repo's `feat/customer-feedback-nov-2026` branch (base: `mas
 | Job cards for a whole run | `GET /api/job-cards?startRun=&endRun=` | 5; M14 | Done (Job cards page) |
 | Proof defaults follow the order's company | `GET /api/proofs/{jobNo}` | 24, 6; M19, M20 | Done (customer letterhead off by default; customer proof fields removed) |
 | Customer account-number range on the archived-invoice reports | `GET /api/reports/{name}/html`: `custFrom`, `custTo` | M24 | Done (Customer from/to on the Invoice Register) |
-| Company letterhead as the delivery docket heading | `DelDocket` report | 2 | None, unless "heading" means text (Q13) |
+| Company letterhead as the delivery docket heading | `DelDocket` report | 2 | The UI docket view now shows the logo too (Q13: confirmed a logo) |
+| Company logo for a state | `GET /api/invoice-states/{state}/letterhead` (`feat/cf-docket-logo`, not on the hub branch) | 2 | Done (the UI delivery docket shows it as the heading) |
+| Invoice email takes a subject and a message (Jackson Beecher, PR 320) | Invoice email endpoint | M17 | Done (Email invoices page) |
+| Label lookup only finds invoices still awaiting tracking (Jackson Beecher, PR 319) | `/api/tracking/labels` | 1, 3 | Done |
 
 Not done on the API: emailing a pro forma (the pro forma itself needs no API work: the UI builds it from the order, M15), the invoice PDF and tracking link on the despatch email (M17, Q7), automatic deposits (M29), and pricing in SQL (M31–M33).
 
-Open question added: **Q13** (for the customer): by "heading" on the packing slip do they mean the company logo/letterhead (what the API now prints), or the company name and address as text?
+**Q13 answered:** the "heading" on the packing slip is the company logo/letterhead, which is what the API prints.
 
 ---
 
@@ -297,7 +307,7 @@ Open question added: **Q13** (for the customer): by "heading" on the packing sli
 | Done | 7, 11, 14, 15, 16, 17, 18, 22, 27, 29, 30 |
 | Branch (on the hub branch, not yet on `master`) | 1 (sidebar print button done), 3 (partial), 9, 12, 13, 19, 20, 31 |
 | Branch (UI + API) | 5, 6, 24, 28, 32 |
-| Branch (API only; docket heading) | 2 |
+| Branch (UI + API; docket heading, logo confirmed) | 2 |
 | Partial | 8 |
 | Question | 4, 10, 23, 25, 26, 33 |
 | Push back | 21 |
@@ -321,10 +331,10 @@ Open question added: **Q13** (for the customer): by "heading" on the packing sli
 price list (M31–M33; built, but off until someone checks prices and turns on `Pricing:UseSqlPrices`),
 and running both apps on one database (M40).
 
-### Still outstanding (as at 13 Nov 2026)
+### Still outstanding (as at 16 Nov 2026)
 
-Everything below "Done" is on the hub branches (`feat/customer-feedback-nov-2026` in the UI and the API),
-not yet on `master`. What is left:
+Everything below "Done" is on the hub branches (`feat/customer-feedback-nov-2026` in the UI and the API)
+and, locally, on `master` in both repos, which has not been pushed. What is left:
 
 **1. Waiting on the customer** (nothing to build until they answer)
 
@@ -333,7 +343,6 @@ not yet on `master`. What is left:
 | Q1 pro forma wording and whether it needs a number | M15 (built with my own wording) |
 | Q4 should a receipt post to the ledger as soon as it is recorded, with no Process step? | M29 (automatic processing) |
 | Q8 which price columns they edit, who edits them, their real Excel file | M31 to M33 (built as a best-judgement version, may be reworked) |
-| Q13 is the docket "heading" the company logo or the company name and address as text? | paper item 2 |
 | Q14 which customer-screen fields are rarely used? | M26 (tabs done, nothing removed) |
 | The PCI concern: do not store a card security code; 542 customers already have card numbers stored | M30, paper item 21 |
 | Q2, Q3, Q5, Q6, Q7, Q9, Q10, Q11, Q12 | M14, M27, M22, M21, M17, M12, paper items 10 and 33, M5 and M11 |
@@ -348,6 +357,8 @@ not yet on `master`. What is left:
 | Number clashes (M40) operating rules | Agree them with the staff: one app at a time for invoicing, and one receipt batch open at a time (both apps share the receipt working tables). |
 | Invoice register cap | The limit is now 5,000 and a bigger run is refused. Tell the staff what the message means. |
 | Soset worker path | The despatch branch changes `SosetDataPath` from `C:\FoxPro` to `C:\Soset`. Confirm it is intended. |
+| Price list "Copy from Soset" | Not yet run. The local `ProductPrice` table exists and is empty. The test stopped because the local API login returned 401 (needs a working dev login, or run it from Settings, Price list). |
+| Docket logo (paper item 2) | Both `feat/cf-docket-logo` branches (the API endpoint and the UI docket view) still need merging into their hub branches. Q13 is answered (a logo). The UI docket needs the API endpoint deployed first. |
 
 **3. Not built**
 
@@ -365,9 +376,23 @@ not yet on `master`. What is left:
 
 M10, M20, M21 and M36 may already work. They need checking against the API or real data before any change.
 
+**4a. Findings from the local database check (16 Nov 2026)**
+
+The scripts `control-payment-link.sql`, `reporting-indexes.sql` and `product-prices.sql` were applied to the local
+`StampOrders` database. The real-database tests then gave 17 passes and 3 failures, all explained by old data, not by code:
+
+| Finding | Detail | What to do |
+| --- | --- | --- |
+| Invoice 228231 (3 Aug 2023) | Its invoice number equals its order number, so it is above `NextsInv` (224,044) and trips the sequence test. The live sequence is correct. | Leave the data. Optionally make the test ignore invoice numbers equal to their order number. |
+| 22 lines with GST off by a few cents | Two 2023 orders (226968, 225108). Order 226968 is 9.9% on every line, which looks like a flat 1% reduction. | Explained; raise `RECON_TOL_LINEGST` or note it in `docs/RECONCILIATION.md`. |
+| Duplicate archive headers | 11 orders (2016 to Dec 2020) each have their header row twice. Reports that read the archive directly could list them twice. | Check before the unique-index script. |
+| **Invoices posted to the ledger twice** | 54 invoices (about $5,100, 24 customers) have two identical open items created within minutes, 43 of them in two November 2024 runs (13 and 18 Nov). Every item is marked paid. | Accounts should check whether any customer paid twice. The M40 guard does not cover the ledger step of an invoice run. |
+| Plaintext SQL password in `appsettings.json` (API) | The file is tracked in git with the `sa` password in the connection string. | Rotate the password and move it to the secret store. |
+| Legacy repo working tree | Four zip files under `OrdersSQL` show as deleted and uncommitted. | Check whether the deletion was intended. |
+
 **5. Release**
 
-None of this is on `master` yet. When the hub branches are merged, `master` is mirrored to GitHub and Vercel by the pipeline.
+Both hub branches are merged into the local `master` in each repo (UI and API), and the Legacy branch is not merged. None of it is pushed. Pushing the UI `master` deploys it through the pipeline to GitHub and Vercel; deploy the API first, after running the SQL scripts, because the UI now calls API endpoints that do not exist on the old build.
 
 ---
 
@@ -384,7 +409,7 @@ Stays close to Jackson Beecher's despatch branch and the order screen.
 | --- | --- | --- |
 | M17 | Despatch email | The batch send is built. Still to do: invoice PDF, tracking link, old wording, company SMTP settings (Q7). |
 | 1 | Despatch sidebar print button | Done: the Email invoices sidebar page (Reprint invoice tab). |
-| 2 | Docket heading | Blocked on Q13 (logo or text?). |
+| 2 | Docket heading | Done: the customer confirmed a logo (Q13). The UI docket now shows it. |
 | M6, M5, M11, M12, M13, M27 | Keyboard audit of other screens, and the partials | First task: read these rows and list what each still needs. |
 | M35–M37 | Cloud and direct label printing | Design note only to start; high risk. |
 | (check) | Soset worker `SosetDataPath` `C:\FoxPro` to `C:\Soset` | Confirm the change is intended. |
@@ -416,3 +441,6 @@ Stays close to Jackson Beecher's despatch branch and the order screen.
    repo's `stash@{0}` (unfinished statement remittance work) alone.
 6. **Balance.** A has more, smaller items; B has fewer, heavier ones. If B is blocked on Q8, B takes
    M26 and the 500-invoice decision first while A carries on with M6 and the despatch work.
+7. **Esc.** The main menu is a sidebar now, so Esc does not close any screen that is opened
+   directly from it. Esc still closes dialogs and dropdown lists (and cancels an edit in a field
+   that has one). Do not copy the old app's "Esc closes the form" onto a new screen.

@@ -126,7 +126,7 @@ export default function CustomerDetailPage() {
                 <Link href="/orders/new">
                   <Button variant="primary">
                     <Plus className="size-3.5" />
-                    New order
+                    Add Order
                   </Button>
                 </Link>
               </>

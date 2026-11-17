@@ -1,6 +1,40 @@
+"use client";
+
+import { useQuery } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
+
 import { InvoiceDocument } from "@/components/InvoiceDocument";
+import { invoiceStates } from "@/lib/endpoints";
 import { addressLines, date, documentTotals, lineTotal, text } from "@/lib/format";
 import type { ArchiveHeader, ArchiveLine } from "@/types/api";
+
+/**
+ * The company logo as an object URL, for the delivery docket's heading. Null while it loads, and
+ * when the company has no logo (or the file is missing): the heading then falls back to text.
+ */
+function useCompanyLogo(company: string | null | undefined, enabled: boolean): string | null {
+  const code = company?.trim() ?? "";
+  const query = useQuery({
+    queryKey: ["letterhead", code],
+    queryFn: ({ signal }) => invoiceStates.letterhead(code, signal),
+    enabled: enabled && code !== "",
+    retry: false,
+    staleTime: 5 * 60_000,
+  });
+
+  const [url, setUrl] = useState<string | null>(null);
+  useEffect(() => {
+    if (!query.data) {
+      setUrl(null);
+      return;
+    }
+    const objectUrl = URL.createObjectURL(query.data);
+    setUrl(objectUrl);
+    return () => URL.revokeObjectURL(objectUrl);
+  }, [query.data]);
+
+  return url;
+}
 
 /**
  * A posted invoice, credit note or delivery docket, laid out as the printed document. Used by the
@@ -23,10 +57,14 @@ export function ArchivedInvoiceDocument({
   docket: boolean;
 }) {
   const { net, gst, gross } = documentTotals(lines);
+  // The delivery docket's heading is the company logo, as on the printed docket report. The
+  // invoice keeps its text heading.
+  const logoUrl = useCompanyLogo(invoice.invoiceComp, docket);
 
   return (
     <InvoiceDocument
       heading="Stead Brothers"
+      logoUrl={logoUrl}
       subheading={text(invoice.invoiceComp, "Stamp manufacturing")}
       title={docket ? "Delivery docket" : invoice.credit ? "Credit note" : "Tax invoice"}
       number={text(invoice.invoiceNo)}
