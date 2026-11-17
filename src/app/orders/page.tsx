@@ -3,6 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Plus } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
 import { CustomerPicker } from "@/components/CustomerPicker";
@@ -43,6 +44,20 @@ type SortDirection = "asc" | "desc";
  * that navigation, and matches the only two filters the API exposes.
  */
 export default function OrdersPage() {
+  const router = useRouter();
+
+  // Alt+A is the Add Order button's shortcut.
+  useEffect(() => {
+    const handler = (event: KeyboardEvent) => {
+      if (!event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+      if (event.key.toLowerCase() !== "a" || event.repeat) return;
+      event.preventDefault();
+      router.push("/orders/new");
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [router]);
+
   // Customer/run-number filters and sort are all remembered in sessionStorage (see
   // useGridState) so they survive following a row link to /orders/{id} and hitting Back —
   // otherwise the list page remounts from scratch and reverts to its defaults.
@@ -133,9 +148,9 @@ export default function OrdersPage() {
         description="Orders entered but not yet invoiced."
         actions={
           <Link href="/orders/new">
-            <Button variant="primary">
+            <Button variant="primary" title="Add Order (Alt+A)">
               <Plus className="size-3.5" />
-              New order
+              Add Order
             </Button>
           </Link>
         }
@@ -180,10 +195,12 @@ export default function OrdersPage() {
         ) : (query.data?.length ?? 0) === 0 ? (
           <EmptyState
             title="No orders found"
-            description="Adjust the filters, or create a new order."
+            description="Adjust the filters, or add an order."
             action={
               <Link href="/orders/new">
-                <Button variant="primary">New order</Button>
+                <Button variant="primary" title="Add Order (Alt+A)">
+                  Add Order
+                </Button>
               </Link>
             }
           />

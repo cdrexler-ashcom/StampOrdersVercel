@@ -219,6 +219,36 @@ export function OrderWorkspace({ initialOrderId }: { initialOrderId?: number }) 
     return () => window.removeEventListener("keydown", handler);
   }, [canStepOrders, prevOrderId, nextOrderId, router]);
 
+  // Alt+X closes the current order and goes back to the order list (the new order screen has
+  // Alt+C to cancel instead). Not while a dialog is up.
+  const canCloseOrder = !isCreate && !anyDialogOpen;
+  useEffect(() => {
+    if (!canCloseOrder) return;
+    const handler = (event: KeyboardEvent) => {
+      if (!event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+      if (event.key.toLowerCase() !== "x" || event.repeat) return;
+      event.preventDefault();
+      // Header fields save when they lose focus, so leave the field first, as Alt+P / Alt+N do.
+      (document.activeElement as HTMLElement | null)?.blur();
+      router.push("/orders");
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [canCloseOrder, router]);
+
+  // Alt+C cancels a new order, the same as the Cancel button.
+  useEffect(() => {
+    if (!isCreate) return;
+    const handler = (event: KeyboardEvent) => {
+      if (!event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+      if (event.key.toLowerCase() !== "c" || event.repeat) return;
+      event.preventDefault();
+      router.back();
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [isCreate, router]);
+
   const customerQuery = useQuery({
     queryKey: ["customer", order?.custId],
     queryFn: () => customers.get(order!.custId!),
@@ -345,9 +375,6 @@ export function OrderWorkspace({ initialOrderId }: { initialOrderId?: number }) 
         actions={
           isCreate ? (
             <>
-              <Button type="button" onClick={() => router.back()}>
-                Cancel
-              </Button>
               <Button
                 type="button"
                 variant="primary"
@@ -357,6 +384,9 @@ export function OrderWorkspace({ initialOrderId }: { initialOrderId?: number }) 
                 onClick={startOrder}
               >
                 Start order
+              </Button>
+              <Button type="button" title="Cancel (Alt+C)" onClick={() => router.back()}>
+                Cancel
               </Button>
             </>
           ) : (
@@ -503,9 +533,14 @@ export function OrderWorkspace({ initialOrderId }: { initialOrderId?: number }) 
         <Card>
           <CardHeader title="Order" actions={saveState} />
           <CardBody className="grid gap-3 sm:grid-cols-2">
-            <Field label="Account" required={isCreate} className="sm:col-span-2">
+            <Field label="Customer code" required={isCreate} className="sm:col-span-2">
               {isCreate ? (
-                <CustomerPicker value={customer} onChange={pickCustomer} autoFocus />
+                <CustomerPicker
+                  value={customer}
+                  onChange={pickCustomer}
+                  autoFocus
+                  placeholder="Search customer code or name…"
+                />
               ) : (
                 <div className="rounded-md bg-slate-50 px-2.5 py-1.5 text-sm font-medium text-slate-800 ring-1 ring-inset ring-slate-200">
                   {text(order!.custTitle, "—")}
@@ -743,6 +778,16 @@ export function OrderWorkspace({ initialOrderId }: { initialOrderId?: number }) 
                       placeholder="State"
                       maxLength={60}
                       onChange={(e) => setNewDelAdr3(e.target.value)}
+                      onKeyDown={(e) => {
+                        // The buttons sit in the page header, before the form in the DOM, so
+                        // Tab from the last field would leave the app. Send it to Start order
+                        // (then Cancel), as the old form did.
+                        if (e.key !== "Tab" || e.shiftKey) return;
+                        const start = startOrderRef.current;
+                        if (!start || start.disabled) return;
+                        e.preventDefault();
+                        start.focus();
+                      }}
                     />
                   </div>
                 </>
